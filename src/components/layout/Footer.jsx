@@ -25,7 +25,7 @@ export default function Footer() {
             radial-gradient(520px 280px at 100% 100%, rgba(251, 145, 63, 0.12), transparent 70%),
             var(--primary-deep);
           color: rgba(255, 255, 255, 0.72);
-          padding-top: 56px;
+          padding-top: 40px;
           font-family: var(--font-sans);
         }
         .main-footer::before {
@@ -44,16 +44,16 @@ export default function Footer() {
           justify-content: space-between;
           gap: 24px;
           flex-wrap: wrap;
-          padding: 24px 28px;
-          margin-bottom: 56px;
+          padding: 18px 24px;
+          margin-bottom: 40px;
           border-radius: var(--radius-xl);
           background: linear-gradient(120deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.03));
           border: 1px solid rgba(255, 255, 255, 0.1);
         }
         .footer-cta-text { display: flex; align-items: center; gap: 16px; }
         .footer-cta-icon {
-          width: 48px;
-          height: 48px;
+          width: 44px;
+          height: 44px;
           border-radius: 14px;
           background: var(--accent);
           color: #fff;
@@ -95,11 +95,11 @@ export default function Footer() {
         /* ── Main grid ── */
         .footer-grid {
           display: grid;
-          grid-template-columns: 1.5fr 1fr 1fr 1.3fr;
-          gap: 40px;
-          margin-bottom: 48px;
+          grid-template-columns: 1.3fr 1fr 1fr 1.3fr;
+          gap: 32px;
+          margin-bottom: 32px;
         }
-        .footer-col { display: flex; flex-direction: column; gap: 20px; }
+        .footer-col { display: flex; flex-direction: column; gap: 14px; }
         .footer-logo-chip {
           display: inline-flex;
           width: fit-content;
@@ -118,7 +118,7 @@ export default function Footer() {
           margin: 0;
           max-width: 340px;
         }
-        .footer-socials { display: flex; gap: 10px; margin-top: 4px; }
+        .footer-socials { display: flex; gap: 8px; }
         .social-btn {
           width: 38px;
           height: 38px;
@@ -147,7 +147,7 @@ export default function Footer() {
           text-transform: uppercase;
           margin: 0;
           position: relative;
-          padding-bottom: 12px;
+          padding-bottom: 10px;
         }
         .footer-title::after {
           content: '';
@@ -159,7 +159,7 @@ export default function Footer() {
           background: var(--accent);
           border-radius: 3px;
         }
-        .footer-links { display: flex; flex-direction: column; gap: 12px; font-size: 14px; }
+        .footer-links { display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
         .footer-link,
         .bottom-link {
           text-decoration: none;
@@ -175,7 +175,7 @@ export default function Footer() {
         .footer-link:hover,
         .bottom-link:hover { background: rgba(255, 255, 255, 0.08); }
 
-        .footer-contact-list { display: flex; flex-direction: column; gap: 14px; }
+        .footer-contact-list { display: flex; flex-direction: column; gap: 8px; }
         .footer-contact-item {
           display: flex;
           align-items: center;
@@ -195,8 +195,8 @@ export default function Footer() {
         }
         a.footer-contact-item:hover { background: rgba(255, 255, 255, 0.08); }
         .footer-contact-icon {
-          width: 34px;
-          height: 34px;
+          width: 30px;
+          height: 30px;
           border-radius: 10px;
           background: rgba(255, 255, 255, 0.07);
           color: var(--accent);
@@ -216,7 +216,7 @@ export default function Footer() {
         /* ── Bottom bar ── */
         .footer-bottom {
           border-top: 1px solid rgba(255, 255, 255, 0.1);
-          padding: 22px 0;
+          padding: 16px 0;
           display: flex;
           justify-content: space-between;
           align-items: center;
@@ -228,11 +228,11 @@ export default function Footer() {
         .bottom-link { color: rgba(255, 255, 255, 0.55); }
 
         @media (max-width: 992px) {
-          .footer-grid { grid-template-columns: 1fr 1fr; gap: 36px; }
+          .footer-grid { grid-template-columns: 1fr 1fr; gap: 28px; }
         }
         @media (max-width: 576px) {
           .footer-cta { padding: 20px; }
-          .footer-grid { grid-template-columns: 1fr; gap: 32px; }
+          .footer-grid { grid-template-columns: 1fr; gap: 24px; }
           .footer-bottom { flex-direction: column; align-items: flex-start; }
           .bottom-links { flex-wrap: wrap; gap: 12px 20px; }
         }
