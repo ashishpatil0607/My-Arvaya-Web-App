@@ -446,14 +446,13 @@ input[type="radio"]:focus-visible {
 }
 
 /* Home variant: richer trust strip */
-.trust-features-panel--home {
-  position: relative;
-  overflow: hidden;
-  padding: 22px;
-  background:
-    radial-gradient(circle at 0% 0%, rgba(99, 225, 181, 0.2), transparent 40%),
-    radial-gradient(circle at 100% 100%, rgba(37, 99, 235, 0.08), transparent 40%),
-    linear-gradient(135deg, #f2fbf8, #fff 55%, #f3f8ff);
+/* no outer box on Home: the cards stand on their own */
+.trust-features-panel.trust-features-panel--home {
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
 }
 
 .trust-features-panel--home .trust-feature-item {
