@@ -1,4 +1,4 @@
-import { Search, MapPin, ChevronDown, ChevronRight, ChevronLeft, Users, User, LogOut, Smartphone, HelpCircle, Menu, X, ArrowRight, Check, Stethoscope, FlaskConical, Building2, Settings, Bell, Gift, Send, Mail, Copy, Share2, Shield, Home, Wallet, Truck } from "lucide-react";
+import { Search, MapPin, ChevronDown, ChevronRight, ChevronLeft, Users, User, LogOut, Smartphone, HelpCircle, Menu, X, ArrowRight, Check, Stethoscope, FlaskConical, Building2, Settings, Bell, Gift, Send, Mail, Copy, Share2, Shield, Home, Wallet, Truck, Phone, Siren } from "lucide-react";
 import { Link, NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useState, useRef, useEffect, useMemo } from "react";
@@ -6,6 +6,7 @@ import { getLocations, getDoctors, getLabPackages } from "../../services/dataSer
 import { useBooking } from "../../context/BookingContext";
 import { fetchImageBlob, getImageUrl } from "../../services/uploadService";
 import { getPatients } from "../../services/dataService";
+import AmbulanceRequestModal from "../ambulance/AmbulanceRequestModal";
 
 function getUserDisplayName(user) {
   if (!user) return "User";
@@ -112,6 +113,7 @@ export default function Header() {
   const [isReferralModalOpen, setIsReferralModalOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [isCustomShareOpen, setIsCustomShareOpen] = useState(false);
+  const [showAmbulanceModal, setShowAmbulanceModal] = useState(false);
 
   const appDownloadUrl = "https://drive.google.com/file/d/136Lb50jdaadDi9_Uigmq-Qsu2zm9jx51/view?usp=sharing";
 
@@ -605,9 +607,10 @@ export default function Header() {
             <div
               style={{
                 position: 'absolute',
-                inset: '8px 0',
+                inset: '5px 0',
                 borderRadius: '32px',
-                background: 'linear-gradient(90deg, rgba(46,102,110,0.10) 0%, rgba(46,102,110,0.05) 55%, rgba(46,102,110,0.02) 100%)',
+                background: 'linear-gradient(90deg, rgba(46,102,110,0.12) 0%, rgba(46,102,110,0.05) 55%, rgba(251,145,63,0.06) 100%)',
+                border: '1px solid rgba(46,102,110,0.08)',
                 zIndex: 0
               }}
             />
@@ -642,14 +645,19 @@ export default function Header() {
                 minWidth: 0
               }}
             >
-              <span className="header-promo-heading" style={{ fontWeight: '800', color: 'var(--text-main)', whiteSpace: 'nowrap' }}>
-                Your Health, Our Priority
+              <span className="header-promo-heading" style={{ whiteSpace: 'nowrap' }}>
+                Your Health, <span className="header-promo-highlight">Our Priority</span>
               </span>
               {/* <span className="header-promo-subtext" style={{ fontSize: '12.5px', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 Book appointments, order medicines, and more — all in one place.
               </span> */}
-              <span className="header-promo-subtext" style={{ fontSize: '12.5px', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                Book appointments, Lab Tests and More — all in one place.
+              <span className="header-promo-subtext" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <span className="header-promo-tag">Appointments</span>
+                <span className="header-promo-dot" aria-hidden="true" />
+                <span className="header-promo-tag">Lab Tests</span>
+                <span className="header-promo-dot" aria-hidden="true" />
+                <span className="header-promo-tag">&amp; More</span>
+                <span className="header-promo-tail">— all in one place</span>
               </span>
             </div>
           </div>
@@ -700,9 +708,9 @@ export default function Header() {
                 >
                   <div className="flex flex-col items-end header-user-text">
                     <span className="text-muted" style={{ fontSize: '11px', lineHeight: '1' }}>Welcome,</span>
-                    <span style={{ 
-                      fontSize: '14px', 
-                      fontWeight: '600', 
+                    <span style={{
+                      fontSize: '14px',
+                      fontWeight: '600',
                       color: 'var(--text-main)',
                       maxWidth: '120px',
                       whiteSpace: 'nowrap',
@@ -962,37 +970,37 @@ export default function Header() {
                           </div>
                         )}
 
-                    <div
-                      className="flex items-center gap-3 cursor-pointer"
-                      onClick={() => { setIsProfileMenuOpen(false); go("/profile"); }}
-                      style={{ padding: '10px 16px', fontSize: '14px', color: 'var(--text-main)', transition: 'background 0.2s' }}
-                      onMouseOver={e => e.currentTarget.style.background = 'var(--bg-app)'}
-                      onMouseOut={e => e.currentTarget.style.background = 'transparent'}
-                    >
-                      <User size={16} className="text-muted" /> Patient Profile
-                    </div>
+                        <div
+                          className="flex items-center gap-3 cursor-pointer"
+                          onClick={() => { setIsProfileMenuOpen(false); go("/profile"); }}
+                          style={{ padding: '10px 16px', fontSize: '14px', color: 'var(--text-main)', transition: 'background 0.2s' }}
+                          onMouseOver={e => e.currentTarget.style.background = 'var(--bg-app)'}
+                          onMouseOut={e => e.currentTarget.style.background = 'transparent'}
+                        >
+                          <User size={16} className="text-muted" /> Patient Profile
+                        </div>
 
-                    <div
-                      className="flex items-center gap-3 cursor-pointer"
-                      onClick={() => { setIsProfileMenuOpen(false); go("/notifications"); }}
-                      style={{ padding: '10px 16px', fontSize: '14px', color: 'var(--text-main)', transition: 'background 0.2s' }}
-                      onMouseOver={e => e.currentTarget.style.background = 'var(--bg-app)'}
-                      onMouseOut={e => e.currentTarget.style.background = 'transparent'}
-                    >
-                      <Bell size={16} className="text-muted" /> Notifications
-                    </div>
+                        <div
+                          className="flex items-center gap-3 cursor-pointer"
+                          onClick={() => { setIsProfileMenuOpen(false); go("/notifications"); }}
+                          style={{ padding: '10px 16px', fontSize: '14px', color: 'var(--text-main)', transition: 'background 0.2s' }}
+                          onMouseOver={e => e.currentTarget.style.background = 'var(--bg-app)'}
+                          onMouseOut={e => e.currentTarget.style.background = 'transparent'}
+                        >
+                          <Bell size={16} className="text-muted" /> Notifications
+                        </div>
 
-                    <div
-                      className="flex items-center gap-3 cursor-pointer"
-                      onClick={() => { setIsProfileMenuOpen(false); go("/my-appointments"); }}
-                      style={{ padding: '10px 16px', fontSize: '14px', color: 'var(--text-main)', transition: 'background 0.2s' }}
-                      onMouseOver={e => e.currentTarget.style.background = 'var(--bg-app)'}
-                      onMouseOut={e => e.currentTarget.style.background = 'transparent'}
-                    >
-                      <User size={16} className="text-muted" /> My Appointments
-                    </div>
+                        <div
+                          className="flex items-center gap-3 cursor-pointer"
+                          onClick={() => { setIsProfileMenuOpen(false); go("/my-appointments"); }}
+                          style={{ padding: '10px 16px', fontSize: '14px', color: 'var(--text-main)', transition: 'background 0.2s' }}
+                          onMouseOver={e => e.currentTarget.style.background = 'var(--bg-app)'}
+                          onMouseOut={e => e.currentTarget.style.background = 'transparent'}
+                        >
+                          <User size={16} className="text-muted" /> My Appointments
+                        </div>
 
-                    {/* <div
+                        {/* <div
                       className="flex items-center gap-3 cursor-pointer"
                       onClick={() => { setIsProfileMenuOpen(false); go("/prescriptions"); }}
                       style={{ padding: '10px 16px', fontSize: '14px', color: 'var(--text-main)', transition: 'background 0.2s' }}
@@ -1002,17 +1010,17 @@ export default function Header() {
                       <User size={16} className="text-muted" /> My Prescriptions
                     </div> */}
 
-                    <div
-                      className="flex items-center gap-3 cursor-pointer"
-                      onClick={() => { setIsProfileMenuOpen(false); go("/orders"); }}
-                      style={{ padding: '10px 16px', fontSize: '14px', color: 'var(--text-main)', transition: 'background 0.2s' }}
-                      onMouseOver={e => e.currentTarget.style.background = 'var(--bg-app)'}
-                      onMouseOut={e => e.currentTarget.style.background = 'transparent'}
-                    >
-                      <User size={16} className="text-muted" /> My Orders
-                    </div>
+                        <div
+                          className="flex items-center gap-3 cursor-pointer"
+                          onClick={() => { setIsProfileMenuOpen(false); go("/orders"); }}
+                          style={{ padding: '10px 16px', fontSize: '14px', color: 'var(--text-main)', transition: 'background 0.2s' }}
+                          onMouseOver={e => e.currentTarget.style.background = 'var(--bg-app)'}
+                          onMouseOut={e => e.currentTarget.style.background = 'transparent'}
+                        >
+                          <User size={16} className="text-muted" /> My Orders
+                        </div>
 
-                    {/* <div
+                        {/* <div
                       className="flex items-center gap-3 cursor-pointer"
                       onClick={() => { setIsProfileMenuOpen(false); go("/payments"); }}
                       style={{ padding: '10px 16px', fontSize: '14px', color: 'var(--text-main)', transition: 'background 0.2s' }}
@@ -1022,7 +1030,7 @@ export default function Header() {
                       <User size={16} className="text-muted" /> Payments & Invoices
                     </div> */}
 
-                    {/* <div
+                        {/* <div
                       className="flex items-center gap-3 cursor-pointer"
                       onClick={() => { setIsProfileMenuOpen(false); go("/settings"); }}
                       style={{ padding: '10px 16px', fontSize: '14px', color: 'var(--text-main)', transition: 'background 0.2s' }}
@@ -1032,22 +1040,22 @@ export default function Header() {
                       <Settings size={16} className="text-muted" /> App Settings
                     </div> */}
 
-                    <div
-                      className="flex items-center gap-3 cursor-pointer"
-                      onClick={() => {
-                        setIsProfileMenuOpen(false);
-                        logout();
-                        go("/");
-                      }}
-                      style={{ padding: '10px 16px', fontSize: '14px', color: 'var(--error, #e53e3e)', transition: 'background 0.2s' }}
-                      onMouseOver={e => e.currentTarget.style.background = 'var(--bg-app)'}
-                      onMouseOut={e => e.currentTarget.style.background = 'transparent'}
-                    >
-                      <LogOut size={16} /> Logout
-                    </div>
-                  </>
-                )}
-              </div>
+                        <div
+                          className="flex items-center gap-3 cursor-pointer"
+                          onClick={() => {
+                            setIsProfileMenuOpen(false);
+                            logout();
+                            go("/");
+                          }}
+                          style={{ padding: '10px 16px', fontSize: '14px', color: 'var(--error, #e53e3e)', transition: 'background 0.2s' }}
+                          onMouseOver={e => e.currentTarget.style.background = 'var(--bg-app)'}
+                          onMouseOut={e => e.currentTarget.style.background = 'transparent'}
+                        >
+                          <LogOut size={16} /> Logout
+                        </div>
+                      </>
+                    )}
+                  </div>
                 )}
               </div>
             ) : (
@@ -1074,62 +1082,41 @@ export default function Header() {
 
         {/* ── Secondary Navigation ── */}
         <div className="header-secondary-nav" style={{ borderTop: '1px solid var(--border)', background: 'rgba(255, 255, 255, 0.3)' }}>
-          <div className="container flex items-center justify-between no-scrollbar" style={{ height: '38px', overflowX: 'auto', gap: '8px' }}>
-            {navLinks.map(([label, path, Icon], index) => (
-              <div key={label} style={{ display: 'flex', alignItems: 'center', height: '100%' }}>
-                <NavLink
-                  to={path}
-                  style={({ isActive }) => ({
-                    position: 'relative',
-                    color: isActive ? 'var(--primary)' : 'var(--text-main)',
-                    fontWeight: isActive ? '700' : '500',
-                    fontSize: '13.5px',
-                    height: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: '0 12px',
-                    textDecoration: 'none',
-                    whiteSpace: 'nowrap'
-                  })}
-                >
-                  {({ isActive }) => (
-                    <>
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        padding: '6px 0',
-                        transition: 'all 0.25s ease'
-                      }}>
-                        {Icon && <Icon size={16} />}
-                        <span>{label}</span>
-                      </div>
-                      {isActive && (
-                        <div style={{
-                          position: 'absolute',
-                          bottom: 0,
-                          left: '50%',
-                          transform: 'translateX(-50%)',
-                          width: '100%',
-                          height: '3px',
-                          background: 'var(--primary)',
-                          borderTopLeftRadius: '4px',
-                          borderTopRightRadius: '4px'
-                        }} />
-                      )}
-                    </>
-                  )}
-                </NavLink>
-                {index < navLinks.length - 1 && (
-                  <div style={{ height: '16px', width: '1px', background: 'var(--border)', margin: '0 8px' }} />
+          <div className="container flex items-center justify-between no-scrollbar" style={{ overflowX: 'auto', gap: '8px' }}>
+            {navLinks.map(([label, path, Icon]) => (
+              <NavLink key={label} to={path} end={path === "/"} className="header-nav-link">
+                {Icon && (
+                  <span className="header-nav-icon">
+                    <Icon size={15} strokeWidth={2.2} />
+                  </span>
                 )}
-              </div>
+                <span>{label}</span>
+              </NavLink>
             ))}
+
+            {/* Quick-call actions, pinned to the right end of the bar */}
+            <div className="header-nav-calls">
+              <a href="tel:+9118001234567" className="header-nav-call">
+                <Phone size={15} strokeWidth={2.2} />
+                <span>Call Us</span>
+              </a>
+              <button
+                type="button"
+                onClick={() => setShowAmbulanceModal(true)}
+                className="header-nav-call header-nav-call-emergency"
+              >
+                <Siren size={15} strokeWidth={2.2} />
+                <span>Call Ambulance</span>
+              </button>
+            </div>
           </div>
         </div>
 
       </header>
+
+      {showAmbulanceModal && (
+        <AmbulanceRequestModal onClose={() => setShowAmbulanceModal(false)} />
+      )}
 
       {/* ── Mobile Navigation Drawer ── */}
       {mobileDrawerOpen && (
@@ -1298,7 +1285,7 @@ export default function Header() {
                   <div style={{ padding: '10px 12px', borderBottom: '1px solid var(--border)', background: 'linear-gradient(135deg, rgba(46, 102, 110, 0.04) 0%, rgba(46, 102, 110, 0.08) 100%)' }}>
                     {user ? (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', background: 'var(--bg-surface)', padding: '10px 12px', borderRadius: '12px', border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(18,51,58,0.04)' }}>
-                        
+
                         {/* Top row: Avatar + Name + Shield badge */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                           <div style={{
@@ -1962,11 +1949,18 @@ export default function Header() {
         .mobile-hamburger-btn {
           display: none;
         }
+        /* Pill hugs its content; auto margins center it so the free space is
+           split evenly on both sides instead of piling up on one side. */
         .header-promo-banner {
           order: 1;
-          flex-shrink: 1;
+          flex: 0 1 auto;
           min-width: 0;
-          margin: 0 12px 0 clamp(8px, 2.5vw, 40px);
+          margin: 0 auto;
+        }
+        @media (min-width: 741px) {
+          .header-flex-spacer {
+            display: none;
+          }
         }
         .header-promo-image {
           left: 20px;
@@ -1974,10 +1968,10 @@ export default function Header() {
         }
         .header-promo-text {
           padding-left: 158px;
-          padding-right: 18px;
+          padding-right: 30px;
         }
         .header-promo-heading {
-          font-size: 17px;
+          font-size: 16px;
         }
         @media (max-width: 1180px) {
           .header-promo-subtext {
@@ -2039,6 +2033,7 @@ export default function Header() {
         @media (max-width: 740px) {
           .header-promo-banner {
             margin: 0 4px !important;
+            flex: 0 0 56px !important;
             width: 56px !important;
             min-width: 56px !important;
           }

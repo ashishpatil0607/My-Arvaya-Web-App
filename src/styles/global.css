@@ -3721,11 +3721,60 @@ input[type="radio"]:focus-visible {
 
 .ambulance-modal-right {
   flex: 1;
-  padding: 44px 48px;
-  overflow-y: auto;
+  min-width: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   position: relative;
+}
+
+/* Single scroll area for the form; footer with the submit button stays pinned. */
+.ambulance-modal-scroll {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: 40px 44px 16px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--primary-soft) transparent;
+}
+
+.ambulance-modal-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.ambulance-modal-scroll::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 64px 0 12px;
+}
+
+.ambulance-modal-scroll::-webkit-scrollbar-thumb {
+  background: var(--primary-soft);
+  border-radius: 999px;
+}
+
+.ambulance-modal-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
+}
+
+.ambulance-modal-footer {
+  flex-shrink: 0;
+  padding: 20px 44px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-surface);
+}
+
+.ambulance-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.ambulance-form-row > div,
+.ambulance-form-row input {
+  min-width: 0;
 }
 
 @media (max-width: 768px) {
@@ -3766,9 +3815,18 @@ input[type="radio"]:focus-visible {
     padding: 12px 14px !important;
   }
 
-  .ambulance-modal-right {
-    padding: 24px 20px;
+  .ambulance-modal-scroll {
+    padding: 24px 20px 12px;
     overflow-y: visible;
+  }
+
+  .ambulance-modal-footer {
+    padding: 16px 20px;
+  }
+
+  .ambulance-form-row {
+    grid-template-columns: 1fr;
+    gap: 18px;
   }
 
   .login-modal-container {
@@ -4524,7 +4582,9 @@ header.glass {
 
 header.glass .header-main-row {
   height: 62px !important;
-  padding: 0 16px !important;
+  /* Span the full window like the nav strip below, instead of the 1240px .container cap. */
+  max-width: none;
+  padding: 0 6px !important;
   background: rgba(255, 255, 255, 0.94);
   border: 1px solid rgba(8, 120, 125, 0.11);
   border-radius: 18px 18px 0 0;
@@ -4564,8 +4624,162 @@ header.glass .header-location-picker {
 }
 
 header.glass .header-secondary-nav {
-  background: rgba(255, 255, 255, 0.91) !important;
-  border-top-color: rgba(8, 120, 125, 0.08) !important;
+  background: var(--primary-deep) !important;
+  border-top-color: transparent !important;
+  border-bottom: 0;
+  box-shadow: 0 8px 22px -14px rgba(3, 73, 78, 0.5);
+}
+
+/* ── Secondary nav: flat text links on a dark teal bar ── */
+header.glass .header-nav-link {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background 0.25s ease;
+}
+
+header.glass .header-nav-icon {
+  display: none;
+}
+
+/* Hover: a soft translucent highlight fades in behind the link. */
+header.glass .header-nav-link:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+header.glass .header-nav-link.active {
+  color: var(--accent);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* Call Us / Call Ambulance buttons at the end of the nav bar */
+header.glass .header-nav-calls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+  padding-left: 12px;
+  flex-shrink: 0;
+}
+
+header.glass .header-nav-call {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 34px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  background: transparent;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.25s ease, border-color 0.25s ease;
+}
+
+header.glass .header-nav-call:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.6);
+}
+
+header.glass .header-nav-call-emergency {
+  background: #e5484d;
+  border-color: #e5484d;
+}
+
+header.glass .header-nav-call-emergency:hover {
+  background: #d13438;
+  border-color: #d13438;
+}
+
+/* Promo heading: deep teal lead-in + orange highlighted phrase with brush underline */
+header.glass .header-promo-heading {
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: var(--primary-dark);
+}
+header.glass .header-promo-highlight {
+  position: relative;
+  display: inline-block;
+  background: linear-gradient(90deg, var(--accent-hover) 0%, var(--accent) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+header.glass .header-promo-highlight::after {
+  content: "";
+  position: absolute;
+  left: 2%;
+  right: 2%;
+  bottom: -3px;
+  height: 6px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 8' preserveAspectRatio='none'%3E%3Cpath d='M2 6 Q30 1 60 4 T118 3' fill='none' stroke='%23FB913F' stroke-width='2.5' stroke-linecap='round' opacity='0.55'/%3E%3C/svg%3E") no-repeat center / 100% 100%;
+  pointer-events: none;
+}
+
+/* Promo subtext: service tags separated by orange dots */
+header.glass .header-promo-subtext {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 4px;
+  font-size: 12px;
+  /* Room for italic overhang and descenders, which overflow:hidden would clip. */
+  line-height: 1.3;
+  padding-right: 4px;
+}
+header.glass .header-promo-tag {
+  font-weight: 600;
+  color: var(--primary);
+  letter-spacing: 0.01em;
+}
+header.glass .header-promo-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+}
+header.glass .header-promo-tail {
+  color: var(--text-muted);
+  font-weight: 500;
+  font-style: italic;
+  margin-left: 2px;
+  padding-right: 2px;
+}
+
+/* Gift button: soft orange accent + gentle wiggle on hover */
+header.glass .header-gift-btn {
+  background: linear-gradient(135deg, var(--accent-light), #fff) !important;
+  border-color: var(--accent-soft) !important;
+}
+
+header.glass .header-gift-btn svg {
+  stroke: var(--accent-hover);
+}
+
+header.glass .header-gift-btn:hover svg {
+  animation: headerGiftWiggle 0.6s ease;
+}
+
+@keyframes headerGiftWiggle {
+  0%, 100% { transform: rotate(0); }
+  25% { transform: rotate(-12deg); }
+  50% { transform: rotate(10deg); }
+  75% { transform: rotate(-6deg); }
 }
 
 /* header.glass .header-secondary-nav .container {
@@ -4575,9 +4789,12 @@ header.glass .header-secondary-nav {
 } */
 
 header.glass .header-secondary-nav .container {
-    height: 38px !important;
-    padding-inline:50px;
-    justify-content: space-around;
+  height: 50px !important;
+  /* Full width with the logo's inset, so links line up under the top row. */
+  max-width: none;
+  padding-inline: 4px;
+  justify-content: flex-start;
+  gap: 4px !important;
 }
 
 header.glass .header-secondary-nav a:focus {
@@ -4585,8 +4802,8 @@ header.glass .header-secondary-nav a:focus {
 }
 
 header.glass .header-secondary-nav a:focus-visible {
-  border-radius: 8px;
-  box-shadow: inset 0 0 0 2px rgba(8, 120, 125, 0.42);
+  border-radius: 4px;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.6);
 }
 
 .card,
