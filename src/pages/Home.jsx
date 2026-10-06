@@ -710,7 +710,13 @@ export default function Home() {
           @media (max-width: 900px) { .ecosystem-grid { justify-content: center; } }
         `}</style>
           <div className="flex flex-col items-center text-center mb-8 w-full">
-            <h2 className="text-h2">Your Health Ecosystem</h2>
+            <span className="home-how-eyebrow">
+              <Sparkles size={14} /> All-in-one
+            </span>
+            <h2 className="text-h2">
+              Your Health{" "}
+              <span className="home-how-highlight">Ecosystem</span>
+            </h2>
             <p className="text-muted mt-2">
               Manage everything from one place
             </p>
@@ -731,6 +737,9 @@ export default function Home() {
                 title: "Care Journey",
                 sub: "Track your treatment progress and personalized care plans",
                 icon: <Activity size={29} strokeWidth={1.8} />,
+                bgIcon: <Activity size={150} strokeWidth={1.2} />,
+                badge: "Personalised",
+                features: ["Care plans", "Progress tracking"],
                 link: "/care-journey",
                 start: "#10add5",
                 end: "#087eb8",
@@ -740,6 +749,9 @@ export default function Home() {
                 title: "Arvaya Rewards",
                 sub: "Earn points on every booking and redeem exclusive offers",
                 icon: <Gift size={29} strokeWidth={1.8} />,
+                bgIcon: <Gift size={150} strokeWidth={1.2} />,
+                badge: "Earn & Save",
+                features: ["Points on bookings", "Exclusive offers"],
                 link: "/rewards",
                 start: "#aa56f3",
                 end: "#7d2be8",
@@ -749,6 +761,9 @@ export default function Home() {
                 title: "Digital Wallet",
                 sub: "Fast, secure payments with instant refunds guaranteed",
                 icon: <Wallet size={29} strokeWidth={1.8} />,
+                bgIcon: <Wallet size={150} strokeWidth={1.2} />,
+                badge: "Secure",
+                features: ["Quick payments", "Instant refunds"],
                 link: "/wallet",
                 start: "#12bca0",
                 end: "#087f74",
@@ -783,8 +798,13 @@ export default function Home() {
                   className="ecosystem-orb ecosystem-orb-bottom"
                   aria-hidden="true"
                 />
+                <span className="ecosystem-card-bgicon" aria-hidden="true">
+                  {item.bgIcon}
+                </span>
+                <span className="ecosystem-card-shine" aria-hidden="true" />
                 <div className="ecosystem-card-top">
                   <div className="ecosystem-card-icon">{item.icon}</div>
+                  <span className="ecosystem-card-badge">{item.badge}</span>
                   <div className="ecosystem-card-arrow" aria-hidden="true">
                     <ArrowUpRight size={23} strokeWidth={2.1} />
                   </div>
@@ -792,6 +812,11 @@ export default function Home() {
                 <div className="ecosystem-card-copy">
                   <h3>{item.title}</h3>
                   <p>{item.sub}</p>
+                  <div className="ecosystem-card-features">
+                    {item.features.map((f) => (
+                      <span key={f}>{f}</span>
+                    ))}
+                  </div>
                   <span className="ecosystem-card-action">
                     Explore <ArrowRight size={16} />
                   </span>
@@ -805,8 +830,16 @@ export default function Home() {
       {/* ── How It Works ── */}
       <section className="home-how-section">
         <div className="container home-how-panel">
+          <span className="home-how-orb home-how-orb-1" aria-hidden="true" />
+          <span className="home-how-orb home-how-orb-2" aria-hidden="true" />
+
           <div className="home-how-heading text-center flex flex-col items-center">
-            <h2 className="text-h2">How It Works</h2>
+            <span className="home-how-eyebrow">
+              <Sparkles size={14} /> Simple &amp; Quick
+            </span>
+            <h2 className="text-h2">
+              How It <span className="home-how-highlight">Works</span>
+            </h2>
             <p className="text-muted mt-2">
               Book a doctor appointment in 3 simple steps
             </p>
@@ -819,6 +852,8 @@ export default function Home() {
                 icon: <Search size={28} />,
                 title: "Search",
                 desc: "Find specialists by name, specialty, or location",
+                chip: "Verified doctors",
+                chipIcon: <ShieldCheck size={13} />,
                 color: "#f28a28",
                 soft: "#fff3e8",
               },
@@ -827,6 +862,8 @@ export default function Home() {
                 icon: <CalendarCheck size={28} />,
                 title: "Book",
                 desc: "Pick a convenient slot and confirm instantly",
+                chip: "Instant confirmation",
+                chipIcon: <Clock size={13} />,
                 color: "#08a57b",
                 soft: "#e8faf4",
               },
@@ -835,6 +872,8 @@ export default function Home() {
                 icon: <Stethoscope size={28} />,
                 title: "Consult",
                 desc: "Visit the clinic or join a video consultation",
+                chip: "In-clinic or online",
+                chipIcon: <Smartphone size={13} />,
                 color: "#2583d8",
                 soft: "#edf6ff",
               },
@@ -848,13 +887,23 @@ export default function Home() {
                   animationDelay: `${i * 150}ms`,
                 }}
               >
+                <span className="home-how-watermark" aria-hidden="true">
+                  0{s.step}
+                </span>
                 <div className="home-how-card-top">
-                  <div className="home-how-icon">{s.icon}</div>
-                  <span className="home-how-step">0{s.step}</span>
+                  <div className="home-how-icon">
+                    {s.icon}
+                    <span className="home-how-step">{s.step}</span>
+                  </div>
                 </div>
                 <div className="home-how-copy">
+                  <span className="home-how-label">Step 0{s.step}</span>
                   <h3>{s.title}</h3>
                   <p>{s.desc}</p>
+                  <span className="home-how-chip">
+                    {s.chipIcon}
+                    {s.chip}
+                  </span>
                 </div>
                 {i < 2 && (
                   <span className="home-how-connector" aria-hidden="true">
