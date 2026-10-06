@@ -801,7 +801,6 @@ export default function Home() {
                 <span className="ecosystem-card-bgicon" aria-hidden="true">
                   {item.bgIcon}
                 </span>
-                <span className="ecosystem-card-shine" aria-hidden="true" />
                 <div className="ecosystem-card-top">
                   <div className="ecosystem-card-icon">{item.icon}</div>
                   <span className="ecosystem-card-badge">{item.badge}</span>

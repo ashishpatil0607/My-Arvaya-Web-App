@@ -5535,14 +5535,14 @@ header.glass .header-secondary-nav a:focus-visible {
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.3),
     0 16px 34px color-mix(in srgb, var(--eco-end) 24%, transparent);
-  transition: transform 0.35s ease, box-shadow 0.35s ease;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
 .ecosystem-card:hover {
-  transform: translateY(-8px);
+  transform: translateY(-4px);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.3),
-    0 28px 50px color-mix(in srgb, var(--eco-end) 36%, transparent);
+    inset 0 0 0 2px rgba(255, 255, 255, 0.45),
+    0 22px 40px color-mix(in srgb, var(--eco-end) 32%, transparent);
 }
 
 /* large faded icon in the background */
@@ -5555,35 +5555,6 @@ header.glass .header-secondary-nav a:focus-visible {
   opacity: 0.1;
   pointer-events: none;
   transform: rotate(-12deg);
-  transition: transform 0.5s ease, opacity 0.5s ease;
-}
-
-.ecosystem-card:hover .ecosystem-card-bgicon {
-  opacity: 0.16;
-  transform: rotate(-4deg) scale(1.08);
-}
-
-/* light sweep on hover */
-.ecosystem-card-shine {
-  position: absolute;
-  z-index: 2;
-  top: 0;
-  left: -75%;
-  width: 50%;
-  height: 100%;
-  background: linear-gradient(
-    100deg,
-    transparent,
-    rgba(255, 255, 255, 0.28),
-    transparent
-  );
-  transform: skewX(-20deg);
-  pointer-events: none;
-}
-
-.ecosystem-card:hover .ecosystem-card-shine {
-  left: 130%;
-  transition: left 0.8s ease;
 }
 
 .ecosystem-card-badge {
@@ -5671,11 +5642,6 @@ header.glass .header-secondary-nav a:focus-visible {
   width: 64px;
   height: 64px;
   border-radius: 20px;
-  transition: transform 0.35s ease;
-}
-
-.ecosystem-card:hover .ecosystem-card-icon {
-  transform: rotate(-6deg) scale(1.06);
 }
 
 .ecosystem-card-arrow {
@@ -5722,34 +5688,27 @@ header.glass .header-secondary-nav a:focus-visible {
   background: #fff;
   border-radius: 999px;
   box-shadow: 0 8px 18px rgba(3, 50, 57, 0.16);
-  transition: gap 0.25s ease, box-shadow 0.25s ease;
 }
 
-.ecosystem-card:hover .ecosystem-card-action {
-  gap: 10px;
-  box-shadow: 0 10px 22px rgba(3, 50, 57, 0.24);
+.ecosystem-card:hover .ecosystem-card-action svg {
+  transform: translateX(3px);
 }
 
 .ecosystem-card:hover .ecosystem-card-arrow {
-  transform: translate(2px, -2px) rotate(45deg);
-  background: rgba(255, 255, 255, 0.28);
+  color: var(--eco-icon-color);
+  background: #fff;
+  border-color: #fff;
 }
 
 .ecosystem-card-arrow,
 .ecosystem-card-action svg {
-  transition: transform 0.3s ease, background 0.3s ease;
+  transition: transform 0.25s ease, background 0.25s ease, color 0.25s ease;
 }
 
 @media (max-width: 768px) {
   .ecosystem-card {
     height: 350px;
     padding: 24px;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .ecosystem-card-shine {
-    display: none;
   }
 }
 
