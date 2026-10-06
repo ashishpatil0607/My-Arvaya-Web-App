@@ -1416,9 +1416,9 @@ export default function Home() {
                     alignItems: "center",
                     gap: "10px",
                   }}
-                   onClick={() =>
+                  onClick={() =>
                     window.open(APP_STORE_URL, "_blank", "noopener,noreferrer")
-                  } 
+                  }
                 >
                   <span
                     style={{
