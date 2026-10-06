@@ -48,11 +48,20 @@ export default function Home() {
   const go = useNavigate();
   const { user } = useAuth();
   const reviewsScrollRef = useRef(null);
+  // Auto-scroll pauses while a card or nav button is hovered/focused
+  const reviewsHoverRef = useRef(false);
+  const reviewsFocusRef = useRef(false);
+  const reviewsLastInteractionRef = useRef(0);
+  const setReviewsPause = (ref, paused) => {
+    ref.current = paused;
+    reviewsLastInteractionRef.current = Date.now();
+  };
   const PLAY_STORE_URL =
     "https://play.google.com/store/apps/details?id=com.arvaya";
   const APP_STORE_URL = "https://apps.apple.com/in/app/myarvaya/id6803788368";
 
   const scrollReviews = (dir) => {
+    reviewsLastInteractionRef.current = Date.now();
     if (reviewsScrollRef.current) {
       const scrollAmount = reviewsScrollRef.current.clientWidth / 2;
       reviewsScrollRef.current.scrollBy({
@@ -270,6 +279,9 @@ export default function Home() {
     if (!reviews || reviews.length === 0) return;
 
     const interval = setInterval(() => {
+      if (reviewsHoverRef.current || reviewsFocusRef.current) return;
+      // wait a full interval after the user stops interacting
+      if (Date.now() - reviewsLastInteractionRef.current < 4000) return;
       if (reviewsScrollRef.current) {
         const { scrollLeft, scrollWidth, clientWidth } =
           reviewsScrollRef.current;
@@ -675,15 +687,19 @@ export default function Home() {
       {/* ── Value Props ── */}
       <section style={{ padding: "20px 0" }}>
         <div className="container">
-          <div className="trust-features-panel">
+          <div className="trust-features-panel trust-features-panel--home">
             <div className="trust-features-grid">
               {[
-                { icon: <Star size={26} />, title: "4.9/5 Rating", sub: "From 1M+ Users", color: "#D97706", bg: "#FEF3C7" },
-                { icon: <ShieldCheck size={26} />, title: "NABH Accredited", sub: "Quality Assured", color: "var(--primary)", bg: "var(--primary-light)" },
-                { icon: <PhoneCall size={26} />, title: "24/7 Support", sub: "Always here for you", color: "#2563EB", bg: "#DBEAFE" },
-                { icon: <Pill size={26} />, title: "100% Genuine", sub: "Medicines & Tests", color: "var(--accent)", bg: "#FEF0E2" },
+                { icon: <Star size={24} />, title: "4.9/5 Rating", sub: "From 1M+ Users", color: "#D97706", bg: "#FEF3C7" },
+                { icon: <ShieldCheck size={24} />, title: "NABH Accredited", sub: "Quality Assured", color: "var(--primary)", bg: "var(--primary-light)" },
+                { icon: <PhoneCall size={24} />, title: "24/7 Support", sub: "Always here for you", color: "#2563EB", bg: "#DBEAFE" },
+                { icon: <Pill size={24} />, title: "100% Genuine", sub: "Medicines & Tests", color: "var(--accent)", bg: "#FEF0E2" },
               ].map((v, i) => (
-                <div key={i} className="trust-feature-item">
+                <div
+                  key={i}
+                  className="trust-feature-item animate-fade-in-up"
+                  style={{ "--tf-color": v.color, "--tf-bg": v.bg, animationDelay: `${i * 80}ms` }}
+                >
                   <div className="trust-feature-icon" style={{ background: v.bg, color: v.color }}>
                     {v.icon}
                   </div>
@@ -927,20 +943,18 @@ export default function Home() {
           @media (max-width: 900px) { .specialties-grid { grid-template-columns: repeat(3, 1fr); } }
           @media (max-width: 600px) { .specialties-grid { grid-template-columns: repeat(2, 1fr); } }
         `}</style>
-        <div className="mb-8 w-full" style={{ position: 'relative' }}>
+        <div className="mb-8 w-full">
           <div className="flex flex-col items-center text-center">
-            <h2 className="text-h2">Consult Top Specialties</h2>
+            <span className="home-how-eyebrow">
+              <Stethoscope size={14} /> Expert Care
+            </span>
+            <h2 className="text-h2">
+              Consult Top <span className="home-how-highlight">Specialties</span>
+            </h2>
             <p className="text-muted mt-2">
               Consult with India's best specialists
             </p>
           </div>
-          <button
-            className="btn btn-view-all flex items-center gap-2"
-            onClick={() => go("/doctors")}
-            style={{ position: 'absolute', right: 0, top: '5px' }}
-          >
-            View All <ArrowRight size={16} />
-          </button>
         </div>
 
         <div className="specialties-grid">
@@ -990,7 +1004,7 @@ export default function Home() {
           ].map((spec, i) => (
             <div
               key={spec.name}
-              className="specialty-card cursor-pointer animate-scale-in"
+              className="home-spec-card animate-scale-in"
               style={{
                 "--specialty-accent": spec.color,
                 "--specialty-soft": spec.soft,
@@ -998,233 +1012,139 @@ export default function Home() {
               }}
               onClick={() => go("/doctors")}
             >
-              <div className="specialty-icon">{spec.icon}</div>
-              <b className="specialty-title">{spec.name}</b>
+              <div className="home-spec-icon">{spec.icon}</div>
+              <b className="home-spec-title">{spec.name}</b>
+              <span className="home-spec-meta">
+                <span className="home-spec-count">{spec.consults} consults</span>
+                <span className="home-spec-cta" aria-hidden="true">
+                  Consult now <ArrowRight size={13} strokeWidth={2.4} />
+                </span>
+              </span>
             </div>
           ))}
+        </div>
+
+        <div className="home-spec-footer">
+          <button className="home-spec-viewall" onClick={() => go("/doctors")}>
+            View all specialties <ArrowRight size={16} />
+          </button>
         </div>
       </section>
 
       {/* ── Featured Lab Packages ── */}
-      <section style={{ padding: "0 0 56px 0" }}>
+      <section className="home-pkg-section">
         <div className="container">
-          <style>{`
-            .packages-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
-            @media (max-width: 1024px) { .packages-grid { grid-template-columns: repeat(2, 1fr); } }
-            @media (max-width: 600px) { .packages-grid { grid-template-columns: 1fr; } }
-            
-            .pkg-card {
-              width: 100%;
-              background: #ffffff;
-              border-radius: 18px;
-              border: 1px solid var(--border);
-              overflow: hidden;
-              display: flex;
-              flex-direction: column;
-              transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-              box-shadow: 0 2px 8px rgba(18, 51, 58, 0.04);
-              position: relative;
-            }
-            .pkg-card:hover {
-              transform: translateY(-4px);
-              box-shadow: 0 12px 28px rgba(18, 51, 58, 0.1);
-              border-color: var(--primary-soft);
-            }
-            .pkg-card-img-container {
-              height: 135px;
-              width: 100%;
-              background: #f0f7f7;
-              overflow: hidden;
-              position: relative;
-            }
-            .pkg-card-body {
-              padding: 16px;
-              display: flex;
-              flex-direction: column;
-              flex: 1;
-            }
-            .pkg-card-title {
-              font-weight: 800;
-              font-size: 15px;
-              line-height: 1.3;
-              color: var(--text-main);
-              margin-bottom: 6px;
-              display: -webkit-box;
-              -webkit-line-clamp: 2;
-              -webkit-box-orient: vertical;
-              overflow: hidden;
-              min-height: 40px;
-            }
-            .pkg-card-tests-badge {
-              display: inline-flex;
-              align-items: center;
-              gap: 4px;
-              font-size: 11px;
-              font-weight: 600;
-              color: #16a34a;
-              background: #dcfce7;
-              padding: 3px 8px;
-              border-radius: 6px;
-              width: fit-content;
-              margin-bottom: 12px;
-            }
-            .pkg-card-btn {
-              width: 100%;
-              background: #1b4d54;
-              color: #ffffff;
-              border: none;
-              padding: 10px 14px;
-              border-radius: 20px;
-              font-size: 12.5px;
-              font-weight: 700;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              gap: 6px;
-              cursor: pointer;
-              transition: background 0.2s, transform 0.15s;
-            }
-            .pkg-card-btn:hover {
-              background: var(--primary);
-            }
-            .lab-card-price-row {
-              display: flex;
-              align-items: center;
-              justify-content: space-between;
-              margin-top: auto;
-              padding-top: 12px;
-              border-top: 1px dashed var(--border);
-              gap: 6px;
-              margin-bottom: 16px;
-            }
-            .lab-card-price {
-              font-weight: 800;
-              font-size: 18px;
-              color: #12333A;
-              line-height: 1.1;
-            }
-            .lab-card-img {
-              width: 100%;
-              height: 100%;
-              object-fit: cover;
-              transition: transform 0.3s;
-            }
-            .pkg-card:hover .lab-card-img {
-              transform: scale(1.05);
-            }
-          `}</style>
-          <div className="mb-8 w-full" style={{ position: 'relative' }}>
+          <div className="mb-8 w-full">
             <div className="flex flex-col items-center text-center">
-              <h2 className="text-h2">Featured Health Packages</h2>
+              <span className="home-how-eyebrow">
+                <TestTube size={14} /> Lab Tests at Home
+              </span>
+              <h2 className="text-h2">
+                Featured Health <span className="home-how-highlight">Packages</span>
+              </h2>
               <p className="text-muted mt-2">
                 Comprehensive checkups with home sample collection
               </p>
             </div>
-            <button
-              className="btn btn-view-all flex items-center gap-2"
-              onClick={() => go("/labs")}
-              style={{ position: 'absolute', right: 0, top: '5px' }}
-            >
-              View All <ArrowRight size={16} />
-            </button>
           </div>
 
           <div className="packages-grid">
-            {apiPackages.map((pkg, idx) => (
-              <div
-                className="pkg-card animate-fade-in-up"
-                key={pkg.id || pkg.title}
-                style={{ animationDelay: `${idx * 80}ms` }}
-              >
-                <div className="pkg-card-img-container">
-                  <img src={pkg.img} alt={pkg.title} className="lab-card-img" />
-                </div>
-                <div className="pkg-card-body">
-                  <div className="pkg-card-title">{pkg.title}</div>
-                  <div className="pkg-card-tests-badge">
-                    <ShieldCheck size={12} /> {pkg.tests}
+            {apiPackages.map((pkg, idx) => {
+              const openPkg = () =>
+                go(
+                  `/labs/package-details/${encodeURIComponent(pkg.id || pkg.title)}`,
+                  { state: { package: pkg } },
+                );
+              return (
+                <article
+                  className="home-pkg-card animate-fade-in-up"
+                  key={pkg.id || pkg.title}
+                  style={{ animationDelay: `${idx * 80}ms` }}
+                  onClick={openPkg}
+                >
+                  <div className="home-pkg-media">
+                    <img src={pkg.img} alt={pkg.title} />
+                    <span className="home-pkg-chip">
+                      <TestTube size={12} /> Home sample
+                    </span>
                   </div>
-                  <button
-                    className="pkg-card-btn"
-                    onClick={() =>
-                      go(
-                        `/labs/package-details/${encodeURIComponent(pkg.id || pkg.title)}`,
-                        { state: { package: pkg } },
-                      )
-                    }
-                  >
-                    View Details <ArrowRight size={14} />
-                  </button>
-                </div>
-              </div>
-            ))}
+                  <div className="home-pkg-body">
+                    <h3 className="home-pkg-title">{pkg.title}</h3>
+                    <span className="home-pkg-tests">
+                      <ShieldCheck size={13} /> {pkg.tests}
+                    </span>
+                    <div className="home-pkg-footer">
+                      <div className="home-pkg-price">
+                        <small>Starting at</small>
+                        <strong>{pkg.price}</strong>
+                      </div>
+                      <button
+                        className="home-pkg-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openPkg();
+                        }}
+                      >
+                        View Details <ArrowRight size={14} />
+                      </button>
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+
+          <div className="home-spec-footer">
+            <button className="home-spec-viewall" onClick={() => go("/labs")}>
+              View all packages <ArrowRight size={16} />
+            </button>
           </div>
         </div>
       </section>
 
       {/* ── Testimonials ── */}
-      <section
-        style={{
-          padding: "56px 0",
-          background: "var(--bg-surface)",
-          borderTop: "1px solid var(--border)",
-          borderBottom: "1px solid var(--border)",
-          position: "relative",
-        }}
-      >
+      <section className="home-reviews-section">
         <div className="container">
-          <div style={{ textAlign: "center", marginBottom: "48px" }}>
-            <h2 className="text-h2">What Our Patients Say</h2>
-            <p className="text-muted mt-2" style={{ fontSize: "15px" }}>
+          <div className="home-reviews-heading">
+            <span className="home-how-eyebrow">
+              <Heart size={14} /> Patient Stories
+            </span>
+            <h2 className="text-h2">
+              What Our <span className="home-how-highlight">Patients</span> Say
+            </h2>
+            <p className="text-muted mt-2">
               Join 1 million+ happy patients across India
             </p>
           </div>
 
-          <style>{`
-            .testimonials-slider { 
-              display: flex; 
-              overflow-x: auto; 
-              scroll-snap-type: x mandatory; 
-              gap: 24px; 
-              padding-bottom: 20px;
-              scrollbar-width: none;
-            }
-            .testimonials-slider::-webkit-scrollbar { display: none; }
-            .testimonial-card-wrap {
-              flex: 0 0 calc(33.333% - 16px);
-              scroll-snap-align: start;
-            }
-            @media (max-width: 1024px) { .testimonial-card-wrap { flex: 0 0 calc(50% - 12px); } }
-            @media (max-width: 768px) { .testimonial-card-wrap { flex: 0 0 100%; } }
-            .review-nav-btn {
-              position: absolute;
-              top: 50%;
-              transform: translateY(-50%);
-              width: 44px; height: 44px; border-radius: 50%; background: #ffffff;
-              color: #1e293b; border: 1px solid var(--border); display: flex;
-              align-items: center; justify-content: center; cursor: pointer; z-index: 20;
-              box-shadow: 0 4px 16px rgba(0,0,0,0.1); transition: all 0.2s;
-            }
-            .review-nav-btn:hover {
-              background: var(--primary); color: white; border-color: var(--primary);
-            }
-            .review-nav-btn.left { left: -20px; }
-            .review-nav-btn.right { right: -20px; }
-            @media (max-width: 1024px) {
-              .review-nav-btn { display: none; }
-            }
-          `}</style>
-
-          <div style={{ position: "relative" }}>
+          <div
+            style={{ position: "relative" }}
+            onMouseEnter={() => setReviewsPause(reviewsHoverRef, true)}
+            onMouseLeave={() => setReviewsPause(reviewsHoverRef, false)}
+            // only keyboard focus pauses; focus left behind by a mouse click doesn't
+            onFocus={(e) => {
+              if (e.target.matches(":focus-visible")) {
+                setReviewsPause(reviewsFocusRef, true);
+              }
+            }}
+            onBlur={(e) => {
+              if (!e.currentTarget.contains(e.relatedTarget)) {
+                setReviewsPause(reviewsFocusRef, false);
+              }
+            }}
+            onTouchStart={() => (reviewsLastInteractionRef.current = Date.now())}
+          >
             <button
               className="review-nav-btn left"
               onClick={() => scrollReviews("left")}
+              aria-label="Previous reviews"
             >
               <ChevronLeft size={20} />
             </button>
             <button
               className="review-nav-btn right"
               onClick={() => scrollReviews("right")}
+              aria-label="Next reviews"
             >
               <ChevronRight size={20} />
             </button>
@@ -1232,97 +1152,36 @@ export default function Home() {
             <div className="testimonials-slider" ref={reviewsScrollRef}>
               {reviews.map((t, i) => (
                 <div key={i} className="testimonial-card-wrap">
-                  <div
-                    className="card-elevated animate-fade-in-up"
+                  <article
+                    tabIndex={0}
+                    className="home-review-card animate-fade-in-up"
                     style={{
-                      padding: "28px",
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "16px",
-                      height: "100%",
+                      "--review-accent": ["#08a57b", "#2583d8", "#f28a28", "#8e52ef"][i % 4],
                       animationDelay: `${(i % 3) * 100}ms`,
                     }}
                   >
-                    <Quote
-                      size={24}
-                      style={{
-                        color: "var(--primary-soft)",
-                        transform: "scaleX(-1)",
-                      }}
-                    />
-                    <p
-                      style={{
-                        fontSize: "14px",
-                        color: "var(--text-main)",
-                        lineHeight: 1.7,
-                        flex: 1,
-                      }}
-                    >
-                      "{t.text}"
-                    </p>
-                    <div
-                      style={{
-                        borderTop: "1px solid var(--border)",
-                        paddingTop: "16px",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "12px",
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: "40px",
-                          height: "40px",
-                          borderRadius: "50%",
-                          background:
-                            "linear-gradient(135deg, var(--primary-light), var(--primary-soft))",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontWeight: "700",
-                          color: "var(--primary-dark)",
-                          fontSize: "14px",
-                        }}
-                      >
-                        {t.name.charAt(0)}
-                      </div>
+                    <Quote className="home-review-quote" size={64} aria-hidden="true" />
+                    <div className="home-review-stars" aria-label={`${t.rating} out of 5 stars`}>
+                      {Array(5)
+                        .fill(null)
+                        .map((_, si) => (
+                          <Star
+                            key={si}
+                            size={16}
+                            fill={si < t.rating ? "#FBBF24" : "none"}
+                            color={si < t.rating ? "#FBBF24" : "#d6dde0"}
+                          />
+                        ))}
+                    </div>
+                    <p className="home-review-text">"{t.text}"</p>
+                    <div className="home-review-author">
+                      <div className="home-review-avatar">{t.name.charAt(0)}</div>
                       <div>
-                        <b
-                          style={{
-                            fontSize: "14px",
-                            color: "var(--text-main)",
-                            display: "block",
-                          }}
-                        >
-                          {t.name}
-                        </b>
-                        <span
-                          className="text-muted"
-                          style={{ fontSize: "12px" }}
-                        >
-                          {t.role}
-                        </span>
-                      </div>
-                      <div
-                        style={{
-                          marginLeft: "auto",
-                          display: "flex",
-                          gap: "2px",
-                        }}
-                      >
-                        {Array(t.rating)
-                          .fill(null)
-                          .map((_, si) => (
-                            <Star
-                              key={si}
-                              size={14}
-                              fill="#FBBF24"
-                              color="#FBBF24"
-                            />
-                          ))}
+                        <b>{t.name}</b>
+                        <span>{t.role}</span>
                       </div>
                     </div>
-                  </div>
+                  </article>
                 </div>
               ))}
             </div>
