@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { CheckCircle2, CalendarDays, Clock, MapPin, Building2, Download, Share2, Mail } from "lucide-react";
+import { CheckCircle2, CalendarDays, Clock, MapPin, Building2, Download, Share2, Mail, MessageSquare } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useBooking } from "../context/BookingContext";
 import Steps from "../components/common/Steps";
@@ -185,13 +185,30 @@ export default function Confirmed() {
             }
 
             .cf-note {
-              display: flex; align-items: center; justify-content: center; gap: 12px;
-              font-size: 14px; color: var(--muted); margin: 0 0 16px; line-height: 1.5;
-              padding: 10px 16px; border-radius: 12px;
-              background: rgba(13, 148, 136, 0.06);
+              display: flex; align-items: flex-start; gap: 14px;
+              text-align: left; margin: 0 0 16px;
+              padding: 14px 16px; border-radius: 14px;
+              background: linear-gradient(135deg, rgba(13, 148, 136, 0.08), rgba(13, 148, 136, 0.02));
+              border: 1px solid rgba(13, 148, 136, 0.16);
+              border-left: 4px solid var(--primary);
               animation: cf-rise .5s .45s ease-out both;
             }
-            .cf-note svg { flex-shrink: 0; color: var(--primary); }
+            .cf-note-icon {
+              flex-shrink: 0; width: 40px; height: 40px; border-radius: 12px;
+              display: grid; place-items: center;
+              background: var(--primary); color: #fff;
+              box-shadow: 0 6px 14px rgba(13, 148, 136, 0.28);
+            }
+            .cf-note-body { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+            .cf-note-title { font-size: 14px; font-weight: 600; color: var(--text, #0f172a); line-height: 1.3; }
+            .cf-note-text { font-size: 13px; color: var(--muted); line-height: 1.5; }
+            .cf-note-chips { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+            .cf-chip {
+              display: inline-flex; align-items: center; gap: 4px;
+              font-size: 11px; font-weight: 600; color: var(--primary);
+              padding: 3px 8px; border-radius: 999px;
+              background: rgba(13, 148, 136, 0.1);
+            }
 
             .cf-btn {
               position: relative; overflow: hidden;
@@ -214,7 +231,6 @@ export default function Confirmed() {
               .cf-title { font-size: 20px; }
               .cf-ticket { padding: 7px 20px; }
               .cf-ticket-code { font-size: 14px; }
-              .cf-note br { display: none; }
             }
             @media (prefers-reduced-motion: reduce) {
               .cf-card *, .cf-card *::before, .cf-card *::after { animation: none !important; }
@@ -281,10 +297,17 @@ export default function Confirmed() {
              </div>
           </div>
 
-          <p className="cf-note">
-            <Mail size={18} />
-            <span>We have sent the appointment details and instructions to<br />your registered email and SMS.</span>
-          </p>
+          <div className="cf-note">
+            <span className="cf-note-icon"><Mail size={20} /></span>
+            <div className="cf-note-body">
+              <strong className="cf-note-title">Confirmation sent</strong>
+              <span className="cf-note-text">Appointment details and instructions are on their way to your registered email and phone.</span>
+              <div className="cf-note-chips">
+                <span className="cf-chip"><Mail size={12} /> Email</span>
+                <span className="cf-chip"><MessageSquare size={12} /> SMS</span>
+              </div>
+            </div>
+          </div>
 
           <div style={{ display: 'flex', gap: '16px', flexDirection: 'column' }}>
             <button className="btn btn-primary cf-btn" onClick={() => go(bookingType === 'lab' ? "/orders" : "/my-appointments")}>

@@ -202,7 +202,7 @@ const categoriesFilterList = [
   { name: "Full Body", icon: <Stethoscope size={16} /> }
 ];
 
-// Picks an icon + accent colour for an order card based on keywords in the test name
+// Picks an accent colour for an order card (icon comes from LabItemIcon, same as Orders page) based on keywords in the test name
 const orderIconRules = [
   { match: /hba1c|glucose|sugar|diabet|insulin|glycosylated/, Icon: Droplets, color: "#E11D48" },
   { match: /lipid|cholesterol|triglycer|cardiac|troponin|heart|hdl|ldl/, Icon: Heart, color: "#DB2777" },
@@ -2682,7 +2682,7 @@ function toTitleCase(str) {
             <div className="lab-appointments-grid">
               {appointments.slice(0, 4).map((appt) => {
                 const isDone = ['delivered', 'completed', 'ready'].includes((appt.status || '').toLowerCase());
-                const { Icon: OrderIcon, color: iconColor } = getOrderIcon(appt.name);
+                const { color: iconColor } = getOrderIcon(appt.name);
                 return (
                   <div
                     key={appt.id}
@@ -2694,7 +2694,7 @@ function toTitleCase(str) {
                   >
                     <div className="lab-order-top">
                       <div className="lab-order-icon" style={{ '--oi-color': iconColor }}>
-                        <OrderIcon size={20} />
+                        <LabItemIcon item={{ title: appt.name }} size={20} />
                       </div>
                       <span className="lab-order-status">
                         <span className="lab-order-status-dot" />

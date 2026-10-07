@@ -1,4 +1,4 @@
-import { ChevronLeft, Building2, AlertTriangle, Activity, ChevronRight, CalendarCheck, Loader2, FileSearch, IdCard, Stethoscope, Headset, RefreshCw, Home } from "lucide-react";
+import { ChevronLeft, Building2, AlertTriangle, Activity, ChevronRight, CalendarCheck, Loader2, FileSearch, IdCard, Stethoscope, Headset, RefreshCw, Home, Lock, LogIn, FileText, Pill, ShieldCheck } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
@@ -87,11 +87,51 @@ export default function CareJourney() {
 
   if (!user) {
     return (
-      <main className="page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: 'var(--bg-app)' }}>
-        <div style={{ textAlign: 'center' }}>
-          <Activity size={48} style={{ color: 'var(--primary)', marginBottom: '16px' }} />
-          <h2 style={{ color: 'var(--text-main)' }}>Log in to view your Care Journey</h2>
-          <button onClick={() => openLoginModal("/care-journey")} className="btn hover-glow" style={{ marginTop: '16px' }}>Log In</button>
+      <main className="page" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'center', minHeight: 'auto', background: 'var(--bg-app)', padding: '40px 16px 56px' }}>
+        <div className="animate-fade-in-up" style={{ position: 'relative', overflow: 'hidden', width: '100%', maxWidth: '480px', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: '28px', boxShadow: 'var(--shadow-lg)', padding: '44px 32px 32px', textAlign: 'center' }}>
+          {/* soft top glow */}
+          <div aria-hidden="true" style={{ position: 'absolute', top: '-90px', left: '50%', transform: 'translateX(-50%)', width: '320px', height: '180px', borderRadius: '50%', background: 'var(--primary-light)', filter: 'blur(10px)', opacity: 0.9 }} />
+
+          <div style={{ position: 'relative' }}>
+            <div style={{ position: 'relative', width: '96px', height: '96px', margin: '0 auto 24px', borderRadius: '50%', background: 'var(--primary-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 0 10px color-mix(in srgb, var(--primary-light) 45%, transparent)' }}>
+              <div style={{ width: '64px', height: '64px', borderRadius: '20px', background: 'var(--bg-surface)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'var(--shadow-md)' }}>
+                <Activity size={38} strokeWidth={1.8} />
+              </div>
+              <span style={{ position: 'absolute', right: '2px', bottom: '2px', width: '30px', height: '30px', borderRadius: '50%', background: 'var(--primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '3px solid var(--bg-surface)' }}>
+                <Lock size={14} strokeWidth={2.4} />
+              </span>
+            </div>
+
+            <h2 style={{ fontSize: '24px', fontWeight: '800', color: 'var(--text-main)', margin: '0 0 10px', lineHeight: 1.25 }}>Your Care Journey awaits</h2>
+            <p style={{ fontSize: '15px', color: 'var(--text-muted)', lineHeight: 1.6, margin: '0 auto 22px', maxWidth: '380px' }}>
+              Log in to see your complete treatment history — all your hospital records in one secure place.
+            </p>
+
+            <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '28px' }}>
+              {[
+                { icon: <FileText size={14} />, label: 'Reports' },
+                { icon: <Pill size={14} />, label: 'Prescriptions' },
+                { icon: <Building2 size={14} />, label: 'Discharge summaries' },
+              ].map(f => (
+                <span key={f.label} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: '700', color: 'var(--primary-dark)', background: 'var(--bg-app)', border: '1px solid var(--border)', padding: '6px 12px', borderRadius: '999px' }}>
+                  {f.icon} {f.label}
+                </span>
+              ))}
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+              <button onClick={() => openLoginModal("/care-journey")} className="btn btn-primary hover-glow" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '12px 22px', borderRadius: '14px', fontWeight: '700' }}>
+                <LogIn size={18} /> Log In / Sign Up
+              </button>
+              <button onClick={() => navigate('/')} className="btn btn-secondary hover-glow" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '12px 22px', borderRadius: '14px', fontWeight: '700' }}>
+                <Home size={18} /> Back to Home
+              </button>
+            </div>
+
+            <p style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-muted)', margin: '24px 0 0' }}>
+              <ShieldCheck size={14} style={{ color: 'var(--primary)' }} /> Your health data is private and encrypted
+            </p>
+          </div>
         </div>
       </main>
     );
