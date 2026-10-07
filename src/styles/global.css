@@ -4990,23 +4990,26 @@ header.glass .header-secondary-nav a:focus-visible {
 }
 
 .home-how-section {
-  padding: 58px 16px;
-  background: var(--bg-surface);
-  border-bottom: 1px solid var(--border);
+  position: relative;
+  padding: 72px 16px 80px;
+  background:
+    radial-gradient(ellipse 50% 60% at 0% 0%, rgba(8, 120, 125, 0.09), transparent 70%),
+    radial-gradient(ellipse 45% 55% at 100% 100%, rgba(255, 131, 41, 0.07), transparent 70%),
+    linear-gradient(180deg, #f4fbfa 0%, #ffffff 100%);
+  border-top: 1px solid rgba(8, 120, 125, 0.08);
+  border-bottom: 1px solid rgba(8, 120, 125, 0.08);
 }
 
 .home-how-panel {
   position: relative;
   overflow: hidden;
   isolation: isolate;
-  padding: 48px 38px 54px !important;
-  border: 1px solid rgba(8, 120, 125, 0.12);
-  border-radius: 30px;
-  background:
-    radial-gradient(circle at 96% 10%, rgba(82, 221, 173, 0.22), transparent 16rem),
-    radial-gradient(circle at 4% 92%, rgba(37, 131, 216, 0.1), transparent 14rem),
-    linear-gradient(135deg, #eafaf6 0%, #f9fffd 58%, #eef8ff 100%);
-  box-shadow: 0 18px 44px rgba(5, 73, 78, 0.09);
+  overflow: visible;
+  padding: 0 24px !important;
+  border: none;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
 }
 
 /* subtle dot grid texture */
@@ -5015,7 +5018,7 @@ header.glass .header-secondary-nav a:focus-visible {
   position: absolute;
   inset: 0;
   z-index: -1;
-  background-image: radial-gradient(rgba(8, 120, 125, 0.12) 1px, transparent 1px);
+  background-image: radial-gradient(rgba(8, 120, 125, 0.08) 1px, transparent 1px);
   background-size: 22px 22px;
   -webkit-mask-image: radial-gradient(ellipse at center, #000 10%, transparent 72%);
   mask-image: radial-gradient(ellipse at center, #000 10%, transparent 72%);
@@ -5023,6 +5026,7 @@ header.glass .header-secondary-nav a:focus-visible {
 }
 
 .home-how-orb {
+  display: none;
   position: absolute;
   z-index: -1;
   border-radius: 50%;
@@ -7587,6 +7591,27 @@ header.glass .header-secondary-nav a:focus-visible {
     display: none !important;
   }
 
+  .home-alert-strip .home-alert-row {
+    padding: 10px 12px 10px 16px !important;
+    row-gap: 8px;
+  }
+
+  .home-alert-strip .container > div:first-child {
+    padding-block: 0 !important;
+  }
+
+  .home-alert-strip .home-alert-call {
+    min-height: 32px;
+    padding: 6px 14px;
+    font-size: 12px;
+    line-height: 1;
+    box-shadow: 0 4px 12px rgba(5, 52, 58, 0.18);
+  }
+
+  .home-alert-strip .ticker-wrap {
+    padding-right: 4px;
+  }
+
   .home-hero-section {
     width: calc(100% - 24px) !important;
     min-height: 390px !important;
@@ -7719,12 +7744,11 @@ header.glass .header-secondary-nav a:focus-visible {
   }
 
   .home-how-section {
-    padding: 38px 12px;
+    padding: 48px 12px 52px;
   }
 
   .home-how-panel {
-    padding: 38px 16px 36px !important;
-    border-radius: 26px;
+    padding: 0 4px !important;
   }
 
   .home-how-heading {
