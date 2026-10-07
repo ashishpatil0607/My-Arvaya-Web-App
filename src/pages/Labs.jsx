@@ -202,6 +202,27 @@ const categoriesFilterList = [
   { name: "Full Body", icon: <Stethoscope size={16} /> }
 ];
 
+// Picks an icon + accent colour for an order card based on keywords in the test name
+const orderIconRules = [
+  { match: /hba1c|glucose|sugar|diabet|insulin|glycosylated/, Icon: Droplets, color: "#E11D48" },
+  { match: /lipid|cholesterol|triglycer|cardiac|troponin|heart|hdl|ldl/, Icon: Heart, color: "#DB2777" },
+  { match: /thyroid|\btsh\b|\bt3\b|\bt4\b/, Icon: Activity, color: "#7C3AED" },
+  { match: /liver|\blft\b|bilirubin|sgot|sgpt|\balt\b|\bast\b|albumin|globulin|protein/, Icon: Beaker, color: "#D97706" },
+  { match: /kidney|\bkft\b|renal|creatinine|urea|uric|urine/, Icon: FlaskConical, color: "#0891B2" },
+  { match: /vitamin|\bb12\b|\bd3\b|\biron\b|ferritin|calcium/, Icon: Apple, color: "#16A34A" },
+  { match: /bone|joint|arthritis/, Icon: Bone, color: "#64748B" },
+  { match: /\bcbc\b|blood count|hemoglobin|haemoglobin|platelet|\besr\b/, Icon: Droplets, color: "#DC2626" },
+  { match: /pregnan|\bhcg\b|fertility|\bamh\b|prolactin/, Icon: Baby, color: "#EC4899" },
+  { match: /cancer|tumou?r|\bpsa\b|\bcea\b|\bca[- ]?125\b/, Icon: Ribbon, color: "#9333EA" },
+  { match: /covid|allergy|lung|respirat/, Icon: Wind, color: "#0EA5E9" },
+  { match: /full body|package|checkup|profile/, Icon: Stethoscope, color: "#2563EB" },
+];
+
+const getOrderIcon = (name) => {
+  const text = String(name || "").toLowerCase();
+  return orderIconRules.find((r) => r.match.test(text)) || { Icon: TestTube, color: "var(--primary)" };
+};
+
 const mockLabAppointments = [
   { id: 1, date: "June 27, 2026", status: "Upcoming", name: "Complete Blood Count", lab: "LifeCare Diagnostics", time: "10:30 AM" },
   { id: 2, date: "July 5, 2026", status: "Upcoming", name: "Thyroid Profile", lab: "MediTest Labs", time: "2:15 PM" },
@@ -2003,28 +2024,11 @@ function toTitleCase(str) {
 
         /* ── Trust & Quality strip: visual polish ── */
         .labs-page .trust-features-panel {
-          position: relative;
-          overflow: hidden;
-          padding: 22px;
-          background:
-            radial-gradient(circle at 0% 0%, rgba(52, 211, 180, 0.16), transparent 34%),
-            radial-gradient(circle at 100% 100%, rgba(56, 189, 248, 0.12), transparent 36%),
-            linear-gradient(135deg, #f1fbf8 0%, #ffffff 50%, #eef8fb 100%);
-          border: 1px solid rgba(8, 120, 125, 0.14);
-          border-radius: 26px;
-          box-shadow: 0 18px 40px -14px rgba(5, 73, 78, 0.18), inset 0 1px 0 #fff;
-        }
-
-        /* faint dot texture */
-        .labs-page .trust-features-panel::before {
-          content: "";
-          position: absolute;
-          inset: 0;
-          pointer-events: none;
-          background-image: radial-gradient(rgba(8, 123, 115, 0.09) 1px, transparent 1.2px);
-          background-size: 16px 16px;
-          -webkit-mask-image: linear-gradient(90deg, #000, transparent 30%, transparent 70%, #000);
-          mask-image: linear-gradient(90deg, #000, transparent 30%, transparent 70%, #000);
+          padding: 0;
+          background: none;
+          border: none;
+          border-radius: 0;
+          box-shadow: none;
         }
 
         .labs-page .trust-features-grid {
@@ -2116,7 +2120,7 @@ function toTitleCase(str) {
 
         @media (max-width: 420px) {
           .labs-page .trust-features-panel {
-            padding: 14px;
+            padding: 0;
           }
         }
 
@@ -2213,8 +2217,23 @@ function toTitleCase(str) {
         }
 
         .lab-order-card {
+          --oc-color: var(--primary);
+          --oc-bg: var(--primary-light);
           position: relative;
           overflow: hidden;
+          display: flex;
+          flex-direction: column;
+          padding: 18px 18px 16px;
+          background:
+            radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--oc-color) 9%, transparent), transparent 45%),
+            #ffffff;
+          cursor: pointer;
+          transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease, border-color 0.3s ease;
+        }
+
+        .lab-order-card.is-done {
+          --oc-color: #16a34a;
+          --oc-bg: #dcfce7;
         }
 
         .lab-order-card::before {
@@ -2223,6 +2242,128 @@ function toTitleCase(str) {
           inset: 0 0 auto;
           height: 4px;
           background: linear-gradient(90deg, #0ca695, #2c82e0);
+        }
+
+        .lab-order-card:hover,
+        .lab-order-card:focus-visible {
+          transform: translateY(-4px);
+          border-color: color-mix(in srgb, var(--oc-color) 30%, transparent) !important;
+          box-shadow: 0 18px 34px -10px rgba(5, 73, 78, 0.2) !important;
+          outline: none;
+        }
+
+        .lab-order-top {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 8px;
+          margin-bottom: 14px;
+        }
+
+        .lab-order-icon {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 42px;
+          height: 42px;
+          border-radius: 13px;
+          color: #fff;
+          background: linear-gradient(145deg, color-mix(in srgb, var(--oi-color) 70%, #fff), var(--oi-color));
+          box-shadow:
+            0 0 0 4px color-mix(in srgb, var(--oi-color) 14%, #fff),
+            0 8px 16px color-mix(in srgb, var(--oi-color) 26%, transparent);
+          flex-shrink: 0;
+        }
+
+        .lab-order-status {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 4px 10px;
+          border-radius: 999px;
+          font-size: 11px;
+          font-weight: 700;
+          text-transform: capitalize;
+          color: var(--oc-color);
+          background: var(--oc-bg);
+          border: 1px solid color-mix(in srgb, var(--oc-color) 18%, transparent);
+        }
+
+        .lab-order-status-dot {
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          background: currentColor;
+          box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 20%, transparent);
+        }
+
+        .lab-order-name {
+          font-size: 15.5px;
+          font-weight: 800;
+          color: var(--text-main);
+          line-height: 1.35;
+          letter-spacing: -0.01em;
+          margin-bottom: 10px;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+          min-height: calc(15.5px * 1.35 * 2);
+        }
+
+        .lab-order-when {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 6px;
+          margin-bottom: 14px;
+        }
+
+        .lab-order-when span {
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+          padding: 4px 9px;
+          border-radius: 8px;
+          font-size: 11.5px;
+          font-weight: 600;
+          color: var(--text-main);
+          background: #f3f7f8;
+        }
+
+        .lab-order-when svg {
+          color: var(--primary);
+        }
+
+        .lab-order-footer {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          margin-top: auto;
+          padding-top: 12px;
+          border-top: 1px dashed rgba(8, 120, 125, 0.18);
+        }
+
+        .lab-order-lab {
+          display: flex;
+          align-items: center;
+          gap: 5px;
+          font-size: 12.5px;
+          color: var(--text-muted);
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .lab-order-lab svg {
+          color: var(--primary);
+          flex-shrink: 0;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .lab-order-card {
+            transition: none;
+          }
         }
 
         @media (max-width: 1024px) {
@@ -2539,46 +2680,43 @@ function toTitleCase(str) {
 
           {appointments.length > 0 ? (
             <div className="lab-appointments-grid">
-              {appointments.slice(0, 4).map((appt) => (
-                <div 
-                  key={appt.id} 
-                  className="lab-order-card"
-                  style={{
-                    background: '#ffffff',
-                    borderRadius: '16px',
-                    border: '1px solid var(--border)',
-                    padding: '18px',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
-                  }}
-                >
-                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px', gap: '8px' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                      <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-muted)' }}>{appt.date}</span>
-                      {appt.time && <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{appt.time}</span>}
+              {appointments.slice(0, 4).map((appt) => {
+                const isDone = ['delivered', 'completed', 'ready'].includes((appt.status || '').toLowerCase());
+                const { Icon: OrderIcon, color: iconColor } = getOrderIcon(appt.name);
+                return (
+                  <div
+                    key={appt.id}
+                    className={`lab-order-card${isDone ? ' is-done' : ''}`}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => go('/orders')}
+                    onKeyDown={(e) => { if (e.key === 'Enter') go('/orders'); }}
+                  >
+                    <div className="lab-order-top">
+                      <div className="lab-order-icon" style={{ '--oi-color': iconColor }}>
+                        <OrderIcon size={20} />
+                      </div>
+                      <span className="lab-order-status">
+                        <span className="lab-order-status-dot" />
+                        {appt.status}
+                      </span>
                     </div>
-                    <span style={{
-                      padding: '3px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: '700',
-                      background: (appt.status || '').toLowerCase() === 'delivered' || (appt.status || '').toLowerCase() === 'completed' || (appt.status || '').toLowerCase() === 'ready' ? '#dcfce7' : 'var(--primary-light)',
-                      color: (appt.status || '').toLowerCase() === 'delivered' || (appt.status || '').toLowerCase() === 'completed' || (appt.status || '').toLowerCase() === 'ready' ? '#16a34a' : 'var(--primary-dark)',
-                      textTransform: 'capitalize',
-                      flexShrink: 0
-                    }}>
-                      {appt.status}
-                    </span>
+
+                    <h4 className="lab-order-name">
+                      {typeof appt.name === 'string' && appt.name.length > 60 ? appt.name.substring(0, 60) + '...' : appt.name}
+                    </h4>
+
+                    <div className="lab-order-when">
+                      <span><CalendarDays size={13} /> {appt.date}</span>
+                      {appt.time && <span><Clock size={13} /> {appt.time}</span>}
+                    </div>
+
+                    <div className="lab-order-footer">
+                      <span className="lab-order-lab"><MapPin size={13} /> {appt.lab}</span>
+                    </div>
                   </div>
-                  <h4 style={{ fontSize: '15px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '8px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: '1.4' }}>
-                    {typeof appt.name === 'string' && appt.name.length > 60 ? appt.name.substring(0, 60) + '...' : appt.name}
-                  </h4>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '12.5px', color: 'var(--text-muted)' }}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <MapPin size={14} color="var(--primary)" /> {appt.lab}
-                    </span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontFamily: 'monospace', fontSize: '11px' }}>
-                      ID: {appt.id}
-                    </span>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <div className="lab-order-empty" style={{
