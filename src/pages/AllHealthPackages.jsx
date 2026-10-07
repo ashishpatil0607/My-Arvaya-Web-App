@@ -287,6 +287,94 @@ export default function AllHealthPackages() {
           transform: translateY(-1px);
         }
 
+        /* ── Match Labs page "View Details" button ── */
+        .all-pkg-card-btn {
+          position: relative;
+          overflow: hidden;
+          width: 100%;
+          min-height: 35px;
+          padding: 10px 14px;
+          justify-content: center;
+          gap: 6px;
+          font-size: 12.5px;
+          box-shadow: 0 8px 18px rgba(8, 123, 115, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .all-pkg-card-btn::after {
+          content: "";
+          position: absolute;
+          top: 0;
+          bottom: 0;
+          left: -60%;
+          width: 40%;
+          background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.28), transparent);
+          transform: skewX(-20deg);
+          transition: left 0.6s ease;
+          pointer-events: none;
+        }
+
+        .all-pkg-card-btn svg {
+          transition: transform 0.2s ease;
+        }
+
+        .all-pkg-card-btn:hover {
+          box-shadow: 0 12px 22px rgba(8, 123, 115, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+
+        .all-pkg-card-btn:hover::after {
+          left: 130%;
+        }
+
+        .all-pkg-card-btn:hover svg {
+          transform: translateX(3px);
+        }
+
+        /* Price beside "View Details" (same as Home / Labs) */
+        .all-pkg-card-footer {
+          gap: 10px;
+        }
+
+        .all-pkg-card-starting {
+          display: flex;
+          flex: 1;
+          flex-direction: column;
+          gap: 2px;
+          margin-right: auto;
+          min-width: 0;
+          line-height: 1.1;
+          text-align: left;
+        }
+
+        .all-pkg-card-starting small {
+          color: var(--text-muted);
+          font-size: 10px;
+          font-weight: 600;
+          letter-spacing: 0.04em;
+          text-transform: uppercase;
+        }
+
+        .all-pkg-card-starting strong {
+          color: #12333a;
+          font-family: var(--font-display);
+          font-size: 17px;
+          font-weight: 800;
+          letter-spacing: -0.02em;
+          white-space: nowrap;
+        }
+
+        .all-pkg-card-footer .all-pkg-card-btn {
+          width: auto;
+          flex-shrink: 0;
+          padding: 9px 14px;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .all-pkg-card-btn::after {
+            transition: none;
+          }
+        }
+
         .all-pkg-chip {
           display: inline-flex;
           align-items: center;
@@ -452,8 +540,12 @@ export default function AllHealthPackages() {
                     <ShieldCheck size={12} /> {pkg.tests}
                   </div>
                   <div className="all-pkg-card-footer">
+                    <div className="all-pkg-card-starting">
+                      <small>Starting at</small>
+                      <strong>₹{Number(pkg.price).toLocaleString('en-IN')}</strong>
+                    </div>
                     <button className="all-pkg-card-btn" onClick={() => go(`/labs/package-details/${encodeURIComponent(pkg.id)}`, { state: { package: pkg } })}>
-                      View Details <ArrowRight size={13} />
+                      View Details <ArrowRight size={14} />
                     </button>
                   </div>
                 </div>

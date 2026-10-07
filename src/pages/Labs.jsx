@@ -12,6 +12,7 @@ import { useAuth } from "../context/AuthContext";
 import { packages as defaultPackages } from "../mocks/data";
 import SelectSlotUI from "../components/doctors/SelectSlotUI";
 import Modal from "../components/common/Modal";
+import LabItemIcon from "../components/labs/LabItemIcon";
 
 /* ─── Mock Individual Lab Tests Data ─── */
 const mockLabTests = [
@@ -200,23 +201,6 @@ const categoriesFilterList = [
   { name: "Vitamins", icon: <Apple size={16} /> },
   { name: "Full Body", icon: <Stethoscope size={16} /> }
 ];
-
-function LabItemIcon({ item, size = 38 }) {
-  const value = `${item?.title || ""} ${item?.category || ""} ${item?.department || ""}`.toLowerCase();
-  let Icon = FlaskConical;
-
-  if (value.includes("diabetes") || value.includes("sugar") || value.includes("hba1c")) Icon = Droplets;
-  else if (value.includes("liver") || value.includes("bilirubin")) Icon = Beaker;
-  else if (value.includes("heart") || value.includes("cardiac") || value.includes("lipid")) Icon = Heart;
-  else if (value.includes("thyroid") || value.includes("tsh")) Icon = Activity;
-  else if (value.includes("blood") || value.includes("cbc") || value.includes("hematology")) Icon = TestTube;
-  else if (value.includes("vitamin")) Icon = Apple;
-  else if (value.includes("bone") || value.includes("ortho") || value.includes("joint")) Icon = Bone;
-  else if (value.includes("paediatric") || value.includes("pediatric") || value.includes("child")) Icon = Baby;
-  else if (value.includes("full body") || value.includes("preventive")) Icon = Stethoscope;
-
-  return <Icon size={size} strokeWidth={1.75} aria-hidden="true" />;
-}
 
 const mockLabAppointments = [
   { id: 1, date: "June 27, 2026", status: "Upcoming", name: "Complete Blood Count", lab: "LifeCare Diagnostics", time: "10:30 AM" },
@@ -1320,17 +1304,76 @@ function toTitleCase(str) {
           overflow: hidden;
           color: #fff;
           background:
-            linear-gradient(120deg, rgba(255, 255, 255, 0.08), transparent 45%),
-            linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 62%, #133a41 100%);
-          border: 1px solid rgba(255, 255, 255, 0.15);
+            radial-gradient(circle at 78% 50%, rgba(94, 234, 212, 0.28), transparent 32%),
+            radial-gradient(circle at 0% 0%, rgba(255, 255, 255, 0.16), transparent 38%),
+            radial-gradient(circle at 45% 120%, rgba(56, 189, 248, 0.18), transparent 40%),
+            linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 58%, #0f2f36 100%);
+          border: 1px solid rgba(255, 255, 255, 0.18);
           border-radius: 26px;
-          box-shadow: 0 20px 44px rgba(31, 79, 87, 0.28);
+          box-shadow:
+            0 24px 50px -12px rgba(15, 60, 66, 0.45),
+            0 8px 18px rgba(31, 79, 87, 0.18),
+            inset 0 1px 0 rgba(255, 255, 255, 0.22);
+          isolation: isolate;
+        }
+
+        /* Subtle dot texture */
+        .lab-hero-banner::before {
+          content: "";
+          position: absolute;
+          inset: 0;
+          z-index: 0;
+          pointer-events: none;
+          background-image: radial-gradient(rgba(255, 255, 255, 0.14) 1px, transparent 1.2px);
+          background-size: 18px 18px;
+          -webkit-mask-image: linear-gradient(100deg, transparent 35%, #000 70%, transparent 100%);
+          mask-image: linear-gradient(100deg, transparent 35%, #000 70%, transparent 100%);
+        }
+
+        /* Soft moving sheen */
+        .lab-hero-banner::after {
+          content: "";
+          position: absolute;
+          top: 0;
+          bottom: 0;
+          left: -40%;
+          width: 35%;
+          z-index: 0;
+          pointer-events: none;
+          background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.09), transparent);
+          transform: skewX(-18deg);
+          animation: labHeroSheen 7s ease-in-out infinite;
+        }
+
+        @keyframes labHeroSheen {
+          0%, 55% { left: -40%; }
+          100% { left: 130%; }
+        }
+
+        @keyframes labHeroFloat {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-6px); }
+        }
+
+        @keyframes labHeroIconFloat {
+          0%, 100% { transform: rotate(-6deg) translateY(0); }
+          50% { transform: rotate(-3deg) translateY(-4px); }
         }
 
         .lab-hero-content,
         .lab-hero-img-col {
           position: relative;
           z-index: 1;
+        }
+
+        .lab-hero-icon {
+          color: var(--primary-dark);
+          background: linear-gradient(145deg, #ffffff 0%, #e6fbf5 100%);
+          box-shadow:
+            0 14px 28px rgba(0, 40, 37, 0.32),
+            0 0 0 5px rgba(255, 255, 255, 0.12),
+            inset 0 -2px 0 rgba(13, 92, 99, 0.08);
+          animation: labHeroIconFloat 5s ease-in-out infinite;
         }
 
         .lab-hero-content {
@@ -1341,9 +1384,10 @@ function toTitleCase(str) {
           margin-bottom: 10px;
           padding: 6px 11px;
           color: #d8fff3;
-          background: rgba(255, 255, 255, 0.1);
-          border: 1px solid rgba(255, 255, 255, 0.24);
+          background: linear-gradient(90deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.06));
+          border: 1px solid rgba(255, 255, 255, 0.26);
           border-radius: 999px;
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 4px 12px rgba(0, 40, 37, 0.12);
           font-size: 10px;
           font-weight: 800;
           letter-spacing: 0.045em;
@@ -1364,6 +1408,12 @@ function toTitleCase(str) {
           font-size: clamp(1.4rem, 2.2vw, 1.85rem);
           line-height: 1.18;
           letter-spacing: -0.03em;
+          background: linear-gradient(90deg, #ffffff 0%, #ffffff 55%, #b8f5e4 100%);
+          -webkit-background-clip: text;
+          background-clip: text;
+          -webkit-text-fill-color: transparent;
+          text-shadow: none;
+          filter: drop-shadow(0 2px 8px rgba(0, 30, 28, 0.25));
         }
 
         .lab-hero-subtitle {
@@ -1397,15 +1447,22 @@ function toTitleCase(str) {
         }
 
         .lab-hero-badge {
-          padding: 6px 9px;
+          padding: 6px 10px;
           color: #fff;
-          background: rgba(18, 51, 58, 0.5);
-          border: 1px solid rgba(255, 255, 255, 0.12);
+          background: linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(18, 51, 58, 0.45));
+          border: 1px solid rgba(255, 255, 255, 0.16);
           border-radius: 10px;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 6px 14px rgba(0, 30, 28, 0.16);
           font-size: 10px;
           backdrop-filter: blur(10px);
           -webkit-backdrop-filter: blur(10px);
+          transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+        }
+
+        .lab-hero-badge:hover {
+          transform: translateY(-2px);
+          background: linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(18, 51, 58, 0.4));
+          border-color: rgba(255, 255, 255, 0.3);
         }
 
         .lab-hero-img-wrap {
@@ -1416,6 +1473,21 @@ function toTitleCase(str) {
           justify-content: center;
         }
 
+        /* Glow halo behind illustration */
+        .lab-hero-img-wrap::before {
+          content: "";
+          position: absolute;
+          left: 50%;
+          top: 55%;
+          width: 170px;
+          height: 170px;
+          transform: translate(-50%, -50%);
+          border-radius: 50%;
+          background: radial-gradient(circle, rgba(167, 243, 208, 0.45) 0%, rgba(94, 234, 212, 0.15) 45%, transparent 70%);
+          filter: blur(6px);
+          z-index: -1;
+        }
+
         .lab-hero-img-photo {
           display: block;
           width: auto;
@@ -1423,6 +1495,8 @@ function toTitleCase(str) {
           max-height: 150px;
           max-width: 100%;
           object-fit: contain;
+          filter: drop-shadow(0 14px 18px rgba(0, 30, 28, 0.35));
+          animation: labHeroFloat 5.5s ease-in-out infinite;
         }
 
         .lab-hero-stat-badge {
@@ -1438,11 +1512,20 @@ function toTitleCase(str) {
           border-radius: 9px;
           font-size: 9px;
           font-weight: 800;
-          box-shadow: 0 9px 20px rgba(0, 53, 49, 0.18);
+          background: linear-gradient(180deg, #ffffff, #f1fbf8);
+          box-shadow: 0 10px 22px rgba(0, 40, 37, 0.28), 0 0 0 3px rgba(255, 255, 255, 0.18);
         }
 
         .lab-hero-stat-badge svg {
           color: #08a579;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .lab-hero-banner::after,
+          .lab-hero-icon,
+          .lab-hero-img-photo {
+            animation: none;
+          }
         }
 
         .lab-category-strip {
@@ -1685,6 +1768,434 @@ function toTitleCase(str) {
         .pkg-card-btn:hover {
           background: var(--lab-accent);
           filter: brightness(0.94) saturate(1.08);
+        }
+
+        /* ── Lab Tests & Health Packages: visual polish ── */
+        .lab-section-title {
+          position: relative;
+          padding-bottom: 8px;
+        }
+
+        .lab-section-title::after {
+          content: "";
+          position: absolute;
+          left: 0;
+          bottom: 0;
+          width: 38px;
+          height: 4px;
+          border-radius: 999px;
+          background: linear-gradient(90deg, var(--primary), #34d3b4);
+        }
+
+        .lab-view-all-btn {
+          background: linear-gradient(180deg, #ffffff, var(--primary-light));
+          box-shadow: 0 4px 12px rgba(5, 73, 78, 0.08), inset 0 1px 0 #fff;
+          transition: color 0.2s, background 0.2s, box-shadow 0.2s, transform 0.2s;
+        }
+
+        .lab-view-all-btn svg {
+          transition: transform 0.2s ease;
+        }
+
+        .lab-view-all-btn:hover {
+          background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+          box-shadow: 0 10px 20px rgba(5, 73, 78, 0.22);
+        }
+
+        .lab-view-all-btn:hover svg {
+          transform: translateX(3px);
+        }
+
+        .lab-scroll-arrow {
+          background: rgba(255, 255, 255, 0.92);
+          backdrop-filter: blur(8px);
+          -webkit-backdrop-filter: blur(8px);
+          border: 1px solid rgba(8, 120, 125, 0.14);
+          box-shadow: 0 10px 24px rgba(5, 73, 78, 0.16), 0 0 0 4px rgba(255, 255, 255, 0.6);
+        }
+
+        .lab-scroll-arrow:hover {
+          background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+          border-color: transparent;
+          box-shadow: 0 12px 26px rgba(5, 73, 78, 0.3), 0 0 0 4px rgba(8, 123, 115, 0.12);
+        }
+
+        .lab-card,
+        .pkg-card {
+          background: linear-gradient(180deg, #ffffff 60%, #fbfefd 100%);
+          transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease, border-color 0.3s ease;
+        }
+
+        .lab-card::before,
+        .pkg-card::before {
+          height: 4px;
+          background: linear-gradient(90deg, var(--lab-accent), #2bc4a6, var(--lab-accent));
+          background-size: 200% 100%;
+          transition: background-position 0.6s ease;
+        }
+
+        .lab-card:hover,
+        .pkg-card:hover {
+          transform: translateY(-6px);
+          border-color: rgba(8, 120, 125, 0.32);
+          box-shadow: 0 22px 40px -10px rgba(5, 73, 78, 0.22), 0 6px 14px rgba(5, 73, 78, 0.06);
+        }
+
+        .lab-card:hover::before,
+        .pkg-card:hover::before {
+          background-position: 100% 0;
+        }
+
+        .lab-card .lab-card-img-container,
+        .pkg-card .pkg-card-img-container {
+          position: relative;
+          overflow: hidden;
+          background:
+            radial-gradient(circle at 50% 78%, rgba(255, 255, 255, 0.95) 0%, transparent 42%),
+            linear-gradient(150deg, #f4fbf9 0%, #e3f5f1 60%, #d7efea 100%);
+        }
+
+        /* Decorative rings behind the icon */
+        .lab-card .lab-card-img-container::before,
+        .lab-card .lab-card-img-container::after,
+        .pkg-card .pkg-card-img-container::before,
+        .pkg-card .pkg-card-img-container::after {
+          content: "";
+          position: absolute;
+          border-radius: 50%;
+          pointer-events: none;
+          z-index: 0;
+        }
+
+        .lab-card .lab-card-img-container::before,
+        .pkg-card .pkg-card-img-container::before {
+          width: 150px;
+          height: 150px;
+          right: -55px;
+          top: -60px;
+          border: 1px solid rgba(8, 123, 115, 0.12);
+          background: radial-gradient(circle, rgba(52, 211, 180, 0.12), transparent 70%);
+        }
+
+        .lab-card .lab-card-img-container::after,
+        .pkg-card .pkg-card-img-container::after {
+          width: 90px;
+          height: 90px;
+          left: -35px;
+          bottom: -45px;
+          border: 1px solid rgba(8, 123, 115, 0.1);
+        }
+
+        .lab-card .lab-card-visual,
+        .pkg-card .lab-card-visual {
+          background: linear-gradient(160deg, #ffffff 0%, #f2fbf8 100%);
+          border: 1px solid rgba(255, 255, 255, 1);
+          box-shadow:
+            0 12px 24px rgba(5, 73, 78, 0.13),
+            0 0 0 6px rgba(255, 255, 255, 0.45),
+            inset 0 -3px 0 rgba(8, 123, 115, 0.06);
+          transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s ease;
+        }
+
+        .lab-card:hover .lab-card-visual,
+        .pkg-card:hover .lab-card-visual {
+          transform: translateY(-3px) scale(1.06) rotate(-3deg);
+          box-shadow:
+            0 16px 30px rgba(5, 73, 78, 0.18),
+            0 0 0 7px rgba(255, 255, 255, 0.6),
+            inset 0 -3px 0 rgba(8, 123, 115, 0.06);
+        }
+
+        .lab-card .lab-card-tag,
+        .pkg-card .pkg-card-badge {
+          background: rgba(255, 255, 255, 0.85);
+          backdrop-filter: blur(8px);
+          -webkit-backdrop-filter: blur(8px);
+          box-shadow: 0 6px 14px rgba(5, 73, 78, 0.08), inset 0 1px 0 #fff;
+        }
+
+        .lab-card .lab-card-title,
+        .pkg-card .pkg-card-title {
+          transition: color 0.2s ease;
+        }
+
+        .lab-card:hover .lab-card-title,
+        .pkg-card:hover .pkg-card-title {
+          color: var(--lab-accent);
+        }
+
+        .lab-card .lab-card-sub,
+        .pkg-card .pkg-card-tests-badge {
+          padding: 4px 10px;
+          background: linear-gradient(90deg, var(--lab-soft), #f2faf8);
+          border: 1px solid color-mix(in srgb, var(--lab-accent) 14%, transparent);
+        }
+
+        .lab-card .lab-card-btn,
+        .pkg-card .pkg-card-btn {
+          position: relative;
+          overflow: hidden;
+          background: linear-gradient(135deg, #0b8f84 0%, var(--lab-accent) 50%, #0a5a5c 100%);
+          box-shadow: 0 8px 18px color-mix(in srgb, var(--lab-accent) 28%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+          transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+        }
+
+        .lab-card .lab-card-btn::after,
+        .pkg-card .pkg-card-btn::after {
+          content: "";
+          position: absolute;
+          top: 0;
+          bottom: 0;
+          left: -60%;
+          width: 40%;
+          background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.28), transparent);
+          transform: skewX(-20deg);
+          transition: left 0.6s ease;
+          pointer-events: none;
+        }
+
+        .lab-card .lab-card-btn svg,
+        .pkg-card .pkg-card-btn svg {
+          transition: transform 0.2s ease;
+        }
+
+        .lab-card .lab-card-btn:hover,
+        .pkg-card .pkg-card-btn:hover {
+          background: linear-gradient(135deg, #0b8f84 0%, var(--lab-accent) 50%, #0a5a5c 100%);
+          transform: translateY(-1px);
+          box-shadow: 0 12px 22px color-mix(in srgb, var(--lab-accent) 34%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+
+        .lab-card .lab-card-btn:hover::after,
+        .pkg-card .pkg-card-btn:hover::after {
+          left: 130%;
+        }
+
+        .lab-card .lab-card-btn:hover svg,
+        .pkg-card .pkg-card-btn:hover svg {
+          transform: translateX(3px);
+        }
+
+        /* Packages: full-bleed photo (same as Home) + badge dot */
+        .pkg-card .pkg-card-img-container {
+          display: block;
+          height: 150px;
+          padding: 0;
+        }
+
+        .pkg-card .pkg-card-img-container::before,
+        .pkg-card .pkg-card-img-container::after {
+          display: none;
+        }
+
+        .pkg-card .pkg-card-img {
+          display: block;
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .pkg-card:hover .pkg-card-img {
+          transform: scale(1.05);
+        }
+
+        /* ── Trust & Quality strip: visual polish ── */
+        .labs-page .trust-features-panel {
+          position: relative;
+          overflow: hidden;
+          padding: 22px;
+          background:
+            radial-gradient(circle at 0% 0%, rgba(52, 211, 180, 0.16), transparent 34%),
+            radial-gradient(circle at 100% 100%, rgba(56, 189, 248, 0.12), transparent 36%),
+            linear-gradient(135deg, #f1fbf8 0%, #ffffff 50%, #eef8fb 100%);
+          border: 1px solid rgba(8, 120, 125, 0.14);
+          border-radius: 26px;
+          box-shadow: 0 18px 40px -14px rgba(5, 73, 78, 0.18), inset 0 1px 0 #fff;
+        }
+
+        /* faint dot texture */
+        .labs-page .trust-features-panel::before {
+          content: "";
+          position: absolute;
+          inset: 0;
+          pointer-events: none;
+          background-image: radial-gradient(rgba(8, 123, 115, 0.09) 1px, transparent 1.2px);
+          background-size: 16px 16px;
+          -webkit-mask-image: linear-gradient(90deg, #000, transparent 30%, transparent 70%, #000);
+          mask-image: linear-gradient(90deg, #000, transparent 30%, transparent 70%, #000);
+        }
+
+        .labs-page .trust-features-grid {
+          position: relative;
+          z-index: 1;
+        }
+
+        .labs-page .trust-feature-item {
+          position: relative;
+          overflow: hidden;
+          gap: 15px;
+          padding: 18px 16px 20px;
+          background: linear-gradient(135deg, color-mix(in srgb, var(--tf-bg) 45%, #fff) 0%, #fff 55%);
+          border: 1px solid color-mix(in srgb, var(--tf-color) 14%, transparent);
+          border-radius: 18px;
+          box-shadow: 0 6px 18px rgba(5, 73, 78, 0.05);
+          transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease, border-color 0.3s ease;
+        }
+
+        /* soft colour glow in the corner */
+        .labs-page .trust-feature-item::before {
+          content: "";
+          position: absolute;
+          right: -30px;
+          top: -30px;
+          width: 90px;
+          height: 90px;
+          border-radius: 50%;
+          background: radial-gradient(circle, color-mix(in srgb, var(--tf-color) 14%, transparent), transparent 70%);
+          pointer-events: none;
+          transition: transform 0.4s ease;
+        }
+
+        /* accent line along the bottom */
+        .labs-page .trust-feature-item::after {
+          content: "";
+          position: absolute;
+          left: 16px;
+          bottom: 0;
+          width: 30px;
+          height: 3px;
+          background: var(--tf-color);
+          border-radius: 999px 999px 0 0;
+          transition: width 0.35s ease;
+        }
+
+        .labs-page .trust-feature-item:hover {
+          transform: translateY(-4px);
+          border-color: color-mix(in srgb, var(--tf-color) 32%, transparent);
+          box-shadow: 0 16px 30px color-mix(in srgb, var(--tf-color) 18%, transparent);
+        }
+
+        .labs-page .trust-feature-item:hover::before {
+          transform: scale(1.5);
+        }
+
+        .labs-page .trust-feature-item:hover::after {
+          width: calc(100% - 32px);
+        }
+
+        .labs-page .trust-feature-icon {
+          position: relative;
+          width: 50px;
+          height: 50px;
+          border-radius: 15px;
+          color: #fff !important;
+          background: linear-gradient(145deg, color-mix(in srgb, var(--tf-color) 68%, #fff), var(--tf-color)) !important;
+          box-shadow:
+            0 0 0 5px var(--tf-bg),
+            0 10px 20px color-mix(in srgb, var(--tf-color) 28%, transparent);
+          transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .labs-page .trust-feature-item:hover .trust-feature-icon {
+          transform: rotate(-6deg) scale(1.06);
+        }
+
+        .labs-page .trust-feature-item h4 {
+          margin-bottom: 3px;
+          font-family: var(--font-display);
+          font-size: 15px;
+          letter-spacing: -0.01em;
+        }
+
+        .labs-page .trust-feature-item p {
+          font-size: 12px;
+          line-height: 1.4;
+        }
+
+        @media (max-width: 420px) {
+          .labs-page .trust-features-panel {
+            padding: 14px;
+          }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .labs-page .trust-feature-item,
+          .labs-page .trust-feature-item::before,
+          .labs-page .trust-feature-item::after,
+          .labs-page .trust-feature-icon {
+            transition: none;
+          }
+        }
+
+        /* Packages: price beside "View Details" (same as Home) */
+        .pkg-card .lab-card-footer {
+          gap: 10px;
+        }
+
+        .pkg-card-price {
+          display: flex;
+          flex: 1;
+          flex-direction: column;
+          gap: 2px;
+          margin-right: auto;
+          min-width: 0;
+          line-height: 1.1;
+          text-align: left;
+        }
+
+        .pkg-card-price small {
+          color: var(--text-muted);
+          font-size: 10px;
+          font-weight: 600;
+          letter-spacing: 0.04em;
+          text-transform: uppercase;
+        }
+
+        .pkg-card-price strong {
+          color: #12333a;
+          font-family: var(--font-display);
+          font-size: 17px;
+          font-weight: 800;
+          letter-spacing: -0.02em;
+          white-space: nowrap;
+        }
+
+        .pkg-card .lab-card-footer .pkg-card-btn {
+          width: auto;
+          flex-shrink: 0;
+          padding: 9px 14px;
+        }
+
+        @media (max-width: 640px) {
+          .pkg-card-price strong {
+            font-size: 15px;
+          }
+
+          .pkg-card .lab-card-footer .pkg-card-btn {
+            padding: 8px 11px;
+            font-size: 11.5px;
+          }
+        }
+
+        .pkg-card .pkg-card-badge::before {
+          content: "";
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          background: #2bc4a6;
+          box-shadow: 0 0 0 3px rgba(43, 196, 166, 0.18);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .lab-card,
+          .pkg-card,
+          .lab-card .lab-card-visual,
+          .pkg-card .pkg-card-img,
+          .lab-card .lab-card-btn::after,
+          .pkg-card .pkg-card-btn::after {
+            transition: none;
+          }
         }
 
         .lab-grid-view,
@@ -1956,7 +2467,7 @@ function toTitleCase(str) {
               {filteredPackages.map((pkg, index) => (
                 <div className={`pkg-card lab-theme-${(index + 2) % 6}`} key={pkg.id} style={{ width: '100%' }}>
                   <div className="pkg-card-img-container">
-                    <div className="lab-card-visual package"><LabItemIcon item={pkg} size={45} /></div>
+                    <img src={pkg.img} alt={pkg.title} className="pkg-card-img" />
                     {pkg.badge && <div className="pkg-card-badge">{pkg.badge}</div>}
                   </div>
                   <div className="pkg-card-body">
@@ -1964,9 +2475,15 @@ function toTitleCase(str) {
                     <div className="pkg-card-tests-badge">
                       <ShieldCheck size={12} /> {pkg.tests}
                     </div>
-                    <button className="pkg-card-btn" onClick={() => go(`/labs/package-details/${encodeURIComponent(pkg.id)}`, { state: { package: pkg } })}>
-                      View Details <ArrowRight size={14} />
-                    </button>
+                    <div className="lab-card-footer">
+                      <div className="pkg-card-price">
+                        <small>Starting at</small>
+                        <strong>₹{Number(pkg.price).toLocaleString('en-IN')}</strong>
+                      </div>
+                      <button className="pkg-card-btn" onClick={() => go(`/labs/package-details/${encodeURIComponent(pkg.id)}`, { state: { package: pkg } })}>
+                        View Details <ArrowRight size={14} />
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -1981,7 +2498,7 @@ function toTitleCase(str) {
                 {filteredPackages.map((pkg, index) => (
                   <div className={`pkg-card lab-theme-${(index + 2) % 6}`} key={pkg.id}>
                     <div className="pkg-card-img-container">
-                      <div className="lab-card-visual package"><LabItemIcon item={pkg} size={45} /></div>
+                      <img src={pkg.img} alt={pkg.title} className="pkg-card-img" />
                       {pkg.badge && <div className="pkg-card-badge">{pkg.badge}</div>}
                     </div>
                     <div className="pkg-card-body">
@@ -1989,9 +2506,15 @@ function toTitleCase(str) {
                       <div className="pkg-card-tests-badge">
                         <ShieldCheck size={12} /> {pkg.tests}
                       </div>
-                      <button className="pkg-card-btn" onClick={() => go(`/labs/package-details/${encodeURIComponent(pkg.id)}`, { state: { package: pkg } })}>
-                        View Details <ArrowRight size={14} />
-                      </button>
+                      <div className="lab-card-footer">
+                        <div className="pkg-card-price">
+                          <small>Starting at</small>
+                          <strong>₹{Number(pkg.price).toLocaleString('en-IN')}</strong>
+                        </div>
+                        <button className="pkg-card-btn" onClick={() => go(`/labs/package-details/${encodeURIComponent(pkg.id)}`, { state: { package: pkg } })}>
+                          View Details <ArrowRight size={14} />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -2092,7 +2615,7 @@ function toTitleCase(str) {
               { icon: <Microscope size={26} />, title: "Home Sample Collection", sub: "Safe & hygienic doorstep phlebotomist", color: "var(--accent)", bg: "#FEF0E2" },
               { icon: <Stethoscope size={26} />, title: "Doctor Verified", sub: "Reviewed by expert clinical pathologists", color: "#DB2777", bg: "#FCE7F3" },
             ].map((feature, i) => (
-              <div key={i} className="trust-feature-item">
+              <div key={i} className="trust-feature-item" style={{ "--tf-color": feature.color, "--tf-bg": feature.bg }}>
                 <div className="trust-feature-icon" style={{ background: feature.bg, color: feature.color }}>
                   {feature.icon}
                 </div>

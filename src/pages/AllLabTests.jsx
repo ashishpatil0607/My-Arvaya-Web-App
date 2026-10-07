@@ -9,6 +9,7 @@ import { useBooking } from "../context/BookingContext";
 import { useAuth } from "../context/AuthContext";
 import SelectSlotUI from "../components/doctors/SelectSlotUI";
 import Modal from "../components/common/Modal";
+import LabItemIcon from "../components/labs/LabItemIcon";
 
 function toTitleCase(str) {
   if (!str) return "";
@@ -334,22 +335,36 @@ export default function AllLabTests() {
         }
 
         .all-tests-card-img-container {
-          height: 130px;
+          height: 146px;
           width: 100%;
+          display: grid;
+          place-items: end center;
+          padding: 47px 14px 14px;
+          box-sizing: border-box;
           background: #f0f7f7;
           overflow: hidden;
           position: relative;
         }
 
-        .all-tests-card-img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          transition: transform 0.35s;
+        .all-tests-card-visual {
+          position: relative;
+          z-index: 1;
+          display: grid;
+          width: 76px;
+          height: 76px;
+          place-items: center;
+          color: #087b73;
+          background: linear-gradient(160deg, #ffffff 0%, #f2fbf8 100%);
+          border: 1px solid #ffffff;
+          border-radius: 24px;
+          box-shadow:
+            0 12px 24px rgba(5, 73, 78, 0.13),
+            0 0 0 6px rgba(255, 255, 255, 0.45);
+          transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
-        .all-tests-card:hover .all-tests-card-img {
-          transform: scale(1.06);
+        .all-tests-card:hover .all-tests-card-visual {
+          transform: translateY(-3px) scale(1.06) rotate(-3deg);
         }
 
         .all-tests-card-tag {
@@ -465,6 +480,163 @@ export default function AllLabTests() {
           gap: 20px;
         }
 
+        /* ── Match Labs page card styling ── */
+        .all-tests-card {
+          background: linear-gradient(180deg, #ffffff 60%, #fbfefd 100%);
+          border: 1px solid rgba(8, 120, 125, 0.14);
+          border-radius: 22px;
+          box-shadow: 0 11px 28px rgba(5, 73, 78, 0.08);
+          transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease, border-color 0.3s ease;
+        }
+
+        .all-tests-card::before {
+          content: "";
+          position: absolute;
+          inset: 0 0 auto;
+          z-index: 3;
+          height: 4px;
+          background: linear-gradient(90deg, #087b73, #2bc4a6, #087b73);
+          background-size: 200% 100%;
+          transition: background-position 0.6s ease;
+        }
+
+        .all-tests-card:hover {
+          transform: translateY(-6px);
+          border-color: rgba(8, 120, 125, 0.32);
+          box-shadow: 0 22px 40px -10px rgba(5, 73, 78, 0.22), 0 6px 14px rgba(5, 73, 78, 0.06);
+        }
+
+        .all-tests-card:hover::before {
+          background-position: 100% 0;
+        }
+
+        /* Decorative rings behind the icon */
+        .all-tests-card-img-container::before,
+        .all-tests-card-img-container::after {
+          content: "";
+          position: absolute;
+          border-radius: 50%;
+          pointer-events: none;
+          z-index: 0;
+        }
+
+        .all-tests-card-img-container::before {
+          width: 150px;
+          height: 150px;
+          right: -55px;
+          top: -60px;
+          border: 1px solid rgba(8, 123, 115, 0.12);
+          background: radial-gradient(circle, rgba(52, 211, 180, 0.12), transparent 70%);
+        }
+
+        .all-tests-card-img-container::after {
+          width: 90px;
+          height: 90px;
+          left: -35px;
+          bottom: -45px;
+          border: 1px solid rgba(8, 123, 115, 0.1);
+        }
+
+        .all-tests-card-visual {
+          box-shadow:
+            0 12px 24px rgba(5, 73, 78, 0.13),
+            0 0 0 6px rgba(255, 255, 255, 0.45),
+            inset 0 -3px 0 rgba(8, 123, 115, 0.06);
+        }
+
+        .all-tests-card-tag {
+          top: 15px;
+          left: 13px;
+          z-index: 4;
+          gap: 5px;
+          padding: 5px 8px;
+          color: #087b73;
+          background: rgba(255, 255, 255, 0.85);
+          backdrop-filter: blur(8px);
+          -webkit-backdrop-filter: blur(8px);
+          border: 1px solid rgba(8, 123, 115, 0.22);
+          border-radius: 9px;
+          box-shadow: 0 6px 14px rgba(5, 73, 78, 0.08), inset 0 1px 0 #fff;
+          font-size: 9.5px;
+          font-weight: 800;
+        }
+
+        .all-tests-card-title {
+          font-family: var(--font-display);
+          font-size: 13.5px;
+          font-weight: 800;
+          min-height: 37px;
+          transition: color 0.2s ease;
+        }
+
+        .all-tests-card:hover .all-tests-card-title {
+          color: #087b73;
+        }
+
+        .all-tests-card-sub {
+          color: #087b73;
+          background: linear-gradient(90deg, #e8f6f3, #f2faf8);
+          border: 1px solid rgba(8, 123, 115, 0.14);
+          border-radius: 999px;
+          font-size: 9.5px;
+          font-weight: 750;
+        }
+
+        .all-tests-card-footer {
+          padding-top: 11px;
+          border-top: 1px dashed color-mix(in srgb, #087b73 22%, #dce8e7);
+        }
+
+        .all-tests-card-btn {
+          position: relative;
+          overflow: hidden;
+          width: 100%;
+          min-height: 35px;
+          justify-content: center;
+          border-radius: 11px;
+          background: linear-gradient(135deg, #0b8f84 0%, #087b73 50%, #0a5a5c 100%);
+          box-shadow: 0 8px 18px rgba(8, 123, 115, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .all-tests-card-btn::after {
+          content: "";
+          position: absolute;
+          top: 0;
+          bottom: 0;
+          left: -60%;
+          width: 40%;
+          background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.28), transparent);
+          transform: skewX(-20deg);
+          transition: left 0.6s ease;
+          pointer-events: none;
+        }
+
+        .all-tests-card-btn svg {
+          transition: transform 0.2s ease;
+        }
+
+        .all-tests-card-btn:hover {
+          background: linear-gradient(135deg, #0b8f84 0%, #087b73 50%, #0a5a5c 100%);
+          box-shadow: 0 12px 22px rgba(8, 123, 115, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+
+        .all-tests-card-btn:hover::after {
+          left: 130%;
+        }
+
+        .all-tests-card-btn:hover svg {
+          transform: translateX(3px);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .all-tests-card,
+          .all-tests-card-visual,
+          .all-tests-card-btn::after {
+            transition: none;
+          }
+        }
+
         @media (max-width: 768px) {
           .all-tests-hero {
             padding: 16px 0 20px 0;
@@ -502,7 +674,17 @@ export default function AllLabTests() {
             gap: 8px;
           }
           .all-tests-card-img-container {
-            height: 100px;
+            height: 118px;
+            padding: 38px 10px 10px;
+          }
+          .all-tests-card-visual {
+            width: 62px;
+            height: 62px;
+            border-radius: 20px;
+          }
+          .all-tests-card-visual svg {
+            width: 34px;
+            height: 34px;
           }
           .all-tests-card-body {
             padding: 10px 8px;
@@ -642,7 +824,7 @@ export default function AllLabTests() {
             {filteredTests.map((test) => (
               <div className="all-tests-card" key={test.id}>
                 <div className="all-tests-card-img-container">
-                  <img src={test.img} alt={test.title} className="all-tests-card-img" />
+                  <div className="all-tests-card-visual"><LabItemIcon item={test} size={43} /></div>
                   <span className="all-tests-card-tag"><TestTube size={10} /> Certified</span>
                 </div>
                 <div className="all-tests-card-body">

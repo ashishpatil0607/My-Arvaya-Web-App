@@ -5489,7 +5489,19 @@ header.glass .header-secondary-nav a:focus-visible {
 
 /* Home: Featured Health Packages */
 .home-pkg-section {
-  padding: 0 0 56px;
+  position: relative;
+  padding: 64px 0 64px;
+  background:
+    radial-gradient(ellipse 45% 55% at 100% 0%, rgba(8, 120, 125, 0.08), transparent 70%),
+    radial-gradient(ellipse 40% 50% at 0% 100%, rgba(255, 131, 41, 0.06), transparent 70%),
+    linear-gradient(180deg, #ffffff 0%, #f1f9f8 100%);
+  border-top: 1px solid rgba(8, 120, 125, 0.1);
+}
+
+@media (max-width: 600px) {
+  .home-pkg-section {
+    padding: 44px 0 48px;
+  }
 }
 
 .packages-grid {
