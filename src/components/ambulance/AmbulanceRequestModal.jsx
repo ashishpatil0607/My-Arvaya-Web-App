@@ -4,33 +4,84 @@ import { X, MapPin, Phone, User, AlertTriangle, ArrowRight, CheckCircle2, Ambula
 import { useAuth } from "../../context/AuthContext";
 import { useBooking } from "../../context/BookingContext";
 import { useNavigate } from "react-router-dom";
-import { EMERGENCY_TYPES, requestAmbulance, reverseGeocode } from "../../services/ambulanceService";
-import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+import { EMERGENCY_TYPES, requestAmbulance, reverseGeocode, GOOGLE_MAPS_API_KEY } from "../../services/ambulanceService";
+import useGoogleMapsScript from "./useGoogleMapsScript";
 
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-});
+const DEFAULT_CENTER = { lat: 20.5937, lng: 78.9629 };
 
-function LocationMarker({ position, setPosition }) {
-  const map = useMapEvents({
-    click(e) {
-      setPosition(e.latlng);
-    },
-  });
+/* ── Google Maps pickup picker: click the map or drag the pin to set location ── */
 
-  React.useEffect(() => {
-    if (position) {
-      const currentZoom = map.getZoom();
-      map.setView(position, currentZoom < 15 ? 15 : currentZoom);
+function GoogleLocationPicker({ position, onPick }) {
+  const { loaded, error } = useGoogleMapsScript(GOOGLE_MAPS_API_KEY);
+  const containerRef = React.useRef(null);
+  const mapRef = React.useRef(null);
+  const markerRef = React.useRef(null);
+  const onPickRef = React.useRef(onPick);
+  onPickRef.current = onPick;
+
+  // Create the map once the script is ready
+  useEffect(() => {
+    if (!loaded || !containerRef.current || mapRef.current) return;
+    const gm = window.google.maps;
+    const map = new gm.Map(containerRef.current, {
+      center: position || DEFAULT_CENTER,
+      zoom: position ? 15 : 4,
+      disableDefaultUI: true,
+      zoomControl: true,
+      clickableIcons: false,
+      gestureHandling: "greedy",
+    });
+    mapRef.current = map;
+
+    map.addListener("click", (e) => {
+      onPickRef.current({ lat: e.latLng.lat(), lng: e.latLng.lng() });
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loaded]);
+
+  // Keep the marker and viewport in sync with the selected position
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !position) return;
+    const gm = window.google.maps;
+
+    if (!markerRef.current) {
+      markerRef.current = new gm.Marker({ position, map, draggable: true, title: "Pickup Location" });
+      markerRef.current.addListener("dragend", (e) => {
+        onPickRef.current({ lat: e.latLng.lat(), lng: e.latLng.lng() });
+      });
+    } else {
+      markerRef.current.setPosition(position);
     }
-  }, [position, map]);
 
-  return position === null ? null : <Marker position={position} />;
+    map.panTo(position);
+    if (map.getZoom() < 15) map.setZoom(15);
+  }, [loaded, position?.lat, position?.lng]);
+
+  // Cleanup listeners on unmount
+  useEffect(() => () => {
+    if (markerRef.current) { window.google?.maps?.event.clearInstanceListeners(markerRef.current); markerRef.current.setMap(null); }
+    if (mapRef.current) window.google?.maps?.event.clearInstanceListeners(mapRef.current);
+  }, []);
+
+  if (error) {
+    return (
+      <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", color: "var(--text-muted)", fontSize: "13px", background: "var(--bg-app)" }}>
+        <MapPin size={16} /> Map unavailable — please enter your address below.
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ position: "relative", height: "100%", width: "100%" }}>
+      <div ref={containerRef} style={{ height: "100%", width: "100%" }} />
+      {!loaded && (
+        <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", color: "var(--text-muted)", fontSize: "13px", background: "var(--bg-app)" }}>
+          <Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} /> Loading map…
+        </div>
+      )}
+    </div>
+  );
 }
 
 /* ── Small shared atoms ──────────────────────────────────────────────────── */
@@ -286,10 +337,7 @@ export default function AmbulanceRequestModal({ onClose, onSuccess }) {
         </label>
 
         <div style={{ height: "170px", borderRadius: "10px", overflow: "hidden", marginBottom: "10px", border: "1px solid var(--border)", position: "relative", zIndex: 0, isolation: "isolate" }}>
-          <MapContainer center={pickupLat && pickupLng ? [pickupLat, pickupLng] : [20.5937, 78.9629]} zoom={pickupLat && pickupLng ? 15 : 4} style={{ height: "100%", width: "100%" }}>
-            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-            <LocationMarker position={pickupLat && pickupLng ? {lat: pickupLat, lng: pickupLng} : null} setPosition={handleMapClick} />
-          </MapContainer>
+          <GoogleLocationPicker position={pickupLat && pickupLng ? { lat: pickupLat, lng: pickupLng } : null} onPick={handleMapClick} />
         </div>
 
         <div style={{ border: `1.5px solid ${fieldErrors.pickupAddress ? "var(--danger)" : "var(--border)"}`, borderRadius: "10px", overflow: "hidden", transition: "border-color 0.2s" }}
