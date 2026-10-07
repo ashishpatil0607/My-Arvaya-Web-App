@@ -119,7 +119,7 @@ export default function CareJourney() {
     const v = variants[error.kind] || variants.failed;
 
     return (
-      <main className="page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: 'var(--bg-app)', padding: '24px 16px' }}>
+      <main className="page" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'center', minHeight: 'auto', background: 'var(--bg-app)', padding: '40px 16px 56px' }}>
         <div className="animate-fade-in-up" style={{ position: 'relative', overflow: 'hidden', width: '100%', maxWidth: '480px', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: '28px', boxShadow: 'var(--shadow-lg)', padding: '44px 32px 32px', textAlign: 'center' }}>
           {/* soft top glow */}
           <div aria-hidden="true" style={{ position: 'absolute', top: '-90px', left: '50%', transform: 'translateX(-50%)', width: '320px', height: '180px', borderRadius: '50%', background: v.tint, filter: 'blur(10px)', opacity: 0.9 }} />
