@@ -392,14 +392,6 @@ export default function Wallet() {
 
   const categories = ["All", "Consultation", "Medicines", "Lab Tests", "Wellness"];
 
-  const parseTxAmount = (amount) => Math.abs(parseFloat(String(amount).replace(/[^\d.-]/g, "")) || 0);
-  const totalEarned = transactions
-    .filter(tx => tx.type === "credit")
-    .reduce((sum, tx) => sum + parseTxAmount(tx.amount), 0);
-  const totalRedeemed = transactions
-    .filter(tx => tx.type !== "credit")
-    .reduce((sum, tx) => sum + parseTxAmount(tx.amount), 0);
-
   const filteredOffers = offers.filter(o => 
     selectedCategory === "All" || o.category === selectedCategory
   );
@@ -524,29 +516,6 @@ export default function Wallet() {
                   <span className="wallet-coin wallet-coin-2">₹</span>
                   <span className="wallet-coin wallet-coin-3">₹</span>
                   <img src="/images/wallet-gift.png" alt="" className="wallet-balance-icon" />
-                </div>
-              </div>
-              <div className="wallet-balance-stats">
-                <div className="wallet-stat">
-                  <span className="wallet-stat-icon is-earned"><ArrowDownLeft size={15} /></span>
-                  <div>
-                    <small>Total earned</small>
-                    <strong>₹ {totalEarned.toLocaleString()}</strong>
-                  </div>
-                </div>
-                <div className="wallet-stat">
-                  <span className="wallet-stat-icon is-redeemed"><ArrowUpRight size={15} /></span>
-                  <div>
-                    <small>Redeemed</small>
-                    <strong>₹ {totalRedeemed.toLocaleString()}</strong>
-                  </div>
-                </div>
-                <div className="wallet-stat">
-                  <span className="wallet-stat-icon is-offers"><Gift size={15} /></span>
-                  <div>
-                    <small>Active offers</small>
-                    <strong>{isLoggedIn ? offers.length - redeemedOffers.length : 0}</strong>
-                  </div>
                 </div>
               </div>
               <div className="wallet-balance-foot">

@@ -402,53 +402,49 @@ export default function Rewards() {
         document.body
       )}
 
-      <header style={{ padding: '16px 0 0' }}>
+      <header className="wallet-top-shell">
         <div className="container">
-          <div
-            style={{
-              position: 'relative',
-              overflow: 'hidden',
-              borderRadius: '26px',
-              padding: '24px 32px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '16px',
-              flexWrap: 'wrap',
-              color: '#fff',
-              background:
-                'linear-gradient(120deg, rgba(255,255,255,0.08), transparent 45%), linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 62%, #133a41 100%)',
-              border: '1px solid rgba(255,255,255,0.15)',
-              boxShadow: '0 20px 44px rgba(31, 79, 87, 0.28)',
-            }}
-          >
-            <div style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', gap: '16px' }}>
-              <div style={{
-                width: '52px', height: '52px', borderRadius: '16px', flexShrink: 0,
-                background: '#fff', color: 'var(--primary-dark)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: '0 12px 24px rgba(0,60,55,0.2)', transform: 'rotate(-6deg)'
-              }}>
+          <div className="wallet-hero-banner">
+            <div className="wallet-hero-content">
+              <div className="wallet-hero-icon" aria-hidden="true">
                 <Award size={26} />
               </div>
+
               <div>
-                <h1 style={{ fontSize: '24px', fontWeight: '800', margin: '0 0 4px', color: '#fff', letterSpacing: '-0.02em' }}>Rewards & Loyalty</h1>
-                <p style={{ margin: '0 0 10px', fontSize: '13px', color: 'rgba(255,255,255,0.82)' }}>Earn points on every transaction and redeem rewards.</p>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                  {[
-                    { icon: Star, label: 'Earn Rewards', color: '#fbbf24' },
-                    { icon: Mountain, label: 'Health Milestones', color: '#2dd4bf' },
-                    { icon: Gift, label: 'Special Benefits', color: '#60a5fa' },
-                  ].map(({ icon: Icon, label, color }) => (
-                    <span key={label} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 10px', color: '#fff', background: 'rgba(18,51,58,0.5)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '10px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', fontSize: '11.5px', fontWeight: '650', backdropFilter: 'blur(10px)' }}>
-                      <Icon size={13} color={color} /> {label}
-                    </span>
-                  ))}
+                <div className="wallet-hero-pill-tag">
+                  <Sparkles size={13} /> Arvaya Rewards &middot; Loyalty Points
+                </div>
+
+                <h1 className="wallet-hero-title">
+                  Earn points on every visit & redeem rewards with ease.
+                </h1>
+                <p className="wallet-hero-subtitle">
+                  Collect loyalty points on appointments and lab tests, then use them on your next booking.
+                </p>
+
+                <div className="wallet-hero-badges">
+                  <span className="wallet-hero-badge">
+                    <Star size={14} color="#fbbf24" /> Earn Rewards
+                  </span>
+                  <span className="wallet-hero-badge">
+                    <Mountain size={14} color="#2dd4bf" /> Health Milestones
+                  </span>
+                  <span className="wallet-hero-badge">
+                    <Gift size={14} color="#60a5fa" /> Special Benefits
+                  </span>
                 </div>
               </div>
             </div>
 
-            <img src="/images/rewards-loyalty.png" alt="" className="rewards-hero-img" aria-hidden="true" />
+            <div className="wallet-hero-img-col">
+              <div className="wallet-hero-img-wrap" aria-hidden="true">
+                <img src="/images/rewards-loyalty.png" alt="" className="wallet-hero-photo" />
+                <div className="wallet-hero-stat-badge">
+                  <CheckCircle2 size={14} />
+                  <span>{loadingPoints ? "Loading points…" : `${points.toLocaleString()} pts available`}</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </header>
@@ -457,6 +453,7 @@ export default function Rewards() {
         <div className="rewards-layout">
           <section className="rewards-primary-column">
             <article className="rewards-balance-card new-rewards-card">
+              <span className="rewards-card-sheen" aria-hidden="true" />
               <div className="rewards-balance-left">
                 <span className="wallet-eyebrow">Available loyalty points</span>
                 <div className="rewards-balance-row">

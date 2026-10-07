@@ -1,8 +1,11 @@
 import { ChevronLeft, Building2, AlertTriangle, Activity, ChevronRight, CalendarCheck, Loader2, FileSearch, IdCard, Stethoscope, Headset, RefreshCw, Home } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Antworkapi } from "../services/apiClient";
 import { useAuth } from "../context/AuthContext";
+
+const DOCS_PAGE_SIZE = 6;
 
 export default function CareJourney() {
   const navigate = useNavigate();
@@ -11,12 +14,16 @@ export default function CareJourney() {
   const uhid = String(user?.external_id || user?.uhid || "").trim();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeDoc, setActiveDoc] = useState(null);
-  
+
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState(null);
   // { kind: "not_found" | "no_uhid" | "failed", message? }
   const [error, setError] = useState(null);
   const [reloadKey, setReloadKey] = useState(0);
+  // Long timelines: filter by document type and reveal in pages
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [visibleCount, setVisibleCount] = useState(DOCS_PAGE_SIZE);
+  const [expandedDocs, setExpandedDocs] = useState({});
 
   useEffect(() => {
     if (!user) {
@@ -34,7 +41,8 @@ export default function CareJourney() {
     setLoading(true);
     setError(null);
     setData(null);
-    Antworkapi.get(`/api/PatientDashboard/${encodeURIComponent(uhid)}`)
+    // encodeURIComponent(uhid)
+    Antworkapi.get(`/api/PatientDashboard/${1072}`)
       .then(res => {
         if (cancelled) return;
         setData(res);
@@ -163,6 +171,16 @@ export default function CareJourney() {
   }
 
   const { patientInfo, stats, timeline } = data || {};
+  const allDocs = timeline || [];
+  const docTypes = [...new Set(allDocs.map(d => d.documenttype).filter(Boolean))];
+  const filteredDocs = typeFilter === 'all' ? allDocs : allDocs.filter(d => d.documenttype === typeFilter);
+  const shownDocs = filteredDocs.slice(0, visibleCount);
+  const remainingDocs = filteredDocs.length - shownDocs.length;
+
+  const changeFilter = (type) => {
+    setTypeFilter(type);
+    setVisibleCount(DOCS_PAGE_SIZE);
+  };
 
   return (
     <main className="page animate-fade-in-up" style={{ padding: 0, background: 'var(--bg-app)', minHeight: '100vh', position: 'relative' }}>
@@ -172,12 +190,12 @@ export default function CareJourney() {
           <button onClick={() => navigate(-1)} className="hover-glow" style={{ background: 'var(--bg-app)', border: '1px solid var(--border)', cursor: 'pointer', color: 'var(--text-main)', display: 'inline-flex', alignItems: 'center', gap: '8px', marginBottom: '20px', padding: '6px 12px', fontSize: '13px', fontWeight: '700', borderRadius: '8px' }}>
             <ChevronLeft size={16} /> Back to Dashboard
           </button>
-          
+
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '24px' }}>
             {/* PATIENT INFO */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
               <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'var(--primary-light)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', fontWeight: '800', flexShrink: 0, border: '3px solid white', boxShadow: '0 4px 12px rgba(0,0,0,0.06)' }}>
-                {patientInfo?.name ? patientInfo.name.substring(0,2).toUpperCase() : 'PT'}
+                {patientInfo?.name ? patientInfo.name.substring(0, 2).toUpperCase() : 'PT'}
               </div>
               <div>
                 <h1 style={{ fontSize: '22px', fontWeight: '800', color: 'var(--text-main)', margin: '0 0 6px 0', textTransform: 'uppercase', lineHeight: 1.2 }}>{patientInfo?.name}</h1>
@@ -202,7 +220,7 @@ export default function CareJourney() {
                   <div style={{ fontSize: '12px', color: '#1565c0', fontWeight: '700', marginTop: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Visits</div>
                 </div>
               </div>
-              
+
               <div style={{ background: '#fdeded', borderRadius: '16px', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '16px', minWidth: '160px' }}>
                 <div style={{ background: 'white', borderRadius: '12px', padding: '10px', color: '#c62828', boxShadow: '0 2px 8px rgba(198,40,40,0.1)' }}>
                   <AlertTriangle size={22} strokeWidth={2.5} />
@@ -217,89 +235,108 @@ export default function CareJourney() {
         </div>
       </div>
 
-      <div className="container" style={{ padding: '48px 0 100px', display: 'grid', gridTemplateColumns: 'minmax(320px, 400px) 1fr', gap: '48px', alignItems: 'start' }}>
-        
-        {/* LEFT COLUMN: VISITS */}
-        <aside style={{ position: 'sticky', top: '120px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-            <h3 style={{ fontSize: '16px', fontWeight: '800', color: 'var(--text-main)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Recent Visits</h3>
-            <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--primary)', background: 'var(--primary-light)', padding: '6px 14px', borderRadius: '20px' }}>{patientInfo?.totalVisits || 0} Total</span>
+      <div className="container" style={{ padding: '32px 0 64px', display: 'grid', gridTemplateColumns: 'minmax(280px, 340px) 1fr', gap: '32px', alignItems: 'start' }}>
+
+        {/* LEFT COLUMN: VISITS (scrolls on its own when the list is long) */}
+        <aside style={{ position: 'sticky', top: '100px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <h3 style={{ fontSize: '15px', fontWeight: '800', color: 'var(--text-main)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Recent Visits</h3>
+            <span style={{ fontSize: '12px', fontWeight: '700', color: 'var(--primary)', background: 'var(--primary-light)', padding: '4px 12px', borderRadius: '20px' }}>{patientInfo?.totalVisits || 0} Total</span>
           </div>
 
-          {(patientInfo?.visits || []).map((visit, index) => (
-            <div key={visit.visitId || index} className="card hover-glow" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: '24px', padding: '32px', marginBottom: '16px' }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '20px' }}>
-                <div style={{ width: '56px', height: '56px', borderRadius: '16px', background: 'var(--primary-light)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <CalendarCheck size={28} strokeWidth={2} />
-                </div>
-                <div>
-                  <h4 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-main)', margin: '0 0 8px 0' }}>
-                    {new Date(visit.dateOfAdmission).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
-                  </h4>
-                  <p style={{ fontSize: '15px', color: 'var(--text-muted)', margin: '0 0 20px 0', fontWeight: '600' }}>Admission ID: {visit.visitId}</p>
+          <div style={{ maxHeight: 'calc(100vh - 180px)', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px', paddingRight: '4px' }}>
+            {(patientInfo?.visits || []).map((visit, index) => (
+              <div key={visit.visitId || index} className="card hover-glow" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '16px 18px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                  <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'var(--primary-light)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <CalendarCheck size={22} strokeWidth={2} />
+                  </div>
+                  <div style={{ minWidth: 0 }}>
+                    <h4 style={{ fontSize: '15px', fontWeight: '800', color: 'var(--text-main)', margin: '0 0 4px 0' }}>
+                      {new Date(visit.dateOfAdmission).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+                    </h4>
+                    <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: 0, fontWeight: '600' }}>Admission ID: {visit.visitId}</p>
+                  </div>
                   {index === 0 && (
-                    <span style={{ fontSize: '13px', fontWeight: '700', color: '#1565c0', background: '#eef4fd', padding: '8px 14px', borderRadius: '10px', display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
-                      <Activity size={16} /> Latest Visit
+                    <span style={{ marginLeft: 'auto', fontSize: '11px', fontWeight: '700', color: '#1565c0', background: '#eef4fd', padding: '4px 10px', borderRadius: '8px', display: 'inline-flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+                      <Activity size={12} /> Latest
                     </span>
                   )}
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </aside>
 
         {/* RIGHT COLUMN: CARE JOURNEY TIMELINE */}
-        <section>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
-            <h3 style={{ fontSize: '16px', fontWeight: '800', color: 'var(--text-main)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Care Journey Documents</h3>
-            <span style={{ fontSize: '13px', fontWeight: '700', color: '#2e7d32', background: '#e8f5e9', padding: '6px 14px', borderRadius: '20px' }}>{stats?.totalRecords || 0} Documents</span>
+        <section style={{ minWidth: 0 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <h3 style={{ fontSize: '15px', fontWeight: '800', color: 'var(--text-main)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Care Journey Documents</h3>
+            <span style={{ fontSize: '12px', fontWeight: '700', color: '#2e7d32', background: '#e8f5e9', padding: '4px 12px', borderRadius: '20px' }}>{stats?.totalRecords || 0} Documents</span>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
-            {(timeline || []).map((doc, idx) => {
+          {/* Type filter chips */}
+          {docTypes.length > 1 && (
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '20px' }}>
+              {['all', ...docTypes].map(type => {
+                const active = typeFilter === type;
+                const count = type === 'all' ? allDocs.length : allDocs.filter(d => d.documenttype === type).length;
+                return (
+                  <button key={type} onClick={() => changeFilter(type)} style={{ cursor: 'pointer', fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.03em', padding: '6px 12px', borderRadius: '999px', border: `1px solid ${active ? 'var(--primary)' : 'var(--border)'}`, background: active ? 'var(--primary)' : 'var(--bg-surface)', color: active ? '#fff' : 'var(--text-muted)' }}>
+                    {type === 'all' ? 'All' : type} · {count}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {shownDocs.map((doc, idx) => {
               const docDate = doc.documentdate ? new Date(doc.documentdate) : null;
-              
+              const key = doc.id || `${typeFilter}-${idx}`;
+              const expanded = !!expandedDocs[key];
+              const isLast = idx === shownDocs.length - 1;
+
               return (
-                <div key={doc.id || idx} style={{ display: 'flex', gap: '32px' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '64px', flexShrink: 0 }}>
-                    <div style={{ fontSize: '28px', fontWeight: '800', color: 'var(--text-main)', lineHeight: 1 }}>
+                <div key={key} style={{ display: 'flex', gap: '16px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '48px', flexShrink: 0 }}>
+                    <div style={{ fontSize: '20px', fontWeight: '800', color: 'var(--text-main)', lineHeight: 1 }}>
                       {docDate ? docDate.getDate() : '-'}
                     </div>
-                    <div style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-muted)', margin: '6px 0 20px', textAlign: 'center' }}>
-                      {docDate ? docDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }).replace(' ', '\n') : 'Undated'}
+                    <div style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-muted)', margin: '4px 0 10px', textAlign: 'center', lineHeight: 1.3 }}>
+                      {docDate ? docDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'Undated'}
                     </div>
-                    <div style={{ width: '16px', height: '16px', borderRadius: '50%', background: doc.severity ? '#c62828' : '#ed6c02', marginBottom: '12px', boxShadow: `0 0 0 6px ${doc.severity ? '#ffebee' : '#fff3e0'}` }}></div>
-                    {idx < timeline.length - 1 && <div style={{ width: '2px', flex: 1, background: 'var(--border)' }}></div>}
+                    <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: doc.severity ? '#c62828' : '#ed6c02', marginBottom: '8px', boxShadow: `0 0 0 4px ${doc.severity ? '#ffebee' : '#fff3e0'}`, flexShrink: 0 }}></div>
+                    {!isLast && <div style={{ width: '2px', flex: 1, background: 'var(--border)' }}></div>}
                   </div>
-                  
-                  <div className="card hover-glow" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: '24px', padding: '32px', flex: 1, marginBottom: idx < timeline.length - 1 ? '40px' : '0' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
-                      <span style={{ fontSize: '14px', fontWeight: '800', color: '#1b5e20', background: '#e8f5e9', padding: '8px 16px', borderRadius: '10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{doc.documenttype}</span>
-                      <button onClick={() => openDoc(doc)} className="btn hover-glow" style={{ background: 'var(--bg-app)', border: '1px solid var(--border)', color: '#ed6c02', fontSize: '14px', fontWeight: '700', display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer', padding: '10px 16px', borderRadius: '12px' }}>
-                        View Document <ChevronRight size={18} />
+
+                  <div className="card hover-glow" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '16px 20px', flex: 1, minWidth: 0, marginBottom: isLast ? 0 : '16px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', minWidth: 0 }}>
+                        <span style={{ fontSize: '12px', fontWeight: '800', color: '#1b5e20', background: '#e8f5e9', padding: '4px 10px', borderRadius: '8px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{doc.documenttype}</span>
+                        {(doc.department || doc.doctorname) && (
+                          <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>
+                            {doc.department && <strong style={{ color: 'var(--text-main)' }}>{doc.department}</strong>}
+                            {doc.department && doc.doctorname && ' · '}
+                            {doc.doctorname}
+                          </span>
+                        )}
+                      </div>
+                      <button onClick={() => openDoc(doc)} className="btn hover-glow" style={{ background: 'var(--bg-app)', border: '1px solid var(--border)', color: '#ed6c02', fontSize: '13px', fontWeight: '700', display: 'inline-flex', alignItems: 'center', gap: '4px', cursor: 'pointer', padding: '6px 12px', borderRadius: '10px' }}>
+                        View <ChevronRight size={16} />
                       </button>
                     </div>
-                    
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '20px', marginBottom: '24px' }}>
-                      {doc.department && (
-                        <div>
-                          <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-muted)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Department</div>
-                          <div style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-main)' }}>{doc.department}</div>
-                        </div>
-                      )}
-                      {doc.doctorname && (
-                        <div>
-                          <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-muted)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Doctor</div>
-                          <div style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-main)' }}>{doc.doctorname}</div>
-                        </div>
-                      )}
-                    </div>
-                    
+
                     {doc.doc_summary && (
-                      <div style={{ padding: '20px', background: 'var(--bg-app)', borderRadius: '16px', border: '1px solid var(--border)' }}>
-                        <p style={{ fontSize: '15px', color: 'var(--text-muted)', lineHeight: 1.6, margin: 0, fontWeight: '500' }}>
+                      <div style={{ marginTop: '12px' }}>
+                        <p style={{ fontSize: '14px', color: 'var(--text-muted)', lineHeight: 1.55, margin: 0, fontWeight: '500', ...(expanded ? {} : { display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }) }}>
                           {doc.doc_summary}
                         </p>
+                        {doc.doc_summary.length > 160 && (
+                          <button onClick={() => setExpandedDocs(s => ({ ...s, [key]: !expanded }))} style={{ background: 'none', border: 'none', padding: 0, marginTop: '4px', color: 'var(--primary)', fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}>
+                            {expanded ? 'Show less' : 'Read more'}
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>
@@ -307,14 +344,21 @@ export default function CareJourney() {
               );
             })}
 
+            {remainingDocs > 0 && (
+              <button onClick={() => setVisibleCount(c => c + DOCS_PAGE_SIZE)} className="btn btn-secondary hover-glow" style={{ alignSelf: 'center', marginTop: '24px', padding: '10px 20px', borderRadius: '12px', fontWeight: '700', fontSize: '14px' }}>
+                Show {Math.min(remainingDocs, DOCS_PAGE_SIZE)} more ({remainingDocs} remaining)
+              </button>
+            )}
           </div>
         </section>
       </div>
 
       {/* Modal */}
-      {isModalOpen && activeDoc && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px', backdropFilter: 'blur(4px)' }}>
-          <div className="animate-fade-in-up" style={{ background: '#ffffff', width: '100%', maxWidth: '850px', borderRadius: '16px', overflow: 'hidden', display: 'flex', flexDirection: 'column', height: '95vh', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
+      {/* Portal to body: <main>'s fade-in animation leaves a transform on it,
+          which would anchor position:fixed to the page instead of the viewport */}
+      {isModalOpen && activeDoc && createPortal(
+        <div onClick={() => setIsModalOpen(false)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px', backdropFilter: 'blur(4px)' }}>
+          <div onClick={e => e.stopPropagation()} className="animate-fade-in-up" style={{ background: '#ffffff', width: '100%', maxWidth: '850px', borderRadius: '16px', overflow: 'hidden', display: 'flex', flexDirection: 'column', height: '95vh', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
             {/* Modal Header */}
             <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '12px' }}>
               <button onClick={() => setIsModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#1a1a1a', padding: '4px' }}>
@@ -322,7 +366,7 @@ export default function CareJourney() {
               </button>
               <h2 style={{ fontSize: '16px', fontWeight: '700', margin: 0, color: '#1a1a1a' }}>Report Details</h2>
             </div>
-            
+
             {/* Modal Body */}
             <div style={{ padding: '20px', overflowY: 'auto', flex: 1 }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
@@ -353,7 +397,7 @@ export default function CareJourney() {
                 <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div style={{ fontSize: '18px', fontWeight: '700', color: '#444', textTransform: 'uppercase' }}>{activeDoc.documenttype}</div>
-                    <div style={{ fontSize: '20px', fontWeight: '800', color: '#111', lineHeight: 1, textAlign: 'right' }}>SeCURE<br/><span style={{ fontSize: '10px', fontWeight: '600' }}>HOSPITALS</span></div>
+                    <div style={{ fontSize: '20px', fontWeight: '800', color: '#111', lineHeight: 1, textAlign: 'right' }}>SeCURE<br /><span style={{ fontSize: '10px', fontWeight: '600' }}>HOSPITALS</span></div>
                   </div>
                   <hr style={{ borderTop: '2px solid #333', margin: '10px 0' }} />
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: '600', color: '#333' }}>
@@ -372,7 +416,8 @@ export default function CareJourney() {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </main>
   );
