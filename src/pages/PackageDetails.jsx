@@ -49,7 +49,7 @@ export default function PackageDetails() {
   const location = useLocation();
   const { id } = useParams();
 
-  const { setBookingType, setLabPackage, setDate, setSlot, setBookingId } = useBooking();
+  const { setBookingType, setLabPackage, setLabVisitType, setDate, setSlot, setBookingId } = useBooking();
   const { user, openLoginModal } = useAuth();
 
   const [packageData, setPackageData] = useState(location.state?.package || null);
@@ -178,6 +178,7 @@ export default function PackageDetails() {
   const confirmBooking = (slotData) => {
     setBookingType("lab");
     setLabPackage(packageData);
+    setLabVisitType(visitType);
     setDate(new Date(slotData.date));
     setSlot(slotData.time);
     setShowBookingModal(false);

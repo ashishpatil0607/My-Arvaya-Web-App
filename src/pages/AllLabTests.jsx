@@ -31,7 +31,7 @@ function toTitleCase(str) {
 
 export default function AllLabTests() {
   const go = useNavigate();
-  const { setBookingType, setLabPackage, setDate, setSlot, setBookingId, globalLocation } = useBooking();
+  const { setBookingType, setLabPackage, setLabVisitType, setDate, setSlot, setBookingId, globalLocation } = useBooking();
   const { user, openLoginModal } = useAuth();
 
   const [tests, setTests] = useState([]);
@@ -231,6 +231,7 @@ export default function AllLabTests() {
 
       setBookingType("lab");
       setLabPackage(selectedItem);
+      setLabVisitType(visitType);
       setDate(new Date(slotData.date));
       setSlot(slotData.time);
       setApplyWallet(false);

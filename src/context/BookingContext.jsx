@@ -49,6 +49,10 @@ export function BookingProvider({ children }) {
     return null;
   });
 
+  const [labVisitType, setLabVisitType] = useState(() => {
+    return sessionStorage.getItem("arvaya_lab_visit_type") || "home";
+  });
+
   const [globalLocation, setGlobalLocation] = useState(() => {
     try {
       const saved = localStorage.getItem("arvaya_location");
@@ -65,6 +69,10 @@ export function BookingProvider({ children }) {
     if (labPackage) sessionStorage.setItem("arvaya_booking_lab", JSON.stringify(labPackage));
     else sessionStorage.removeItem("arvaya_booking_lab");
   }, [labPackage]);
+
+  useEffect(() => {
+    sessionStorage.setItem("arvaya_lab_visit_type", labVisitType);
+  }, [labVisitType]);
 
   useEffect(() => {
     sessionStorage.setItem("arvaya_booking_type", bookingType);
@@ -115,6 +123,7 @@ export function BookingProvider({ children }) {
     setBookingSpecialty("");
     setBookingVisitType("Initial consultation");
     setLabPackage(null);
+    setLabVisitType("home");
     setBookingId("");
     sessionStorage.removeItem("arvaya_booking_id");
     sessionStorage.removeItem("arvaya_booking_doctor");
@@ -147,6 +156,8 @@ export function BookingProvider({ children }) {
         setBookingVisitType,
         labPackage,
         setLabPackage,
+        labVisitType,
+        setLabVisitType,
         globalLocation,
         setGlobalLocation,
         clearBooking

@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from "react";
-import { Package, Truck, CheckCircle2, ChevronRight, FileText, MapPin, CreditCard, ChevronLeft, FlaskConical, Loader2, CalendarCheck, Clock } from "lucide-react";
+import { Package, Truck, CheckCircle2, ChevronRight, FileText, MapPin, CreditCard, ChevronLeft, Loader2, CalendarCheck, Clock } from "lucide-react";
 import { Link } from "react-router-dom";
 import { getLabOrderHistory } from "../services/dataService";
+import LabItemIcon from "../components/labs/LabItemIcon";
 
 function getStoredUserId() {
   try {
@@ -214,7 +215,7 @@ export default function Orders() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: 'var(--primary-light)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <FlaskConical size={24} />
+                      <LabItemIcon item={{ title: order.items }} size={24} />
                     </div>
                     <div>
                       <h2 style={{ fontSize: '16px', fontWeight: '800', color: 'var(--text-main)', margin: '0 0 6px 0', lineHeight: 1.3, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>

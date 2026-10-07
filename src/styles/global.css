@@ -5325,7 +5325,7 @@ body {
 .arvaya-app-content::before { left: -13rem; top: 16rem; }
 .arvaya-app-content::after { right: -14rem; bottom: 10rem; }
 
-main.page:not(.home-page):not(.wallet-page):not(.rewards-page) > div:first-of-type {
+main.page:not(.home-page):not(.wallet-page):not(.rewards-page):not(.ambulance-page):not(.confirmed-page) > div:first-of-type {
   background:
     radial-gradient(circle at 92% 12%, rgba(116, 228, 189, 0.28), transparent 15rem),
     linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(229, 247, 243, 0.92)) !important;

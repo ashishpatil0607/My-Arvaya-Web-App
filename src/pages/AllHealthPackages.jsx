@@ -12,7 +12,7 @@ import Modal from "../components/common/Modal";
 
 export default function AllHealthPackages() {
   const go = useNavigate();
-  const { setBookingType, setLabPackage, setDate, setSlot, setBookingId } = useBooking();
+  const { setBookingType, setLabPackage, setLabVisitType, setDate, setSlot, setBookingId } = useBooking();
   const { user, openLoginModal } = useAuth();
 
   const [packages, setPackages] = useState([]);
@@ -107,6 +107,7 @@ export default function AllHealthPackages() {
   const confirmBooking = (slotData) => {
     setBookingType("lab");
     setLabPackage(selectedItem);
+    setLabVisitType(visitType);
     setDate(new Date(slotData.date));
     setSlot(slotData.time);
     if (!user) return openLoginModal("/confirmed");

@@ -211,7 +211,7 @@ const mockLabAppointments = [
 
 export default function Labs({ forceModalOpen = false }) {
   const go = useNavigate();
-  const { setBookingType, setLabPackage, setDate, setSlot, setBookingId, globalLocation } = useBooking();
+  const { setBookingType, setLabPackage, setLabVisitType, setDate, setSlot, setBookingId, globalLocation } = useBooking();
   const { user, openLoginModal } = useAuth();
 
   const [q, setQ] = useState("");
@@ -510,6 +510,7 @@ function toTitleCase(str) {
 
       setBookingType("lab");
       setLabPackage(selectedItem);
+      setLabVisitType(visitType);
       setDate(new Date(slotData.date));
       setSlot(slotData.time);
 

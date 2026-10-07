@@ -22,6 +22,7 @@ import {
   XCircle,
   ChevronLeft,
   ChevronRight,
+  Sparkles,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -511,126 +512,57 @@ export default function AmbulancePage() {
 
   return (
     <main
-      className="page animate-fade-in-up"
+      className="page ambulance-page animate-fade-in-up"
       style={{ padding: 0, background: "var(--bg-app)" }}
     >
       {/* ── Internal Hero ── */}
-      <header style={{ padding: "16px 0 0" }}>
+      <header className="wallet-top-shell">
         <div className="container">
-          <div
-            className="ambulance-hero-card"
-            style={{
-              position: "relative",
-              overflow: "hidden",
-              borderRadius: "24px",
-              padding: "20px 28px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: "12px",
-              flexWrap: "wrap",
-              color: "#fff",
-              background:
-                "linear-gradient(120deg, rgba(255,255,255,0.08), transparent 45%), linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 62%, #133a41 100%)",
-              border: "1px solid rgba(255,255,255,0.15)",
-              boxShadow: "0 20px 44px rgba(31, 79, 87, 0.28)",
-            }}
-          >
-            <div
-              className="ambulance-hero-left"
-              style={{
-                position: "relative",
-                zIndex: 1,
-                display: "flex",
-                alignItems: "center",
-                gap: "16px",
-              }}
-            >
-              <div
-                style={{
-                  width: "52px",
-                  height: "52px",
-                  borderRadius: "16px",
-                  flexShrink: 0,
-                  background: "#fff",
-                  color: "var(--primary-dark)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  boxShadow: "0 12px 24px rgba(0,60,55,0.2)",
-                  transform: "rotate(-6deg)",
-                }}
-              >
+          <div className="wallet-hero-banner">
+            <div className="wallet-hero-content">
+              <div className="wallet-hero-icon" aria-hidden="true">
                 <Ambulance size={26} />
               </div>
+
               <div>
-                <h1
-                  style={{
-                    fontSize: "24px",
-                    fontWeight: "800",
-                    margin: "0 0 4px",
-                    color: "#fff",
-                    letterSpacing: "-0.02em",
-                  }}
-                >
-                  Track Ambulance
+                <div className="wallet-hero-pill-tag">
+                  <Sparkles size={13} /> Arvaya Emergency &middot; Ambulance Tracking
+                </div>
+
+                <h1 className="wallet-hero-title">
+                  Track your ambulance in real-time, every step of the way.
                 </h1>
-                <p
-                  style={{
-                    margin: "0 0 10px",
-                    fontSize: "13px",
-                    color: "rgba(255,255,255,0.82)",
-                  }}
-                >
-                  Monitor your emergency ambulance requests in real-time.
+                <p className="wallet-hero-subtitle">
+                  Monitor your emergency ambulance requests live, from dispatch to arrival.
                 </p>
-                <div
-                  className="ambulance-hero-badges"
-                  style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}
-                >
-                  {[
-                    { icon: Zap, label: "Fast Response", color: "#fbbf24" },
-                    {
-                      icon: ShieldCheck,
-                      label: "Emergency Support",
-                      color: "#2dd4bf",
-                    },
-                    {
-                      icon: Clock,
-                      label: "Real-time Tracking",
-                      color: "#60a5fa",
-                    },
-                  ].map(({ icon: Icon, label, color }) => (
-                    <span
-                      key={label}
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "6px",
-                        padding: "6px 10px",
-                        color: "#fff",
-                        background: "rgba(18,51,58,0.5)",
-                        border: "1px solid rgba(255,255,255,0.12)",
-                        borderRadius: "10px",
-                        boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
-                        fontSize: "11.5px",
-                        fontWeight: "650",
-                        backdropFilter: "blur(10px)",
-                      }}
-                    >
-                      <Icon size={13} color={color} /> {label}
-                    </span>
-                  ))}
+
+                <div className="wallet-hero-badges">
+                  <span className="wallet-hero-badge">
+                    <Zap size={14} color="#fbbf24" /> Fast Response
+                  </span>
+                  <span className="wallet-hero-badge">
+                    <ShieldCheck size={14} color="#2dd4bf" /> Emergency Support
+                  </span>
+                  <span className="wallet-hero-badge">
+                    <Clock size={14} color="#60a5fa" /> Real-time Tracking
+                  </span>
                 </div>
               </div>
             </div>
 
-            <img
-              src="/images/trackAmbulance.png"
-              alt=""
-              className="ambulance-hero-img"
-              aria-hidden="true"
-            />
+            <div className="wallet-hero-img-col">
+              <div className="wallet-hero-img-wrap" aria-hidden="true">
+                <img src="/images/trackAmbulance.png" alt="" className="wallet-hero-photo" />
+                <div className="wallet-hero-stat-badge">
+                  <CheckCircle2 size={14} />
+                  <span>
+                    {loading
+                      ? "Loading requests…"
+                      : `${requests.length} request${requests.length === 1 ? "" : "s"} tracked`}
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </header>
