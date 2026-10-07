@@ -392,6 +392,14 @@ export default function Wallet() {
 
   const categories = ["All", "Consultation", "Medicines", "Lab Tests", "Wellness"];
 
+  const parseTxAmount = (amount) => Math.abs(parseFloat(String(amount).replace(/[^\d.-]/g, "")) || 0);
+  const totalEarned = transactions
+    .filter(tx => tx.type === "credit")
+    .reduce((sum, tx) => sum + parseTxAmount(tx.amount), 0);
+  const totalRedeemed = transactions
+    .filter(tx => tx.type !== "credit")
+    .reduce((sum, tx) => sum + parseTxAmount(tx.amount), 0);
+
   const filteredOffers = offers.filter(o => 
     selectedCategory === "All" || o.category === selectedCategory
   );
@@ -452,53 +460,49 @@ export default function Wallet() {
         document.body
       )}
 
-      <header style={{ padding: '16px 0 0' }}>
+      <header className="wallet-top-shell">
         <div className="container">
-          <div
-            style={{
-              position: 'relative',
-              overflow: 'hidden',
-              borderRadius: '26px',
-              padding: '24px 32px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '16px',
-              flexWrap: 'wrap',
-              color: '#fff',
-              background:
-                'linear-gradient(120deg, rgba(255,255,255,0.08), transparent 45%), linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 62%, #133a41 100%)',
-              border: '1px solid rgba(255,255,255,0.15)',
-              boxShadow: '0 20px 44px rgba(31, 79, 87, 0.28)',
-            }}
-          >
-            <div style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', gap: '16px' }}>
-              <div style={{
-                width: '52px', height: '52px', borderRadius: '16px', flexShrink: 0,
-                background: '#fff', color: 'var(--primary-dark)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: '0 12px 24px rgba(0,60,55,0.2)', transform: 'rotate(-6deg)'
-              }}>
+          <div className="wallet-hero-banner">
+            <div className="wallet-hero-content">
+              <div className="wallet-hero-icon" aria-hidden="true">
                 <Gift size={26} />
               </div>
+
               <div>
-                <h1 style={{ fontSize: '24px', fontWeight: '800', margin: '0 0 4px', color: '#fff', letterSpacing: '-0.02em' }}>Arvaya Wallet</h1>
-                <p style={{ margin: '0 0 10px', fontSize: '13px', color: 'rgba(255,255,255,0.82)' }}>Track your rewards and redeem benefits.</p>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                  {[
-                    { icon: Star, label: 'Reward Points', color: '#fbbf24' },
-                    { icon: Zap, label: 'Instant Redeem', color: '#2dd4bf' },
-                    { icon: Heart, label: 'Healthcare Benefits', color: '#5eead4' },
-                  ].map(({ icon: Icon, label, color }) => (
-                    <span key={label} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 10px', color: '#fff', background: 'rgba(18,51,58,0.5)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '10px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', fontSize: '11.5px', fontWeight: '650', backdropFilter: 'blur(10px)' }}>
-                      <Icon size={13} color={color} /> {label}
-                    </span>
-                  ))}
+                <div className="wallet-hero-pill-tag">
+                  <Sparkles size={13} /> Arvaya Wallet &middot; Rewards & Cashback
+                </div>
+
+                <h1 className="wallet-hero-title">
+                  Earn rewards on every booking & redeem with ease.
+                </h1>
+                <p className="wallet-hero-subtitle">
+                  Track your balance, unlock offers and save on your next consultation.
+                </p>
+
+                <div className="wallet-hero-badges">
+                  <span className="wallet-hero-badge">
+                    <Star size={14} color="#fbbf24" /> Reward Points
+                  </span>
+                  <span className="wallet-hero-badge">
+                    <Zap size={14} color="#67e8f9" /> Instant Redeem
+                  </span>
+                  <span className="wallet-hero-badge">
+                    <Heart size={14} color="#fb923c" /> Healthcare Benefits
+                  </span>
                 </div>
               </div>
             </div>
 
-            <img src="/images/arvaya-wallet.png" alt="" className="wallet-hero-img" aria-hidden="true" />
+            <div className="wallet-hero-img-col">
+              <div className="wallet-hero-img-wrap" aria-hidden="true">
+                <img src="/images/arvaya-wallet.png" alt="" className="wallet-hero-photo" />
+                <div className="wallet-hero-stat-badge">
+                  <CheckCircle2 size={14} />
+                  <span>{loading ? "Loading balance…" : `₹${rewardPoints.toLocaleString()} available`}</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </header>
@@ -522,8 +526,32 @@ export default function Wallet() {
                   <img src="/images/wallet-gift.png" alt="" className="wallet-balance-icon" />
                 </div>
               </div>
+              <div className="wallet-balance-stats">
+                <div className="wallet-stat">
+                  <span className="wallet-stat-icon is-earned"><ArrowDownLeft size={15} /></span>
+                  <div>
+                    <small>Total earned</small>
+                    <strong>₹ {totalEarned.toLocaleString()}</strong>
+                  </div>
+                </div>
+                <div className="wallet-stat">
+                  <span className="wallet-stat-icon is-redeemed"><ArrowUpRight size={15} /></span>
+                  <div>
+                    <small>Redeemed</small>
+                    <strong>₹ {totalRedeemed.toLocaleString()}</strong>
+                  </div>
+                </div>
+                <div className="wallet-stat">
+                  <span className="wallet-stat-icon is-offers"><Gift size={15} /></span>
+                  <div>
+                    <small>Active offers</small>
+                    <strong>{isLoggedIn ? offers.length - redeemedOffers.length : 0}</strong>
+                  </div>
+                </div>
+              </div>
               <div className="wallet-balance-foot">
                 <span><Ticket size={17} /> Redeem on your next booking</span>
+                <span className="wallet-secure-chip"><ShieldCheck size={14} /> Secure wallet</span>
               </div>
             </article>
 
@@ -573,41 +601,38 @@ export default function Wallet() {
                       className={`wallet-offer-card ${theme.className} ${isRedeemed ? "is-redeemed" : ""}`}
                       // onClick={() => !isRedeemed && handleRedeem(offer)}
                       disabled={isRedeemed}
-                      style={{ position: 'relative' }}
+                      style={{ "--stagger": `${index * 70}ms` }}
                     >
-                      {!isRedeemed && (
-                        <div style={{
-                          position: 'absolute',
-                          top: '12px',
-                          right: '12px',
-                          backgroundColor: '#10b981',
-                          color: '#fff',
-                          fontSize: '10px',
-                          fontWeight: 'bold',
-                          padding: '2px 8px',
-                          borderRadius: '12px',
-                          letterSpacing: '0.5px',
-                          zIndex: 2
-                        }}>
-                          Active
-                        </div>
-                      )}
-                      <span className="wallet-offer-media">
-                        <ThemeIcon size={20} />
-                      </span>
-                      <span className="wallet-offer-meta">
-                        <span className="wallet-points-chip">
-                          <Sparkles size={12} />{" "}
-                          {offer.rewardType?.toLowerCase() === "flat"
-                            ? `₹${offer.points}`
-                            : offer.rewardType?.toLowerCase() === "percentage"
-                            ? `${offer.points}%`
-                            : `${offer.points} pts`}
+                      <span className="wallet-offer-top">
+                        <span className="wallet-offer-media">
+                          <ThemeIcon size={20} />
                         </span>
+                        {!isRedeemed && (
+                          <span className="wallet-offer-status">
+                            <span className="wallet-offer-status-dot" /> Active
+                          </span>
+                        )}
+                      </span>
+                      <span className="wallet-offer-value">
+                        {offer.rewardType?.toLowerCase() === "flat"
+                          ? `₹${offer.points}`
+                          : offer.rewardType?.toLowerCase() === "percentage"
+                          ? `${offer.points}%`
+                          : `${offer.points} pts`}
+                        <small>{offer.rewardType?.toLowerCase() === "percentage" ? "cashback" : "reward"}</small>
                       </span>
                       <span className="wallet-offer-content">
                         <strong>{offer.title}</strong>
                         {/* <small>{offer.subtitle}</small> */}
+                      </span>
+                      <span className="wallet-offer-divider" aria-hidden="true" />
+                      <span className="wallet-offer-meta">
+                        <span className="wallet-validity">
+                          <Clock size={12} /> Valid {offer.validityDays ?? 30} days
+                        </span>
+                        <span className="wallet-points-chip">
+                          <Sparkles size={12} /> {offer.category}
+                        </span>
                       </span>
                     </button>
                   );

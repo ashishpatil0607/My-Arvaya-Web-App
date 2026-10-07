@@ -1,7 +1,8 @@
 import axios from 'axios';
 import { clearAuthData, getValidToken } from './antworkAuthService';
 
-export const BASE_URL = 'https://secure-ant.ant.works/secure-api';
+// Proxied to https://secure-ant.ant.works/secure-api (vite.config.js in dev, vercel.json in prod) — the API has no CORS headers
+export const BASE_URL = '/antwork-api';
 
 export const Antworkapi = axios.create({
   baseURL: BASE_URL,
@@ -61,9 +62,10 @@ Antworkapi.interceptors.response.use(
       });
     }
 
+    // Non-axios errors (e.g. token fetch failure in the request interceptor)
     return Promise.reject({
       code: 999,
-      message: 'Unexpected error occurred',
+      message: error?.message || 'Unexpected error occurred',
     });
   }
 );

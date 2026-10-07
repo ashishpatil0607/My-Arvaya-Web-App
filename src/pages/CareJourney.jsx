@@ -1,29 +1,57 @@
-import { ChevronLeft, Building2, AlertTriangle, Activity, ChevronRight, CalendarCheck, Loader2 } from "lucide-react";
+import { ChevronLeft, Building2, AlertTriangle, Activity, ChevronRight, CalendarCheck, Loader2, FileSearch, IdCard, Stethoscope, Headset, RefreshCw, Home } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { Antworkapi } from "../services/apiClient";
+import { useAuth } from "../context/AuthContext";
 
 export default function CareJourney() {
   const navigate = useNavigate();
+  const { user, openLoginModal } = useAuth();
+  // UHID entered at login is stored as external_id
+  const uhid = String(user?.external_id || user?.uhid || "").trim();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeDoc, setActiveDoc] = useState(null);
   
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState(null);
+  // { kind: "not_found" | "no_uhid" | "failed", message? }
   const [error, setError] = useState(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
-    Antworkapi.get('/api/PatientDashboard/1072')
+    if (!user) {
+      setLoading(false);
+      openLoginModal("/care-journey");
+      return;
+    }
+    if (!uhid) {
+      setLoading(false);
+      setError({ kind: "no_uhid" });
+      return;
+    }
+
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    setData(null);
+    Antworkapi.get(`/api/PatientDashboard/${encodeURIComponent(uhid)}`)
       .then(res => {
+        if (cancelled) return;
         setData(res);
         setLoading(false);
       })
       .catch(err => {
+        if (cancelled) return;
         console.error("API Error:", err);
-        setError(err.message || "Failed to load patient data");
+        if (err.code === 404 || err.code === 400) {
+          setError({ kind: "not_found" });
+        } else {
+          setError({ kind: "failed", message: err.message });
+        }
         setLoading(false);
       });
-  }, []);
+    return () => { cancelled = true; };
+  }, [user?.id, uhid, reloadKey]);
 
   useEffect(() => {
     if (isModalOpen) {
@@ -49,13 +77,86 @@ export default function CareJourney() {
     );
   }
 
-  if (error) {
+  if (!user) {
     return (
       <main className="page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: 'var(--bg-app)' }}>
         <div style={{ textAlign: 'center' }}>
-          <AlertTriangle size={48} style={{ color: 'var(--danger)', marginBottom: '16px' }} />
-          <h2 style={{ color: 'var(--text-main)' }}>{error}</h2>
-          <button onClick={() => navigate(-1)} className="btn hover-glow" style={{ marginTop: '16px' }}>Go Back</button>
+          <Activity size={48} style={{ color: 'var(--primary)', marginBottom: '16px' }} />
+          <h2 style={{ color: 'var(--text-main)' }}>Log in to view your Care Journey</h2>
+          <button onClick={() => openLoginModal("/care-journey")} className="btn hover-glow" style={{ marginTop: '16px' }}>Log In</button>
+        </div>
+      </main>
+    );
+  }
+
+  if (error) {
+    const variants = {
+      not_found: {
+        icon: <FileSearch size={38} strokeWidth={1.8} />,
+        tone: 'var(--primary)',
+        tint: 'var(--primary-light)',
+        title: 'No care records yet',
+        text: "We couldn't find any treatment history linked to your UHID. Your reports, prescriptions and discharge summaries will appear here once your hospital visits are synced.",
+        primary: { label: 'Book a Consultation', icon: <Stethoscope size={18} />, onClick: () => navigate('/doctors') },
+      },
+      no_uhid: {
+        icon: <IdCard size={38} strokeWidth={1.8} />,
+        tone: 'var(--accent)',
+        tint: '#fff3e8',
+        title: 'Link your hospital UHID',
+        text: 'Your Care Journey is built from your hospital records. Log in again and enter the UHID printed on your hospital card or receipt to see them here.',
+        primary: { label: 'Contact Support', icon: <Headset size={18} />, onClick: () => navigate('/support') },
+      },
+      failed: {
+        icon: <AlertTriangle size={38} strokeWidth={1.8} />,
+        tone: 'var(--danger)',
+        tint: '#fdeded',
+        title: "We couldn't load your records",
+        text: error.message || 'Something went wrong while fetching your Care Journey. Please check your connection and try again.',
+        primary: { label: 'Try Again', icon: <RefreshCw size={18} />, onClick: () => setReloadKey(k => k + 1) },
+      },
+    };
+    const v = variants[error.kind] || variants.failed;
+
+    return (
+      <main className="page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: 'var(--bg-app)', padding: '24px 16px' }}>
+        <div className="animate-fade-in-up" style={{ position: 'relative', overflow: 'hidden', width: '100%', maxWidth: '480px', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: '28px', boxShadow: 'var(--shadow-lg)', padding: '44px 32px 32px', textAlign: 'center' }}>
+          {/* soft top glow */}
+          <div aria-hidden="true" style={{ position: 'absolute', top: '-90px', left: '50%', transform: 'translateX(-50%)', width: '320px', height: '180px', borderRadius: '50%', background: v.tint, filter: 'blur(10px)', opacity: 0.9 }} />
+
+          <div style={{ position: 'relative' }}>
+            <div style={{ width: '96px', height: '96px', margin: '0 auto 24px', borderRadius: '50%', background: v.tint, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 0 0 10px color-mix(in srgb, ${v.tint} 45%, transparent)` }}>
+              <div style={{ width: '64px', height: '64px', borderRadius: '20px', background: 'var(--bg-surface)', color: v.tone, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'var(--shadow-md)' }}>
+                {v.icon}
+              </div>
+            </div>
+
+            <h2 style={{ fontSize: '24px', fontWeight: '800', color: 'var(--text-main)', margin: '0 0 10px', lineHeight: 1.25 }}>{v.title}</h2>
+
+            {uhid && error.kind !== 'no_uhid' && (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: '700', color: 'var(--primary-dark)', background: 'var(--bg-app)', border: '1px solid var(--border)', padding: '5px 12px', borderRadius: '999px', marginBottom: '16px', letterSpacing: '0.03em' }}>
+                <IdCard size={14} /> UHID · {uhid}
+              </span>
+            )}
+
+            <p style={{ fontSize: '15px', color: 'var(--text-muted)', lineHeight: 1.6, margin: '0 auto 28px', maxWidth: '380px' }}>{v.text}</p>
+
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+              <button onClick={v.primary.onClick} className="btn btn-primary hover-glow" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '12px 22px', borderRadius: '14px', fontWeight: '700' }}>
+                {v.primary.icon} {v.primary.label}
+              </button>
+              <button onClick={() => navigate('/')} className="btn btn-secondary hover-glow" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '12px 22px', borderRadius: '14px', fontWeight: '700' }}>
+                <Home size={18} /> Back to Home
+              </button>
+            </div>
+
+            {error.kind === 'not_found' && (
+              <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: '24px 0 0' }}>
+                Think this is a mistake?{' '}
+                <button onClick={() => navigate('/support')} style={{ background: 'none', border: 'none', padding: 0, color: 'var(--primary)', fontWeight: '700', cursor: 'pointer', fontSize: '13px' }}>Contact support</button>
+              </p>
+            )}
+          </div>
         </div>
       </main>
     );

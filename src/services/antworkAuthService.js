@@ -1,12 +1,8 @@
 const TOKEN_KEY = 'ACCESS_TOKEN';
 const TOKEN_EXPIRY_KEY = 'TOKEN_EXPIRY';
 
-const CLIENT_ID = import.meta.env.VITE_ANTWORK_CLIENT_ID;
-const CLIENT_SECRET = import.meta.env.VITE_ANTWORK_CLIENT_SECRET;
-const SCOPE = import.meta.env.VITE_ANTWORK_SCOPE;
-const TENANT_ID = import.meta.env.VITE_ANTWORK_TENANT_ID;
-
-const TOKEN_URL = `https://login.microsoftonline.com/${TENANT_ID}/oauth2/v2.0/token`;
+// Token is minted server-side (api/antwork-token.js) — Azure blocks client_credentials from the browser
+const TOKEN_URL = '/api/antwork-token';
 
 export const getStoredToken = async () => {
   return localStorage.getItem(TOKEN_KEY);
@@ -24,25 +20,12 @@ export const isTokenExpired = async () => {
 
 export const fetchAccessToken = async () => {
   try {
-    const formData = new URLSearchParams();
+    const response = await fetch(TOKEN_URL, { method: 'POST' });
 
-    formData.append('client_id', CLIENT_ID ?? '');
-    formData.append('client_secret', CLIENT_SECRET ?? '');
-    formData.append('scope', SCOPE ?? '');
-    formData.append('grant_type', 'client_credentials');
-
-    const response = await fetch(TOKEN_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: formData.toString(),
-    });
-
-    const data = await response.json();
+    const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-      throw new Error(data?.error_description || 'Token fetch failed');
+      throw new Error(data?.error || 'Token fetch failed');
     }
 
     const accessToken = data.access_token;
