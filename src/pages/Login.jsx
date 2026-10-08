@@ -1024,7 +1024,7 @@ export default function Login({ forceOpen = false, modalHost = false }) {
             }}
           >
             <img
-              src="/logo.png"
+              src="/secure-hospitals-logo.png"
               alt="Arvaya"
               style={{
                 height: "36px",

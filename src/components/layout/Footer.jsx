@@ -110,7 +110,7 @@ export default function Footer() {
           transition: transform 0.3s var(--ease-out);
         }
         .footer-logo-chip:hover { transform: translateY(-2px); }
-        .footer-logo { height: 34px; display: block; }
+        .footer-logo { height: 64px; max-width: 100%; display: block; }
         .footer-desc {
           font-size: 14px;
           line-height: 1.7;
@@ -264,7 +264,7 @@ export default function Footer() {
           {/* Column 1: Brand */}
           <div className="footer-col">
             <Link to="/" className="footer-logo-chip" aria-label="Arvaya home">
-              <img src="/logo.png" alt="Arvaya" className="footer-logo" />
+              <img src="/secure-hospitals-logo.png" alt="Secure Hospitals – Arvaya Healthcare Ltd." className="footer-logo" />
             </Link>
             <p className="footer-desc">
               India's most trusted healthcare platform. Connecting you with top doctors, diagnostic centers, and pharmacies across the country.

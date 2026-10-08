@@ -165,7 +165,7 @@ export default function Signup() {
         {/* Card Header */}
         <div style={{ textAlign: "center", marginBottom: "18px" }}>
           <div style={{ background: '#ffffff', padding: '6px 14px', borderRadius: '12px', display: 'inline-flex', marginBottom: '8px', boxShadow: '0 2px 10px rgba(0,0,0,0.04)', border: '1px solid var(--border)' }}>
-            <img src="/logo.png" alt="Arvaya" style={{ height: "30px", objectFit: 'contain' }} />
+            <img src="/secure-hospitals-logo.png" alt="Secure Hospitals – Arvaya Healthcare Ltd." style={{ height: "30px", objectFit: 'contain' }} />
           </div>
           <h1 style={{ fontSize: "22px", color: "var(--text-main)", margin: "0 0 4px", fontWeight: "800", letterSpacing: "-0.01em" }}>
             Complete Registration

@@ -497,7 +497,7 @@ export default function Header() {
           {/* Logo & Location Group */}
           <div className="flex items-center gap-4 header-brand-location" style={{ flexShrink: 0 }}>
             <Link to="/" className="flex items-center gap-2" style={{ display: 'flex', alignItems: 'center' }}>
-              <img src="/logo.png" alt="Arvaya Logo" className="header-logo-img" style={{ height: '48px', width: 'auto', objectFit: 'contain', display: 'block' }} />
+              <img src="/secure-hospitals-logo.png" alt="Secure Hospitals – Arvaya Healthcare Ltd." className="header-logo-img" style={{ height: '48px', width: 'auto', objectFit: 'contain', display: 'block' }} />
             </Link>
 
             {/* Location Picker */}
@@ -1267,7 +1267,7 @@ export default function Header() {
               <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                 {/* Drawer Header */}
                 <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-app)', flexShrink: 0 }}>
-                  <img src="/logo.png" alt="Arvaya" style={{ height: '26px' }} />
+                  <img src="/secure-hospitals-logo.png" alt="Secure Hospitals – Arvaya Healthcare Ltd." style={{ height: '36px', width: 'auto', objectFit: 'contain' }} />
                   <button
                     onClick={() => {
                       setMobileDrawerOpen(false);
