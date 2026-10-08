@@ -4547,8 +4547,14 @@ input[type="radio"]:focus-visible {
   .ambulance-modal-card {
     flex-direction: column;
     max-height: 94vh;
+    max-height: 94dvh;
     border-radius: 16px;
     overflow-y: auto;
+  }
+
+  /* Whole card scrolls on mobile: let the right panel take its natural height */
+  .ambulance-modal-right {
+    flex: none;
   }
 
   .ambulance-modal-left {
@@ -4578,11 +4584,16 @@ input[type="radio"]:focus-visible {
   }
 
   .ambulance-modal-scroll {
+    flex: none;
     padding: 24px 20px 12px;
     overflow-y: visible;
   }
 
+  /* Keep the submit button visible at the bottom of the scrolling card */
   .ambulance-modal-footer {
+    position: sticky;
+    bottom: 0;
+    z-index: 30;
     padding: 16px 20px;
   }
 

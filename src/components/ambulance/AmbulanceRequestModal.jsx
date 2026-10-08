@@ -89,7 +89,7 @@ function GoogleLocationPicker({ position, onPick }) {
 function Overlay({ children, onClose }) {
   const content = (
     <div className="ambulance-modal-overlay" onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} style={{ width: "100%", maxWidth: "860px", margin: "auto" }}>{children}</div>
+      <div onClick={e => e.stopPropagation()} style={{ width: "100%", maxWidth: "860px", margin: "auto", position: "relative" }}>{children}</div>
     </div>
   );
   if (typeof window === "undefined") return content;
@@ -407,6 +407,10 @@ export default function AmbulanceRequestModal({ onClose, onSuccess }) {
 
   return (
     <Overlay onClose={onClose}>
+      {/* Close button anchored to the (non-scrolling) card frame so it stays in the top-right corner */}
+      <button onClick={onClose} aria-label="Close" style={{ position: "absolute", top: "16px", right: "16px", background: "var(--bg-app)", border: "1px solid var(--border)", width: "34px", height: "34px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", transition: "all 0.2s", zIndex: 40, boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }} onMouseEnter={e => e.currentTarget.style.background="var(--border)"} onMouseLeave={e => e.currentTarget.style.background="var(--bg-app)"}>
+        <X size={16} color="var(--text-muted)" />
+      </button>
       <div className="ambulance-modal-card">
 
         {/* Left Panel */}
@@ -420,9 +424,6 @@ export default function AmbulanceRequestModal({ onClose, onSuccess }) {
 
         {/* Right Panel */}
         <div className="ambulance-modal-right">
-          <button onClick={onClose} style={{ position: "absolute", top: "16px", right: "16px", background: "var(--bg-app)", border: "1px solid var(--border)", width: "34px", height: "34px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", transition: "all 0.2s", zIndex: 10 }} onMouseEnter={e => e.currentTarget.style.background="var(--border)"} onMouseLeave={e => e.currentTarget.style.background="var(--bg-app)"}>
-            <X size={16} color="var(--text-muted)" />
-          </button>
           <div className="ambulance-modal-scroll" style={{ justifyContent: step === 2 ? "center" : "flex-start" }}>
             {step === 1 ? formPanel : successPanel}
           </div>

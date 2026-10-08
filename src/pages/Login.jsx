@@ -21,6 +21,7 @@ import {
   ChevronUp,
   Link as LinkIcon,
   Ticket,
+  AlertCircle,
 } from "lucide-react";
 import {
   sendOtp,
@@ -38,6 +39,8 @@ import {
   abhaCreateByAadhaar,
   abhaGetSuggestions,
 } from "../services/abhaService";
+import { fetchImageBlob, getImageUrl } from "../services/uploadService";
+import { getPatients } from "../services/dataService";
 import { useNavigate, useLocation } from "react-router-dom";
 import { createPortal } from "react-dom";
 
@@ -325,8 +328,30 @@ export default function Login({ forceOpen = false, modalHost = false }) {
           mobile_number: p.mobile_number || res?.mobile_number || phone,
           relation: p.relation || null,
           parent_account_id: p.parent_account_id || null,
+          profile_image:
+            p.profile_image ||
+            p.profileImage ||
+            p.photo ||
+            p.image ||
+            userData?.profile_image ||
+            userData?.profileImage ||
+            res?.user?.profile_image ||
+            "",
         };
       });
+
+      const tempToken =
+        res?.token ||
+        res?.accessToken ||
+        res?.data?.token ||
+        res?.result?.token ||
+        res?.UserData?.token ||
+        res?.UserData?.accessToken;
+      if (tempToken && typeof localStorage !== "undefined") {
+        try {
+          localStorage.setItem("token", tempToken);
+        } catch (e) {}
+      }
 
       // Verify UHID is COMPULSORY for all types of users (single user, new user, multiple profiles)
       setVerifyOtpRawRes(res);
@@ -480,6 +505,15 @@ export default function Login({ forceOpen = false, modalHost = false }) {
           null,
         phone: rawUserMobile || phone,
         mobile_number: rawUserMobile || phone,
+        profile_image:
+          profile.profile_image ||
+          profile.profileImage ||
+          profile.photo ||
+          selectRes?.UserData?.profile_image ||
+          selectRes?.UserData?.profileImage ||
+          rawUser?.profile_image ||
+          rawUser?.profileImage ||
+          "",
       };
 
       // Save all selected profiles for Google Mail style account switching
@@ -492,6 +526,11 @@ export default function Login({ forceOpen = false, modalHost = false }) {
         mobile_number: rawUserMobile || phone,
         phone: rawUserMobile || phone,
         isPrimary: !p.relation && (!p.parent_account_id || p.parent_account_id === p.id),
+        profile_image:
+          p.profile_image ||
+          p.profileImage ||
+          p.photo ||
+          "",
       }));
 
       localStorage.setItem("arvaya_linked_profiles", JSON.stringify(profilesToSave));
@@ -500,6 +539,9 @@ export default function Login({ forceOpen = false, modalHost = false }) {
       }
 
       saveSession({ token, user, loginMethod: "user_verify_otp" });
+      try {
+        window.dispatchEvent(new Event("arvaya_profile_updated"));
+      } catch (e) {}
       setScreen("landing");
       setPhone("");
       setErr("");
@@ -902,21 +944,25 @@ export default function Login({ forceOpen = false, modalHost = false }) {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        padding: isModalPresentation ? "24px" : "32px 16px",
+        padding: isModalPresentation ? "0" : "32px 16px",
         background: isModalPresentation ? "transparent" : "var(--bg-app)",
+        width: "100%",
+        boxSizing: "border-box",
       }}
     >
       <div
-        className="login-modal-container"
+        className={`login-modal-container ${screen === "choose_profile" ? "choose-profile-modal-container" : screen === "otp" ? "otp-modal-container" : ""}`}
         style={{
           background: "#fff",
           borderRadius: "24px",
           width: "100%",
-          maxWidth: "840px",
+          maxWidth: screen === "choose_profile" ? "780px" : screen === "otp" ? "720px" : "840px",
+          boxSizing: "border-box",
+          height: "auto",
           maxHeight:
             screen === "choose_profile"
-              ? "min(640px, calc(100dvh - 32px))"
-              : "min(680px, calc(100dvh - 48px))",
+              ? "min(580px, calc(100dvh - 32px))"
+              : "min(640px, calc(100dvh - 36px))",
           display: "flex",
           position: "relative",
           boxShadow:
@@ -1044,22 +1090,24 @@ export default function Login({ forceOpen = false, modalHost = false }) {
 
         {/* ── Right Pane ── */}
         <div
-          className="login-modal-right no-scrollbar"
+          className={`login-modal-right ${screen === "choose_profile" ? "choose-profile-modal-right" : "no-scrollbar"}`}
           style={{
             flex: "1.1",
             padding:
-              screen === "choose_profile" ? "20px 20px 16px" : "20px 24px",
+              screen === "choose_profile" ? "20px 22px 16px" : "20px 24px",
             display: "flex",
             flexDirection: "column",
             justifyContent:
               screen === "choose_profile" ? "flex-start" : "center",
             background: "#fff",
-            minWidth: "340px",
+            minWidth: 0,
+            width: "100%",
+            boxSizing: "border-box",
             borderTopRightRadius: "24px",
             borderBottomRightRadius: "24px",
-            overflowY: "auto",
-            scrollbarWidth: "none",
-            msOverflowStyle: "none",
+            overflowY: screen === "choose_profile" ? "hidden" : "auto",
+            scrollbarWidth: screen === "choose_profile" ? "auto" : "none",
+            msOverflowStyle: screen === "choose_profile" ? "auto" : "none",
           }}
         >
           {card}
@@ -1073,13 +1121,11 @@ export default function Login({ forceOpen = false, modalHost = false }) {
       <div
         className="login-modal-overlay"
         role="presentation"
-        onMouseDown={handleClose}
       >
         <div
           role="dialog"
           aria-modal="true"
           aria-label="Sign in"
-          onMouseDown={(event) => event.stopPropagation()}
         >
           {loginCard}
         </div>
@@ -1335,6 +1381,7 @@ function Landing({ onAbha, onMobile, showToast }) {
     >
       <div style={{ marginBottom: "16px" }}>
         <h3
+          className="welcome-title"
           style={{
             fontSize: "24px",
             fontWeight: "800",
@@ -1345,42 +1392,35 @@ function Landing({ onAbha, onMobile, showToast }) {
         >
           Welcome Back
         </h3>
-        <p style={{ fontSize: "14px", color: "var(--text-muted)" }}>
+        <p className="welcome-desc" style={{ fontSize: "14px", color: "var(--text-muted)" }}>
           Login or sign up to access your account
         </p>
       </div>
 
       <button
         onClick={onMobile}
-        className="hover-glow"
+        className="hover-glow mobile-login-btn"
         style={{
-          position: "relative",
+          width: "100%",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
+          gap: "12px",
           background: "var(--primary)",
           color: "#fff",
           border: "none",
-          padding: "14px",
+          padding: "14px 18px",
           borderRadius: "12px",
           fontSize: "15px",
           fontWeight: "600",
           cursor: "pointer",
           boxShadow: "0 4px 12px rgba(46,102,110,0.28)",
           transition: "all 0.25s",
+          boxSizing: "border-box",
         }}
       >
-        <div
-          style={{
-            position: "absolute",
-            left: "20px",
-            display: "flex",
-            alignItems: "center",
-          }}
-        >
-          <Phone size={20} color="#fff" />
-        </div>
-        Continue with Mobile Number
+        <Phone size={19} color="#fff" style={{ flexShrink: 0 }} />
+        <span>Continue with Mobile Number</span>
       </button>
 
       {/* Referral Code Option */}
@@ -1733,35 +1773,39 @@ function Otp({ phone, onBack, onVerify, onResend, busy, err }) {
   const secs = String(countdown % 60).padStart(2, "0");
 
   return (
-    <div style={{ animation: "fadeIn 0.3s ease-in-out" }}>
+    <div className="otp-container" style={{ animation: "fadeIn 0.3s ease-in-out", width: "100%" }}>
       <div
+        className="otp-header-row"
         style={{
           display: "flex",
           alignItems: "center",
-          gap: "12px",
-          marginBottom: "8px",
+          gap: "10px",
+          marginBottom: "6px",
         }}
       >
         <button
           onClick={onBack}
+          className="otp-back-btn"
           style={{
             background: "var(--bg-app)",
             border: "none",
             cursor: "pointer",
             color: "var(--text-main)",
-            width: "32px",
-            height: "32px",
+            width: "30px",
+            height: "30px",
             borderRadius: "50%",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
+            flexShrink: 0,
           }}
         >
-          <ArrowLeft size={18} />
+          <ArrowLeft size={16} />
         </button>
         <h3
+          className="otp-header-title"
           style={{
-            fontSize: "22px",
+            fontSize: "20px",
             fontWeight: "800",
             color: "var(--text-main)",
             margin: 0,
@@ -1772,23 +1816,24 @@ function Otp({ phone, onBack, onVerify, onResend, busy, err }) {
         </h3>
       </div>
       <p
+        className="otp-header-subtitle"
         style={{
-          fontSize: "14px",
+          fontSize: "13.5px",
           color: "var(--text-muted)",
-          marginBottom: "32px",
-          paddingLeft: "44px",
+          marginBottom: "18px",
+          paddingLeft: "40px",
         }}
       >
         Code sent to <b style={{ color: "var(--text-main)" }}>+91 {phone}</b>
       </p>
 
-      {err && <ErrorBox msg={err} />}
-      <div style={{ marginBottom: "24px" }}>
+      {err && <div style={{ marginBottom: "12px" }}><ErrorBox msg={err} /></div>}
+      <div className="otp-input-container" style={{ marginBottom: "16px" }}>
         <OtpInputGrid value={o} onChange={setO} />
       </div>
 
       {/* Resend timer */}
-      <div style={{ textAlign: "right", marginBottom: "24px" }}>
+      <div className="otp-resend-row" style={{ textAlign: "right", marginBottom: "18px" }}>
         {canResend ? (
           <button
             onClick={handleResend}
@@ -1804,7 +1849,7 @@ function Otp({ phone, onBack, onVerify, onResend, busy, err }) {
             Resend OTP
           </button>
         ) : (
-          <span style={{ fontSize: "13px", color: "var(--text-muted)" }}>
+          <span style={{ fontSize: "12.5px", color: "var(--text-muted)" }}>
             Resend OTP in{" "}
             <strong
               style={{
@@ -1819,6 +1864,7 @@ function Otp({ phone, onBack, onVerify, onResend, busy, err }) {
       </div>
 
       <button
+        className="otp-submit-btn"
         disabled={busy || o.length < 6}
         onClick={() => onVerify(o)}
         style={{
@@ -1826,10 +1872,10 @@ function Otp({ phone, onBack, onVerify, onResend, busy, err }) {
           background: busy || o.length < 6 ? "var(--border)" : "var(--primary)",
           color: busy || o.length < 6 ? "var(--text-muted)" : "#fff",
           border: "none",
-          padding: "16px",
+          padding: "13px 16px",
           borderRadius: "12px",
-          fontSize: "15px",
-          fontWeight: "600",
+          fontSize: "14.5px",
+          fontWeight: "700",
           cursor: busy || o.length < 6 ? "not-allowed" : "pointer",
           transition: "all 0.2s",
           boxShadow:
@@ -3703,11 +3749,14 @@ function OtpInputGrid({ value, onChange }) {
 
   return (
     <div
+      className="otp-input-grid"
       style={{
         display: "flex",
         gap: "10px",
-        justifyContent: "flex-start",
+        justifyContent: "center",
         marginBottom: "8px",
+        width: "100%",
+        boxSizing: "border-box",
       }}
     >
       {Array.from({ length: 6 }).map((_, i) => (
@@ -3721,6 +3770,7 @@ function OtpInputGrid({ value, onChange }) {
           onChange={(e) => handleChange(e, i)}
           onKeyDown={(e) => handleKeyDown(e, i)}
           onPaste={handlePaste}
+          className="otp-input-box"
           onFocus={(e) => {
             e.target.style.borderColor = "var(--primary)";
             e.target.style.boxShadow = "0 0 0 4px rgba(46,102,110,0.14)";
@@ -3734,20 +3784,21 @@ function OtpInputGrid({ value, onChange }) {
             e.target.style.background = "var(--bg-app)";
           }}
           style={{
-            width: "48px",
-            height: "56px",
+            width: "44px",
+            height: "52px",
             border: value[i]
               ? "2px solid var(--primary-soft)"
               : "1.5px solid var(--border)",
             borderRadius: "12px",
             textAlign: "center",
-            fontSize: "22px",
+            fontSize: "20px",
             fontWeight: "700",
             color: "var(--text-main)",
             outline: "none",
             background: value[i] ? "var(--primary-light)" : "var(--bg-app)",
             transition: "all 0.2s",
             cursor: "text",
+            boxSizing: "border-box",
           }}
         />
       ))}
@@ -4297,8 +4348,105 @@ function ChooseProfile({
 }) {
   const [chooseStep, setChooseStep] = useState("verify"); // "verify" | "select_primary"
   const [selectedProfileIds, setSelectedProfileIds] = useState([]);
+  const [verifiedProfileIds, setVerifiedProfileIds] = useState([]);
+  const [uhidErrors, setUhidErrors] = useState({});
   const [primaryLoginId, setPrimaryLoginId] = useState(null);
+  const [profileAvatars, setProfileAvatars] = useState({});
   const { showToast } = useAuth();
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadAvatars() {
+      if (!profiles || profiles.length === 0) return;
+
+      // Match patients by mobile or id (same approach as Header.jsx)
+      let patientsList = [];
+      try {
+        const mobile = profiles[0]?.mobile_number || "";
+        const profileId = profiles[0]?.id;
+        const filters = [
+          ...(profileId ? [{ column: "id", operator: "=", value: profileId }] : []),
+          ...(mobile ? [{ column: "mobile_number", operator: "=", value: mobile }] : [])
+        ];
+        const res = await getPatients(filters);
+        if (Array.isArray(res)) {
+          patientsList = res;
+        } else if (res && typeof res === "object") {
+          patientsList = [res];
+        }
+      } catch (err) {
+        console.warn("Could not query patients in ChooseProfile:", err);
+      }
+
+      const avatarsMap = {};
+      await Promise.all(
+        profiles.map(async (p) => {
+          try {
+            const matchedPatient =
+              patientsList.find(
+                (item) => String(item.id || item.user_id || item.app_user_id) === String(p.id)
+              ) ||
+              patientsList.find(
+                (item) =>
+                  item.external_id &&
+                  p.external_id &&
+                  String(item.external_id).trim().toUpperCase() ===
+                    String(p.external_id).trim().toUpperCase()
+              ) ||
+              patientsList.find(
+                (item) =>
+                  item.name &&
+                  p.name &&
+                  item.name.trim().toLowerCase() === p.name.trim().toLowerCase()
+              );
+
+            let imgPath =
+              matchedPatient?.profile_image ||
+              matchedPatient?.profileImage ||
+              matchedPatient?.photo ||
+              p?.profile_image ||
+              p?.profileImage ||
+              p?.photo ||
+              p?.image ||
+              "";
+
+            if (imgPath) {
+              const pathStr = String(imgPath).trim();
+              if (
+                pathStr.startsWith("http://") ||
+                pathStr.startsWith("https://") ||
+                pathStr.startsWith("data:") ||
+                pathStr.startsWith("blob:")
+              ) {
+                avatarsMap[p.id] = pathStr;
+              } else {
+                const resolved = await fetchImageBlob(pathStr, "patientProfileImage");
+                if (resolved) {
+                  avatarsMap[p.id] = resolved;
+                } else {
+                  const fallback = getImageUrl(pathStr, "patientProfileImage");
+                  if (fallback) avatarsMap[p.id] = fallback;
+                }
+              }
+            }
+          } catch (e) {
+            console.error("Failed to load avatar for profile", p.id, e);
+          }
+        })
+      );
+
+      if (isMounted) {
+        setProfileAvatars(avatarsMap);
+      }
+    }
+
+    loadAvatars();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [profiles]);
 
   const getInitials = (name) => {
     if (!name) return "U";
@@ -4311,6 +4459,11 @@ function ChooseProfile({
   };
 
   const handleCheckboxToggle = (profileId, checked) => {
+    // Only verified profiles can be toggled
+    if (!verifiedProfileIds.includes(profileId)) {
+      onSelectProfile(profileId);
+      return;
+    }
     if (checked) {
       setSelectedProfileIds((prev) =>
         prev.includes(profileId) ? prev : [...prev, profileId]
@@ -4321,45 +4474,77 @@ function ChooseProfile({
   };
 
   const handleUhidInputChange = (profile, val) => {
-    onUhidChange(profile.id, val);
-    const hasLowercase = /[a-z]/.test(val || "");
-    const entered = (val || "").trim().toUpperCase();
+    // Only allow uppercase letters, numbers, and hyphen (format: KOL-55552)
+    const sanitized = (val || "").toUpperCase().replace(/[^A-Z0-9-]/g, "");
+    onUhidChange(profile.id, sanitized);
+    // Clear error for this profile when user types
+    setUhidErrors((prev) => {
+      if (!prev[profile.id]) return prev;
+      const next = { ...prev };
+      delete next[profile.id];
+      return next;
+    });
+    // Invalidate prior verification if input is changed
+    setVerifiedProfileIds((prev) => prev.filter((id) => id !== profile.id));
+    setSelectedProfileIds((prev) => prev.filter((id) => id !== profile.id));
+  };
+
+  const handleVerifyUhid = (profile) => {
+    const rawVal =
+      uhidInputs[profile.id] !== undefined ? uhidInputs[profile.id] : "";
+    const entered = (rawVal || "").trim().toUpperCase();
+
+    if (!entered) {
+      setUhidErrors((prev) => ({
+        ...prev,
+        [profile.id]: "Please enter UHID to verify",
+      }));
+      return;
+    }
+
+    // Match against profile record if external_id exists
     const expected = (
       profile.external_id ||
       profile.uhid ||
       profile.externalId ||
       ""
     ).trim().toUpperCase();
-    const isMatch = Boolean(
-      !hasLowercase && entered && (expected ? entered === expected : entered.length >= 3)
-    );
-    if (isMatch) {
-      setSelectedProfileIds((prev) =>
-        prev.includes(profile.id) ? prev : [...prev, profile.id]
-      );
-    } else {
-      setSelectedProfileIds((prev) => prev.filter((id) => id !== profile.id));
-    }
-  };
 
-  const handleProceedToPrimary = () => {
-    // Check if any entered UHID contains lowercase letters
-    const hasLowercase = selectedProfileIds.some((id) => {
-      const val = uhidInputs[id] || "";
-      return /[a-z]/.test(val);
-    });
-    
-    if (hasLowercase) {
-      if (showToast) {
-        showToast("UHID must be in uppercase format (e.g., KOL-1022)", "error");
-      } else {
-        alert("UHID must be in uppercase format (e.g., KOL-1022)");
-      }
+    if (expected && entered !== expected) {
+      setUhidErrors((prev) => ({
+        ...prev,
+        [profile.id]: "Incorrect UHID. Please check and try again.",
+      }));
       return;
     }
 
-    const verifiedSelected = profiles.filter((p) =>
-      selectedProfileIds.includes(p.id)
+    // Successful verification
+    setUhidErrors((prev) => {
+      const next = { ...prev };
+      delete next[profile.id];
+      return next;
+    });
+    setVerifiedProfileIds((prev) =>
+      prev.includes(profile.id) ? prev : [...prev, profile.id]
+    );
+    setSelectedProfileIds((prev) =>
+      prev.includes(profile.id) ? prev : [...prev, profile.id]
+    );
+  };
+
+  const handleResetUhidVerification = (profileId) => {
+    setVerifiedProfileIds((prev) => prev.filter((id) => id !== profileId));
+    setSelectedProfileIds((prev) => prev.filter((id) => id !== profileId));
+    setUhidErrors((prev) => {
+      const next = { ...prev };
+      delete next[profileId];
+      return next;
+    });
+  };
+
+  const handleProceedToPrimary = () => {
+    const verifiedSelected = profiles.filter(
+      (p) => selectedProfileIds.includes(p.id) && verifiedProfileIds.includes(p.id)
     );
     if (verifiedSelected.length === 0) return;
 
@@ -4380,9 +4565,8 @@ function ChooseProfile({
   };
 
   const handleDoLogin = () => {
-    const verifiedSelected = profiles.filter((p) =>
-      selectedProfileIds.includes(p.id)
-    );
+    const verifiedSelected = profiles.filter(
+      (p) => selectedProfileIds.includes(p.id) && verifiedProfileIds.includes(p.id)    );
     const chosen =
       profiles.find((p) => p.id === primaryLoginId) ||
       verifiedSelected[0] ||
@@ -4399,61 +4583,40 @@ function ChooseProfile({
       profiles.find((p) => p.id === primaryLoginId) || selectedProfiles[0];
 
     return (
-      <div style={{ animation: "fadeIn 0.35s ease-in-out", width: "100%" }}>
-        <button
-          type="button"
-          onClick={() => setChooseStep("verify")}
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "6px",
-            background: "none",
-            border: "none",
-            color: "#1b6b72",
-            fontSize: "13px",
-            fontWeight: "700",
-            cursor: "pointer",
-            padding: "0 0 12px 0",
-          }}
-        >
-          <ChevronLeft size={16} /> Back to account selection
-        </button>
-
-        <div style={{ marginBottom: "16px" }}>
-          <h3
+      <div className="choose-profile-container">
+        <div className="choose-profile-header">
+          <button
+            type="button"
+            onClick={() => setChooseStep("verify")}
             style={{
-              fontSize: "22px",
-              fontWeight: "800",
-              color: "var(--text-main)",
-              margin: "0 0 4px 0",
-              letterSpacing: "-0.02em",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              background: "none",
+              border: "none",
+              color: "#1b6b72",
+              fontSize: "13px",
+              fontWeight: "700",
+              cursor: "pointer",
+              padding: "0 0 10px 0",
             }}
           >
-            Select Primary Account
-          </h3>
-          <p
-            style={{ fontSize: "13px", color: "var(--text-muted)", margin: 0, lineHeight: "1.4" }}
-          >
-            Select the primary account to login. All selected accounts will be accessible to switch anytime after login.
-          </p>
+            <ChevronLeft size={16} /> Back to account selection
+          </button>
+
+          <div>
+            <h3 className="choose-profile-title">
+              Select Primary Account
+            </h3>
+            <p className="choose-profile-desc">
+              Select the primary account to login. All selected accounts will be accessible to switch anytime after login.
+            </p>
+          </div>
         </div>
 
-        {err && <ErrorBox msg={err} />}
+        {err && <div style={{ flexShrink: 0, marginBottom: "8px" }}><ErrorBox msg={err} /></div>}
 
-        <div
-          className="no-scrollbar"
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "10px",
-            maxHeight: "380px",
-            overflowY: "auto",
-            scrollbarWidth: "none",
-            msOverflowStyle: "none",
-            paddingRight: "2px",
-            marginBottom: "16px",
-          }}
-        >
+        <div className="choose-profile-list custom-modal-scroller">
           {selectedProfiles.map((p) => {
             const isPrimary =
               !p.relation &&
@@ -4529,8 +4692,28 @@ function ChooseProfile({
                       fontSize: "15px",
                       fontWeight: "700",
                       flexShrink: 0,
+                      overflow: "hidden",
+                      position: "relative",
                     }}
                   >
+                    {profileAvatars[p.id] ? (
+                      <img
+                        src={profileAvatars[p.id]}
+                        alt={displayName}
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "cover",
+                          position: "absolute",
+                          top: 0,
+                          left: 0,
+                          zIndex: 1,
+                        }}
+                        onError={(e) => {
+                          e.currentTarget.style.display = "none";
+                        }}
+                      />
+                    ) : null}
                     {initials}
                   </div>
 
@@ -4569,85 +4752,62 @@ function ChooseProfile({
           })}
         </div>
 
-        <button
-          disabled={busy || !primaryLoginId}
-          onClick={handleDoLogin}
-          style={{
-            width: "100%",
-            background: busy
-              ? "#cbd5e1"
-              : "linear-gradient(135deg, #1b6b72, #134e54)",
-            color: "#ffffff",
-            border: "none",
-            padding: "14px",
-            borderRadius: "12px",
-            fontSize: "15px",
-            fontWeight: "700",
-            cursor: busy ? "not-allowed" : "pointer",
-            boxShadow: busy
-              ? "none"
-              : "0 4px 14px rgba(27, 107, 114, 0.35)",
-            transition: "all 0.25s ease",
-          }}
-        >
-          {busy
-            ? "Logging in..."
-            : `Login as ${(() => {
-                if (!chosenProfile?.name) return "Account";
-                const parts = chosenProfile.name.trim().split(/\s+/);
-                if (parts.length > 1 && /^(mr|mrs|ms|dr)\.?$/i.test(parts[0])) {
-                  return `${parts[0]} ${parts[1]}`;
-                }
-                return chosenProfile.name;
-              })()}`}
-        </button>
+        <div className="choose-profile-footer">
+          <button
+            disabled={busy || !primaryLoginId}
+            onClick={handleDoLogin}
+            style={{
+              width: "100%",
+              margin: 0,
+              background: busy
+                ? "#cbd5e1"
+                : "linear-gradient(135deg, #1b6b72, #134e54)",
+              color: "#ffffff",
+              border: "none",
+              padding: "13px 16px",
+              borderRadius: "12px",
+              fontSize: "15px",
+              fontWeight: "700",
+              cursor: busy ? "not-allowed" : "pointer",
+              boxShadow: busy
+                ? "none"
+                : "0 4px 14px rgba(27, 107, 114, 0.35)",
+              transition: "all 0.25s ease",
+            }}
+          >
+            {busy
+              ? "Logging in..."
+              : `Login as ${(() => {
+                  if (!chosenProfile?.name) return "Account";
+                  const parts = chosenProfile.name.trim().split(/\s+/);
+                  if (parts.length > 1 && /^(mr|mrs|ms|dr)\.?$/i.test(parts[0])) {
+                    return `${parts[0]} ${parts[1]}`;
+                  }
+                  return chosenProfile.name;
+                })()}`}
+          </button>
+        </div>
       </div>
     );
   }
 
   // Step 1: Verification & Selection view (matches Image 1)
   return (
-    <div style={{ animation: "fadeIn 0.35s ease-in-out", width: "100%" }}>
-      <div style={{ marginBottom: "16px" }}>
-        <h3
-          style={{
-            fontSize: "22px",
-            fontWeight: "800",
-            color: "var(--text-main)",
-            margin: "0 0 4px 0",
-            letterSpacing: "-0.02em",
-          }}
-        >
+    <div className="choose-profile-container">
+      <div className="choose-profile-header">
+        <h3 className="choose-profile-title">
           {profiles.length === 1 ? "Verify UHID" : "Choose a Profile"}
         </h3>
-        <p
-          style={{ fontSize: "13.5px", color: "var(--text-muted)", margin: 0 }}
-        >
+        <p className="choose-profile-desc">
           {profiles.length === 1
             ? "Please enter your UHID to verify and continue to your account."
             : "Select the profile you want to access."}
         </p>
       </div>
 
-      {err && <ErrorBox msg={err} />}
+      {err && <div style={{ flexShrink: 0, marginBottom: "8px" }}><ErrorBox msg={err} /></div>}
 
-      <div
-        className="no-scrollbar"
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: "10px",
-          maxHeight: "380px",
-          overflowY: "auto",
-          scrollbarWidth: "none",
-          msOverflowStyle: "none",
-          paddingRight: "2px",
-          paddingLeft: "2px",
-          paddingTop: "2px",
-          paddingBottom: "2px",
-          marginBottom: "10px",
-        }}
-      >
+      <div className="choose-profile-list custom-modal-scroller">
         {profiles.map((p) => {
           const isAccordionOpen =
             p.id === selectedProfileId || profiles.length === 1;
@@ -4672,29 +4832,22 @@ function ChooseProfile({
           const initials = getInitials(displayName);
           const currentUhid =
             uhidInputs[p.id] !== undefined ? uhidInputs[p.id] : "";
-          const hasLowercase = /[a-z]/.test(currentUhid);
-          const enteredClean = currentUhid.trim().toUpperCase();
-          const expectedClean = (
-            p.external_id ||
-            p.uhid ||
-            p.externalId ||
-            ""
-          ).trim().toUpperCase();
-          const isVerified = Boolean(
-            !hasLowercase && enteredClean &&
-              (expectedClean ? enteredClean === expectedClean : enteredClean.length >= 3)
-          );
-          const isChecked = selectedProfileIds.includes(p.id);
+          const isVerified = verifiedProfileIds.includes(p.id);
+          const isChecked = selectedProfileIds.includes(p.id) && isVerified;
+          const currentError = uhidErrors[p.id] || "";
 
           return (
             <div
               key={p.id}
+              className="choose-profile-card"
               style={{
-                border: isAccordionOpen
-                  ? "2px solid #1b6b72"
-                  : isChecked
-                    ? "2px solid #10b981"
-                    : "1.5px solid var(--border)",
+                border: currentError
+                  ? "2px solid #ef4444"
+                  : isAccordionOpen
+                    ? "2px solid #1b6b72"
+                    : isChecked
+                      ? "2px solid #10b981"
+                      : "1.5px solid var(--border)",
                 borderRadius: "16px",
                 background: "#ffffff",
                 padding: "16px",
@@ -4702,6 +4855,8 @@ function ChooseProfile({
                 boxShadow: isAccordionOpen
                   ? "0 4px 16px rgba(27, 107, 114, 0.08)"
                   : "none",
+                boxSizing: "border-box",
+                width: "100%",
               }}
             >
               {/* Card Top Row - Clickable to expand/collapse */}
@@ -4722,6 +4877,7 @@ function ChooseProfile({
                 >
                   {/* Avatar Circle */}
                   <div
+                    className="choose-profile-avatar"
                     style={{
                       width: "48px",
                       height: "48px",
@@ -4738,26 +4894,47 @@ function ChooseProfile({
                       flexShrink: 0,
                       boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
                       overflow: "hidden",
+                      position: "relative",
                       boxSizing: "border-box",
                     }}
                   >
+                    {profileAvatars[p.id] ? (
+                      <img
+                        src={profileAvatars[p.id]}
+                        alt={displayName}
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "cover",
+                          position: "absolute",
+                          top: 0,
+                          left: 0,
+                          zIndex: 1,
+                        }}
+                        onError={(e) => {
+                          e.currentTarget.style.display = "none";
+                        }}
+                      />
+                    ) : null}
                     <span>{initials}</span>
                   </div>
 
                   {/* Name and Badges */}
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div
+                      className="choose-profile-name"
                       style={{
                         fontSize: "16px",
                         fontWeight: "700",
                         color: "var(--text-main)",
                         lineHeight: "1.2",
+                        wordBreak: "break-word",
                       }}
                     >
                       {displayName}
                     </div>
 
-                    {/* Only show verified below name when user enters valid UHID */}
+                    {/* Only show verified below name when user has verified UHID */}
                     {isVerified && (
                       <div style={{ marginTop: "4px" }}>
                         <span
@@ -4801,7 +4978,7 @@ function ChooseProfile({
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    cursor: isVerified ? "pointer" : "not-allowed",
+                    cursor: "pointer",
                     transition: "all 0.15s ease",
                     flexShrink: 0,
                     boxSizing: "border-box",
@@ -4812,7 +4989,7 @@ function ChooseProfile({
                       ? isChecked
                         ? "Selected"
                         : "Click to select"
-                      : "Enter UHID to verify"
+                      : "Click to enter UHID and verify"
                   }
                 >
                   {isChecked && (
@@ -4830,56 +5007,161 @@ function ChooseProfile({
                     borderTop: "1px solid #f1f5f9",
                   }}
                 >
-                  <label
+                  <div
                     style={{
-                      display: "block",
-                      fontSize: "12px",
-                      fontWeight: "700",
-                      color: "#475569",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
                       marginBottom: "6px",
-                      letterSpacing: "0.04em",
-                      textTransform: "uppercase",
                     }}
                   >
-                    UHID <span style={{ color: "#ef4444" }}>*</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Enter UHID to continue"
-                    value={currentUhid}
-                    onChange={(e) => handleUhidInputChange(p, e.target.value)}
+                    <label
+                      style={{
+                        fontSize: "12px",
+                        fontWeight: "700",
+                        color: "#475569",
+                        letterSpacing: "0.04em",
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      UHID <span style={{ color: "#ef4444" }}>*</span>
+                    </label>
+                    {/* <span
+                      style={{
+                        fontSize: "11px",
+                        color: "#64748b",
+                        fontWeight: "600",
+                      }}
+                    >
+                      Format: KOL-55552
+                    </span> */}
+                  </div>
+
+                  {/* Input + Verify Button row */}
+                  <div
+                    className="uhid-input-row"
                     style={{
+                      display: "flex",
+                      gap: "8px",
+                      alignItems: "stretch",
                       width: "100%",
-                      padding: "12px 14px",
-                      borderRadius: "10px",
-                      border: isVerified
-                        ? "1.5px solid #10b981"
-                        : enteredClean.length > 0 && !isVerified
-                          ? "1.5px solid #ef4444"
-                          : "1.5px solid #cbd5e1",
-                      fontSize: "15px",
-                      color: "var(--text-main)",
-                      background: "#ffffff",
-                      outline: "none",
                       boxSizing: "border-box",
                     }}
-                    onFocus={(e) => {
-                      if (!isVerified) {
-                        e.target.style.borderColor = "#1b6b72";
-                        e.target.style.boxShadow =
-                          "0 0 0 3px rgba(27,107,114,0.12)";
-                      }
-                    }}
-                    onBlur={(e) => {
-                      if (!isVerified) {
-                        e.target.style.borderColor = "#cbd5e1";
-                        e.target.style.boxShadow = "none";
-                      }
-                    }}
-                  />
+                  >
+                    <input
+                      className="uhid-input"
+                      type="text"
+                      placeholder="Enter UHID to continue"
+                      value={currentUhid}
+                      onChange={(e) => handleUhidInputChange(p, e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          if (!isVerified) handleVerifyUhid(p);
+                        }
+                      }}
+                      disabled={isVerified}
+                      style={{
+                        flex: 1,
+                        minWidth: 0,
+                        padding: "12px 14px",
+                        borderRadius: "10px",
+                        border: isVerified
+                          ? "1.5px solid #10b981"
+                          : currentError
+                            ? "1.5px solid #ef4444"
+                            : "1.5px solid #cbd5e1",
+                        fontSize: "14.5px",
+                        fontWeight: "600",
+                        letterSpacing: "0.04em",
+                        textTransform: "uppercase",
+                        color: "var(--text-main)",
+                        background: isVerified ? "#f0fdf4" : "#ffffff",
+                        outline: "none",
+                        boxSizing: "border-box",
+                        transition: "all 0.2s",
+                      }}
+                      onFocus={(e) => {
+                        if (!isVerified && !currentError) {
+                          e.target.style.borderColor = "#1b6b72";
+                          e.target.style.boxShadow =
+                            "0 0 0 3px rgba(27,107,114,0.12)";
+                        }
+                      }}
+                      onBlur={(e) => {
+                        if (!isVerified && !currentError) {
+                          e.target.style.borderColor = "#cbd5e1";
+                          e.target.style.boxShadow = "none";
+                        }
+                      }}
+                    />
 
-                  {/* If incorrect UHID entered, show error */}
-                  {enteredClean.length > 0 && !isVerified && (
+                    {isVerified ? (
+                      <button
+                        type="button"
+                        className="uhid-verify-btn"
+                        onClick={() => handleResetUhidVerification(p.id)}
+                        style={{
+                          padding: "0 16px",
+                          borderRadius: "10px",
+                          border: "1.5px solid #cbd5e1",
+                          background: "#f8fafc",
+                          color: "#475569",
+                          fontSize: "13px",
+                          fontWeight: "600",
+                          cursor: "pointer",
+                          whiteSpace: "nowrap",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          flexShrink: 0,
+                          transition: "all 0.2s",
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = "#e2e8f0";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = "#f8fafc";
+                        }}
+                      >
+                        Change
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="uhid-verify-btn"
+                        onClick={() => handleVerifyUhid(p)}
+                        style={{
+                          padding: "0 20px",
+                          borderRadius: "10px",
+                          border: "none",
+                          background: "linear-gradient(135deg, #1b6b72, #144e53)",
+                          color: "#ffffff",
+                          fontSize: "13.5px",
+                          fontWeight: "700",
+                          cursor: "pointer",
+                          whiteSpace: "nowrap",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          flexShrink: 0,
+                          boxShadow: "0 2px 8px rgba(27, 107, 114, 0.25)",
+                          transition: "all 0.2s",
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.opacity = "0.92";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.opacity = "1";
+                        }}
+                      >
+                        Verify
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Immediate error message if verification fails */}
+                  {currentError && (
                     <div
                       style={{
                         color: "#ef4444",
@@ -4891,11 +5173,8 @@ function ChooseProfile({
                         gap: "6px",
                       }}
                     >
-                      <span>
-                        {expectedClean
-                          ? "UHID does not match records"
-                          : "Please enter a valid UHID (min 3 characters)"}
-                      </span>
+                      <AlertCircle size={14} style={{ flexShrink: 0 }} />
+                      <span>{currentError}</span>
                     </div>
                   )}
 
@@ -4924,61 +5203,71 @@ function ChooseProfile({
       </div>
 
       {/* Continue Button once at least one account is verified & checked */}
-      {selectedProfileIds.length > 0 ? (
-        <button
-          type="button"
-          onClick={handleProceedToPrimary}
-          style={{
-            width: "100%",
-            marginTop: "14px",
-            background: "linear-gradient(135deg, #1b6b72, #144e53)",
-            color: "#ffffff",
-            border: "none",
-            padding: "14px",
-            borderRadius: "12px",
-            fontSize: "15px",
-            fontWeight: "700",
-            cursor: "pointer",
-            boxShadow: "0 4px 14px rgba(27, 107, 114, 0.35)",
-            transition: "all 0.25s ease",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "8px",
-          }}
-        >
-          <span>
-            {profiles.length === 1
-              ? "Verify & Continue"
-              : `Continue (${selectedProfileIds.length} account${selectedProfileIds.length > 1 ? "s" : ""} selected)`}
-          </span>
-          <ChevronRight size={18} />
-        </button>
-      ) : (
-        <button
-          type="button"
-          disabled={true}
-          style={{
-            width: "100%",
-            marginTop: "14px",
-            background: "#e2e8f0",
-            color: "#94a3b8",
-            border: "none",
-            padding: "14px",
-            borderRadius: "12px",
-            fontSize: "15px",
-            fontWeight: "700",
-            cursor: "not-allowed",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "8px",
-          }}
-        >
-          <span>Enter UHID to Verify & Continue</span>
-          <ChevronRight size={18} />
-        </button>
-      )}
+      <div className="choose-profile-footer">
+        {selectedProfileIds.filter((id) => verifiedProfileIds.includes(id)).length > 0 ? (
+          <button
+            type="button"
+            onClick={handleProceedToPrimary}
+            style={{
+              width: "100%",
+              margin: 0,
+              background: "linear-gradient(135deg, #1b6b72, #144e53)",
+              color: "#ffffff",
+              border: "none",
+              padding: "13px 16px",
+              borderRadius: "12px",
+              fontSize: "15px",
+              fontWeight: "700",
+              cursor: "pointer",
+              boxShadow: "0 4px 14px rgba(27, 107, 114, 0.35)",
+              transition: "all 0.25s ease",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "8px",
+            }}
+          >
+            <span>
+              {profiles.length === 1
+                ? "Continue"
+                : `Continue (${selectedProfileIds.filter((id) => verifiedProfileIds.includes(id)).length} account${selectedProfileIds.filter((id) => verifiedProfileIds.includes(id)).length > 1 ? "s" : ""} selected)`}
+            </span>
+            <ChevronRight size={18} />
+          </button>
+        ) : (
+          <button
+            type="button"
+            disabled={true}
+            style={{
+              width: "100%",
+              margin: 0,
+              background: "#e2e8f0",
+              color: "#94a3b8",
+              border: "none",
+              padding: "13px 16px",
+              borderRadius: "12px",
+              fontSize: "15px",
+              fontWeight: "700",
+              cursor: "not-allowed",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "8px",
+            }}
+          >
+            <span>Verify UHID to Continue</span>
+            <ChevronRight size={18} />
+          </button>
+        )}
+      </div>
+
+      <style>{`
+        .uhid-input::placeholder {
+          text-transform: none;
+          letter-spacing: normal;
+          font-weight: 400;
+        }
+      `}</style>
     </div>
   );
 }
