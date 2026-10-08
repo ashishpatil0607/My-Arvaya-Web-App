@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { Edit2, Check, Shield, Camera, Plus, Trash2, ChevronRight, User, HeartPulse, FileText, Users, Loader2, X, Upload, ChevronDown } from "lucide-react";
+import { Edit2, Check, Shield, Camera, Plus, Trash2, ChevronRight, User, HeartPulse, FileText, Users, Loader2, X, Upload, ChevronDown, Droplet, Ruler, Lock, MapPin, Calendar, Phone } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { Link } from "react-router-dom";
 import { getPatients, getFamilyDetails, upsertFamilyDetails, addFamilyMember, updateAppUser, getLocations } from "../services/dataService";
@@ -21,6 +21,113 @@ function getLocationLabel(loc) {
   return [loc.alt_name, loc.area, loc.street, loc.landmark, loc.zip, loc.city, loc.state]
     .filter(Boolean)
     .join(', ');
+}
+
+function ProfileSelect({ name, value, options, onChange, disabled, style, compact }) {
+  const [open, setOpen] = useState(false);
+  const [dropUp, setDropUp] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
+  const [menuMaxHeight, setMenuMaxHeight] = useState(260);
+  const wrapRef = useRef(null);
+  const selected = options.find(o => o.value === value);
+
+  useEffect(() => {
+    if (!open) return;
+    const handleOutside = (e) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handleOutside);
+    return () => document.removeEventListener("mousedown", handleOutside);
+  }, [open]);
+
+  useEffect(() => {
+    if (disabled) setOpen(false);
+  }, [disabled]);
+
+  const openMenu = () => {
+    if (disabled) return;
+    const rect = wrapRef.current?.getBoundingClientRect();
+    const boundary = wrapRef.current?.closest("[data-select-boundary]")?.getBoundingClientRect();
+    const top = boundary ? boundary.top : 0;
+    const bottom = boundary ? boundary.bottom : window.innerHeight;
+    const menuHeight = Math.min(options.length * 40 + 12, 260);
+    const spaceBelow = rect ? bottom - rect.bottom - 12 : menuHeight;
+    const spaceAbove = rect ? rect.top - top - 12 : 0;
+    const up = spaceBelow < menuHeight && spaceAbove > spaceBelow;
+    setDropUp(up);
+    setMenuMaxHeight(Math.max(120, Math.min(260, up ? spaceAbove : spaceBelow)));
+    setActiveIndex(Math.max(0, options.findIndex(o => o.value === value)));
+    setOpen(true);
+  };
+
+  const choose = (opt) => {
+    onChange({ target: { name, value: opt.value } });
+    setOpen(false);
+  };
+
+  const handleKeyDown = (e) => {
+    if (disabled) return;
+    if (!open) {
+      if (["Enter", " ", "ArrowDown", "ArrowUp"].includes(e.key)) {
+        e.preventDefault();
+        openMenu();
+      }
+      return;
+    }
+    if (e.key === "Escape") {
+      e.preventDefault();
+      setOpen(false);
+    } else if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setActiveIndex(i => (i + 1) % options.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setActiveIndex(i => (i - 1 + options.length) % options.length);
+    } else if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      if (options[activeIndex]) choose(options[activeIndex]);
+    } else if (e.key === "Tab") {
+      setOpen(false);
+    }
+  };
+
+  return (
+    <div className={`profile-select${compact ? " profile-select--compact" : ""}`} ref={wrapRef}>
+      <button
+        type="button"
+        className={`input-field profile-select-trigger${open ? " is-open" : ""}`}
+        style={style}
+        onClick={() => (open ? setOpen(false) : openMenu())}
+        onKeyDown={handleKeyDown}
+        disabled={disabled}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+      >
+        <span className="profile-select-value">{selected ? selected.label : (value || "Select")}</span>
+        {!disabled && <ChevronDown size={compact ? 15 : 16} className="profile-select-chevron" />}
+      </button>
+      {open && (
+        <ul className={`profile-select-menu${dropUp ? " drop-up" : ""}`} role="listbox" style={{ maxHeight: menuMaxHeight }}>
+          {options.map((opt, i) => {
+            const isSelected = opt.value === value;
+            return (
+              <li
+                key={opt.value}
+                role="option"
+                aria-selected={isSelected}
+                className={`profile-select-option${isSelected ? " is-selected" : ""}${i === activeIndex ? " is-active" : ""}`}
+                onMouseEnter={() => setActiveIndex(i)}
+                onMouseDown={(e) => { e.preventDefault(); choose(opt); }}
+              >
+                <span>{opt.label}</span>
+                {isSelected && <Check size={15} />}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
 }
 
 export default function Profile() {
@@ -69,6 +176,7 @@ export default function Profile() {
     dob: user?.date_of_birth || user?.dob || "",
     gender: formatGender(user?.gender),
     patientId: user?.patientId || user?.user_id || user?.id || `ARV-${Math.floor(1000 + Math.random() * 9000)}`,
+    uhid: user?.external_id || "",
     
     bloodGroup: user?.blood_group || user?.bloodGroup || "O+",
     height: (user?.height && String(user.height) !== "175") ? String(user.height) : "",
@@ -403,6 +511,7 @@ export default function Profile() {
           dob: patientData.date_of_birth || patientData.dob || prev.dob,
           gender: formatGender(patientData.gender || prev.gender),
           patientId: patientData.patientId || patientData.user_id || patientData.id || prev.patientId,
+          uhid: patientData.external_id || prev.uhid,
           bloodGroup: patientData.blood_group || patientData.bloodGroup || prev.bloodGroup,
           height: cleanHeight,
           weight: cleanWeight,
@@ -640,31 +749,47 @@ export default function Profile() {
     <main id="profile-page-main" className="page animate-fade-in-up" style={{ padding: 0, background: 'var(--bg-app)' }}>
       
       {/* ── Internal Hero ── */}
-      <div style={{ background: 'var(--bg-surface)', padding: '24px 0', borderBottom: '1px solid var(--border)' }}>
+      <div className="profile-hero-banner">
+        <svg className="profile-hero-wave" viewBox="0 0 500 150" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M0,40 C150,90 320,10 500,45 L500,0 L0,0 Z" fill="rgba(255, 255, 255, 0.42)" />
+        </svg>
+
         <div className="container">
-          <div className="flex items-center gap-2 text-muted mb-2" style={{ fontSize: '12px', fontWeight: '500' }}>
-            <Link to="/" style={{ transition: 'color 0.2s' }} onMouseOver={e => e.currentTarget.style.color='var(--primary)'} onMouseOut={e => e.currentTarget.style.color=''}>Home</Link> <ChevronRight size={12} /> <span>Patient Profile</span>
-          </div>
-          <div className="flex justify-between items-center flex-wrap gap-4">
-            <div>
-              <h1 id="profile-heading" style={{ fontSize: '24px', fontWeight: '800', color: 'var(--text-main)' }}>Patient Profile</h1>
-              <p className="text-muted mt-1" style={{ fontSize: '14px' }}>Manage your personal, medical, and insurance records.</p>
+          <div className="profile-hero-inner">
+            <div className="profile-hero-content">
+              <nav aria-label="Breadcrumb" className="profile-hero-breadcrumb">
+                <Link to="/" className="profile-breadcrumb-link">Home</Link>
+                <ChevronRight size={13} className="profile-breadcrumb-sep" />
+                <span>Patient Profile</span>
+              </nav>
+              <h1 id="profile-heading" className="profile-hero-title">Patient Profile</h1>
+              <p className="profile-hero-desc">Manage your personal, medical, and insurance records.</p>
             </div>
-            <button 
-              id="profile-edit-btn"
-              className={`btn ${isEditing ? 'btn-primary' : 'btn-secondary'} hover-glow`}
-              onClick={isEditing ? handleSaveProfile : handleStartEdit}
-              disabled={savingProfile}
-              style={{ padding: '10px 20px', fontSize: '14px', borderRadius: 'var(--radius-full)' }}
-            >
-              {savingProfile ? (
-                <><Loader2 size={16} className="animate-spin" /> Saving...</>
-              ) : isEditing ? (
-                <><Check size={16} /> Save Changes</>
-              ) : (
-                <><Edit2 size={16} /> Edit Profile</>
-              )}
-            </button>
+
+            <div className="profile-hero-actions">
+
+              <div className="profile-hero-graphic" aria-hidden="true">
+                <svg className="profile-hero-svg" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  {/* Sparkles */}
+                  <path d="M107 19C107 23.2 109.8 26 114 26C109.8 26 107 28.8 107 33C107 28.8 104.2 26 100 26C104.2 26 107 23.2 107 19Z" fill="#14b8a6" />
+                  <path d="M13 46C13 49.5 15.5 52 19 52C15.5 52 13 54.5 13 58C13 54.5 10.5 52 7 52C10.5 52 13 49.5 13 46Z" fill="#14b8a6" />
+                  <circle cx="16" cy="74" r="2" fill="#2dd4bf" />
+                  <circle cx="112" cy="45" r="1.5" fill="#2dd4bf" />
+
+                  {/* ID card */}
+                  <rect x="22" y="30" width="72" height="56" rx="11" fill="#ffffff" stroke="#0d9488" strokeWidth="3.2" />
+                  <circle cx="43" cy="52" r="8" fill="#ccfbf1" stroke="#0d9488" strokeWidth="3" />
+                  <path d="M31 74C31 67.5 36.4 63 43 63C49.6 63 55 67.5 55 74" stroke="#0d9488" strokeWidth="3" strokeLinecap="round" />
+                  <path d="M62 50H82" stroke="#0d9488" strokeWidth="3" strokeLinecap="round" />
+                  <path d="M62 61H80" stroke="#99f6e4" strokeWidth="3" strokeLinecap="round" />
+                  <path d="M62 72H74" stroke="#99f6e4" strokeWidth="3" strokeLinecap="round" />
+
+                  {/* Medical cross badge */}
+                  <circle cx="88" cy="84" r="13" fill="#2dd4bf" stroke="#0d9488" strokeWidth="3" />
+                  <path d="M88 78V90M82 84H94" stroke="#ffffff" strokeWidth="3" strokeLinecap="round" />
+                </svg>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -675,7 +800,12 @@ export default function Profile() {
           {/* Left Sticky Profile Card */}
           <aside className="profile-sidebar" style={{ position: 'sticky', top: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <div className="card-elevated profile-header-card" style={{ padding: '32px 24px', textAlign: 'center', borderRadius: '16px' }}>
-              <div style={{ position: 'relative', display: 'inline-block', marginBottom: '16px' }}>
+              <div className="profile-card-cover" aria-hidden="true">
+                <svg viewBox="0 0 300 90" preserveAspectRatio="none">
+                  <path d="M0,60 C80,95 200,30 300,62 L300,0 L0,0 Z" fill="rgba(255, 255, 255, 0.35)" />
+                </svg>
+              </div>
+              <div className="profile-avatar-wrap" style={{ position: 'relative', display: 'inline-block', marginBottom: '16px' }}>
                 <div 
                   className="animate-scale-in profile-avatar-circle" 
                   style={{ width: '100px', height: '100px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--primary), var(--primary-dark))', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '36px', fontWeight: '700', boxShadow: '0 8px 24px rgba(46,102,110,0.2)', margin: '0 auto', overflow: 'hidden', position: 'relative', cursor: 'pointer' }}
@@ -712,7 +842,7 @@ export default function Profile() {
               </div>
               <h2 className="profile-patient-name" style={{ fontSize: '20px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '6px' }}>{profile.name}</h2>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '16px' }}>
-                <span className="badge badge-success profile-kyc-badge" style={{ padding: '4px 10px', fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                <span className="badge badge-success profile-kyc-badge" style={{ padding: '4px 10px', fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px', border: '1px solid rgba(22, 163, 74, 0.18)' }}>
                   <Shield size={13} /> KYC Verified
                 </span>
                 <span className="profile-patient-id-badge" style={{
@@ -728,19 +858,21 @@ export default function Profile() {
                   gap: '4px',
                   border: '1px solid rgba(15, 77, 88, 0.15)'
                 }}>
-                  Patient ID: {profile.patientId}
+                  UHID: {profile.uhid || 'NA'}
                 </span>
               </div>
 
               {/* Quick Stats Grid */}
               <div className="profile-quick-stats-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '16px' }}>
-                <div style={{ background: 'var(--primary-light)', padding: '10px 8px', borderRadius: '12px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '11px', color: 'var(--primary-dark)', fontWeight: '600' }}>Blood Group</div>
-                  <div style={{ fontSize: '15px', color: 'var(--primary-dark)', fontWeight: '800', marginTop: '2px' }}>{profile.bloodGroup || 'A+'}</div>
+                <div className="profile-stat-tile profile-stat-tile--blood">
+                  <span className="profile-stat-icon"><Droplet size={14} /></span>
+                  <div className="profile-stat-label">Blood Group</div>
+                  <div className="profile-stat-value" style={{ fontSize: '16px' }}>{profile.bloodGroup || 'A+'}</div>
                 </div>
-                <div style={{ background: 'var(--bg-app)', padding: '10px 8px', borderRadius: '12px', textAlign: 'center', border: '1px solid var(--border)' }}>
-                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '600' }}>Height / Weight</div>
-                  <div style={{ fontSize: '13px', color: 'var(--text-main)', fontWeight: '700', marginTop: '2px', whiteSpace: 'nowrap' }}>
+                <div className="profile-stat-tile profile-stat-tile--body">
+                  <span className="profile-stat-icon"><Ruler size={14} /></span>
+                  <div className="profile-stat-label">Height / Weight</div>
+                  <div className="profile-stat-value" style={{ fontSize: '13px', whiteSpace: 'nowrap' }}>
                     {profile.height && profile.weight 
                       ? `${parseFloat(profile.height)}cm / ${parseFloat(profile.weight)}kg`
                       : profile.height 
@@ -768,7 +900,7 @@ export default function Profile() {
                 return (
                   <button 
                     key={tab.id}
-                    className="profile-tab-btn"
+                    className={`profile-tab-btn${isActive ? ' profile-tab-btn--active' : ''}`}
                     onClick={() => {
                       setActiveTab(tab.id);
                       if (tab.id === 'family') {
@@ -779,15 +911,16 @@ export default function Profile() {
                       display: 'flex', alignItems: 'center', gap: '8px',
                       padding: '10px 20px', borderRadius: '12px',
                       fontSize: '14px', fontWeight: isActive ? '700' : '600',
-                      color: isActive ? 'var(--primary-dark)' : 'var(--text-muted)',
-                      background: isActive ? 'var(--primary-light)' : 'transparent',
+                      color: isActive ? '#ffffff' : 'var(--text-muted)',
+                      background: isActive ? 'linear-gradient(135deg, #14b8a6 0%, #0d9488 100%)' : 'transparent',
+                      boxShadow: isActive ? '0 6px 16px rgba(13, 148, 136, 0.25)' : 'none',
                       border: 'none', cursor: 'pointer', transition: 'all 0.2s',
                       flex: '1', justifyContent: 'center'
                     }}
                     onMouseOver={e => { if(!isActive) e.currentTarget.style.background = 'var(--bg-app)'; }}
                     onMouseOut={e => { if(!isActive) e.currentTarget.style.background = 'transparent'; }}
                   >
-                    <Icon size={16} className={isActive ? 'text-primary' : 'text-muted'} />
+                    <Icon size={16} className={isActive ? '' : 'text-muted'} />
                     <span>{tab.label}</span>
                   </button>
                 )
@@ -795,12 +928,30 @@ export default function Profile() {
             </div>
 
             {/* Form Content */}
-            <div className="card-elevated profile-form-card" style={{ padding: '32px', borderRadius: '16px', background: 'var(--bg-surface)' }}>
+            <div className="card-elevated profile-form-card" style={{ padding: '22px 28px 28px', borderRadius: '16px', background: 'var(--bg-surface)' }}>
               {activeTab === 'personal' && (
                 <div className="animate-fade-in-up">
-                  <h3 style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text-main)', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <User size={20} className="text-primary" /> Personal Information
-                  </h3>
+                  <div className="profile-section-head" style={{ flexWrap: 'wrap' }}>
+                    <span className="profile-section-icon"><User size={20} /></span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <h3 className="profile-section-title">Personal Information</h3>
+                      <p className="profile-section-sub">{isEditing ? 'Update your details and click Save Changes.' : 'Your basic details used for bookings and records.'}</p>
+                    </div>
+                    <button
+                      id="profile-edit-btn"
+                      className={`profile-edit-btn${isEditing ? ' profile-edit-btn--save' : ''}`}
+                      onClick={isEditing ? handleSaveProfile : handleStartEdit}
+                      disabled={savingProfile}
+                    >
+                      {savingProfile ? (
+                        <><Loader2 size={16} className="animate-spin" /> Saving...</>
+                      ) : isEditing ? (
+                        <><Check size={16} /> Save Changes</>
+                      ) : (
+                        <><Edit2 size={16} /> Edit Profile</>
+                      )}
+                    </button>
+                  </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                     {/* Row 1: Full Name & Email Address */}
                     <div className="profile-form-row-2col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
@@ -818,7 +969,10 @@ export default function Profile() {
                     <div className="profile-form-row-2col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                       <div className="flex flex-col gap-2">
                         <label className="text-muted" style={{ fontSize: '13px', fontWeight: '600' }}>Phone Number</label>
-                        <input name="phone" value={profile.phone} onChange={handleChange} readOnly={!isEditing} className="input-field" style={inputStyle} />
+                        <div style={{ position: 'relative' }}>
+                          <input name="phone" value={profile.phone} readOnly className="input-field" style={{ background: 'var(--bg-app)', borderColor: 'transparent', color: 'var(--text-main)', padding: '12px 40px 12px 16px', cursor: isEditing ? 'not-allowed' : undefined, width: '100%' }} />
+                          <Lock size={15} className="profile-input-lock" aria-label="Phone number cannot be changed" />
+                        </div>
                       </div>
                       <div className="flex flex-col gap-2">
                         <label className="text-muted" style={{ fontSize: '13px', fontWeight: '600' }}>Date of Birth</label>
@@ -840,24 +994,25 @@ export default function Profile() {
                     <div className="profile-form-row-4col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '16px' }}>
                       <div className="flex flex-col gap-2">
                         <label className="text-muted" style={{ fontSize: '13px', fontWeight: '600' }}>Gender</label>
-                        <select name="gender" value={profile.gender} onChange={handleChange} disabled={!isEditing} className="input-field" style={{...inputStyle, appearance: !isEditing ? 'none' : 'auto'}}>
-                          <option value="Male">Male</option>
-                          <option value="Female">Female</option>
-                          <option value="Other">Other</option>
-                        </select>
+                        <ProfileSelect
+                          name="gender"
+                          value={profile.gender}
+                          onChange={handleChange}
+                          disabled={!isEditing}
+                          style={inputStyle}
+                          options={["Male", "Female", "Other"].map(v => ({ value: v, label: v }))}
+                        />
                       </div>
                       <div className="flex flex-col gap-2">
                         <label className="text-muted" style={{ fontSize: '13px', fontWeight: '600' }}>Blood Group</label>
-                        <select name="bloodGroup" value={profile.bloodGroup} onChange={handleChange} disabled={!isEditing} className="input-field" style={{...inputStyle, appearance: !isEditing ? 'none' : 'auto'}}>
-                          <option value="B+">B+</option>
-                          <option value="A+">A+</option>
-                          <option value="O+">O+</option>
-                          <option value="AB+">AB+</option>
-                          <option value="A-">A-</option>
-                          <option value="B-">B-</option>
-                          <option value="O-">O-</option>
-                          <option value="AB-">AB-</option>
-                        </select>
+                        <ProfileSelect
+                          name="bloodGroup"
+                          value={profile.bloodGroup}
+                          onChange={handleChange}
+                          disabled={!isEditing}
+                          style={inputStyle}
+                          options={["B+", "A+", "O+", "AB+", "A-", "B-", "O-", "AB-"].map(v => ({ value: v, label: v }))}
+                        />
                       </div>
                       <div className="flex flex-col gap-2">
                         <label className="text-muted" style={{ fontSize: '13px', fontWeight: '600' }}>Height (cm)</label>
@@ -955,22 +1110,22 @@ export default function Profile() {
 
               {activeTab === 'family' && (
                 <div className="animate-fade-in-up">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px', marginBottom: '24px' }}>
-                    <div>
-                      <h3 style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <Users size={20} className="text-primary" /> Family Members
+                  <div className="profile-section-head family-section-head">
+                    <span className="profile-section-icon"><Users size={20} /></span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <h3 className="profile-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        Family Members
+                        {!loadingFamily && familyMembers.length > 0 && (
+                          <span className="family-count-chip">{familyMembers.length}</span>
+                        )}
                       </h3>
-                      <p style={{ color: 'var(--text-muted)', fontSize: '14px', margin: '4px 0 0 0' }}>Manage profiles for your dependents and family members.</p>
+                      <p className="profile-section-sub">Manage profiles for your dependents and family members.</p>
                     </div>
-                    <button 
-                      className="btn btn-secondary hover-glow flex items-center gap-1.5" 
-                      onClick={handleOpenAddModal}
-                      style={{ padding: '8px 16px', fontSize: '13px', borderRadius: 'var(--radius-full)' }}
-                    >
+                    <button className="family-add-btn" onClick={handleOpenAddModal}>
                       <Plus size={16} /> Add Member
                     </button>
                   </div>
-                  
+
                   {loadingFamily ? (
                     <div style={{
                       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
@@ -983,16 +1138,16 @@ export default function Profile() {
                       </span>
                     </div>
                   ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div className="family-list">
                       {familyMembers.map(member => (
-                        <div key={member.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', border: '1px solid var(--border)', borderRadius: '12px', background: 'var(--bg-app)' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                            <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--primary-light), var(--primary-soft))', color: 'var(--primary-dark)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', fontWeight: '700', overflow: 'hidden', position: 'relative' }}>
+                        <div key={member.id} className={`family-card${member.isPrimary ? ' family-card--primary' : ''}`}>
+                          <div className="family-card-main">
+                            <div className="family-card-avatar">
                               {member.displayImage ? (
-                                <img 
-                                  src={member.displayImage} 
-                                  alt={member.name} 
-                                  style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', top: 0, left: 0, zIndex: 1 }} 
+                                <img
+                                  src={member.displayImage}
+                                  alt={member.name}
+                                  style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', top: 0, left: 0, zIndex: 1 }}
                                   onError={(e) => {
                                     e.currentTarget.style.display = 'none';
                                   }}
@@ -1000,28 +1155,35 @@ export default function Profile() {
                               ) : null}
                               {(member.name || "M").charAt(0)}
                             </div>
-                            <div>
-                              <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '600', color: 'var(--text-main)' }}>{member.name}</h4>
-                              <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
-                                {member.relation} • {member.age} yrs {member.bloodGroup ? `• ${member.bloodGroup}` : ''} {member.mobile ? `• ${member.mobile}` : ''}
-                              </span>
+                            <div style={{ minWidth: 0 }}>
+                              <div className="family-card-name-row">
+                                <h4 className="family-card-name">{member.name}</h4>
+                                {member.relation && <span className="family-relation-chip">{member.relation}</span>}
+                              </div>
+                              <div className="family-card-meta">
+                                <span className="family-meta-pill"><Calendar size={12} /> {member.age} yrs</span>
+                                {member.bloodGroup && <span className="family-meta-pill family-meta-pill--blood"><Droplet size={12} /> {member.bloodGroup}</span>}
+                                {member.mobile && <span className="family-meta-pill"><Phone size={12} /> {member.mobile}</span>}
+                              </div>
                             </div>
                           </div>
-                          <div style={{ display: 'flex', gap: '8px' }}>
+                          <div className="family-card-actions">
                             {member.isPrimary ? (
-                              <span style={{ fontSize: '11px', color: '#16a34a', fontWeight: '600', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>● Primary Account</span>
+                              <span className="family-primary-badge"><Shield size={13} /> Primary Account</span>
                             ) : (
-                              <>
-                                <button className="btn btn-ghost" onClick={() => handleEditMember(member)} style={{ padding: '8px', color: 'var(--text-muted)' }} title="Edit Member"><Edit2 size={16} /></button>
-                              </>
+                              <button className="family-edit-btn" onClick={() => handleEditMember(member)} title="Edit Member">
+                                <Edit2 size={14} /> <span>Edit</span>
+                              </button>
                             )}
                           </div>
                         </div>
                       ))}
-                      
+
                       {familyMembers.length === 0 && (
-                        <div style={{ padding: '32px', textAlign: 'center', color: 'var(--text-muted)', background: 'var(--bg-app)', borderRadius: '12px', border: '1px dashed var(--border)' }}>
-                          No family members added yet. Click "Add Member" or click tab to refresh.
+                        <div className="family-empty">
+                          <span className="family-empty-icon"><Users size={26} /></span>
+                          <div className="family-empty-title">No family members yet</div>
+                          <div className="family-empty-sub">Click "Add Member" or click tab to refresh.</div>
                         </div>
                       )}
                     </div>
@@ -1042,138 +1204,132 @@ export default function Profile() {
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           zIndex: 10000, padding: '16px', overflowY: 'auto'
         }}>
-          <div className="animate-scale-in" style={{
-            background: 'var(--bg-surface, #ffffff)', borderRadius: '16px', width: '100%', maxWidth: '540px',
-            boxShadow: '0 20px 40px -10px rgba(0,0,0,0.25)', overflow: 'hidden', border: '1px solid var(--border)',
+          <div className="animate-scale-in family-modal" style={{
+            background: 'var(--bg-surface, #ffffff)', borderRadius: '20px', width: '100%', maxWidth: '560px',
+            boxShadow: '0 24px 60px -12px rgba(11, 37, 69, 0.35)', overflow: 'hidden', border: '1px solid rgba(20, 184, 166, 0.18)',
             maxHeight: 'calc(100dvh - 32px)', display: 'flex', flexDirection: 'column', margin: 'auto 0'
           }}>
             {/* Modal Header */}
-            <div style={{ padding: '12px 18px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-app)' }}>
-              <div>
-                <h3 style={{ fontSize: '16px', fontWeight: '800', color: 'var(--text-main)', margin: 0 }}>
-                  {editingMemberId ? "Edit Family Member" : "Add Family Member"}
-                </h3>
-                <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '1px 0 0 0' }}>
-                  {editingMemberId ? "Update dependent/family member details" : "Enter dependent/family member details"}
-                </p>
+            <div className="family-modal-header">
+              <svg className="family-modal-wave" viewBox="0 0 500 100" preserveAspectRatio="none" aria-hidden="true">
+                <path d="M0,30 C150,80 320,0 500,35 L500,0 L0,0 Z" fill="rgba(255, 255, 255, 0.45)" />
+              </svg>
+              <div className="family-modal-head-left">
+                <span className="family-modal-head-icon">{editingMemberId ? <Edit2 size={18} /> : <Users size={18} />}</span>
+                <div>
+                  <h3 className="family-modal-title">
+                    {editingMemberId ? "Edit Family Member" : "Add Family Member"}
+                  </h3>
+                  <p className="family-modal-sub">
+                    {editingMemberId ? "Update dependent/family member details" : "Enter dependent/family member details"}
+                  </p>
+                </div>
               </div>
-              <button 
+              <button
+                type="button"
+                className="family-modal-close"
+                aria-label="Close"
                 onClick={() => { setIsMemberModalOpen(false); setEditingMemberId(null); }}
-                style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: '50%', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--text-muted)' }}
               >
-                <X size={15} />
+                <X size={16} />
               </button>
             </div>
 
             {/* Modal Form */}
-            <form onSubmit={handleSaveMember} style={{ padding: '14px 18px', overflowY: 'auto', minHeight: 0 }}>
+            <form onSubmit={handleSaveMember} data-select-boundary style={{ padding: '18px 20px', overflowY: 'auto', minHeight: 0 }}>
               
               {/* Profile Image Field */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '10px', padding: '6px 12px', background: 'var(--bg-app)', borderRadius: '10px', border: '1px solid var(--border)' }}>
-                <div style={{ position: 'relative', width: '38px', height: '38px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--primary-light), var(--primary-soft))', color: 'var(--primary-dark)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', fontWeight: '700', overflow: 'hidden', flexShrink: 0 }}>
+              <div className="family-modal-photo">
+                <div className="family-modal-avatar">
                   {memberForm.displayImage ? (
                     <img src={memberForm.displayImage} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   ) : (
                     (memberForm.name.trim().charAt(0) || "F").toUpperCase()
                   )}
                 </div>
-                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <label style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-main)', margin: 0 }}>Profile Image</label>
-                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                    <label className="btn btn-secondary" style={{ padding: '3px 8px', fontSize: '11px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                      <Upload size={12} /> Upload Photo
-                      <input type="file" accept="image/*" onChange={handleImageUpload} style={{ display: 'none' }} />
-                    </label>
-                    <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>JPG, PNG</span>
+                <div className="family-modal-photo-body">
+                  <div>
+                    <div className="family-modal-photo-title">Profile Image</div>
+                    <div className="family-modal-photo-hint">JPG or PNG, square works best</div>
                   </div>
+                  <label className="family-modal-upload-btn">
+                    <Upload size={14} /> Upload Photo
+                    <input type="file" accept="image/*" onChange={handleImageUpload} style={{ display: 'none' }} />
+                  </label>
                 </div>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 
                 {/* Row 1: Title, Name, Relation */}
-                <div className="modal-form-3col" style={{ display: 'grid', gridTemplateColumns: '1fr 2fr 2fr', gap: '10px' }}>
-                  <div className="flex flex-col gap-0.5">
-                    <label style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-main)' }}>Title *</label>
-                    <select name="title" value={memberForm.title} onChange={handleMemberFormChange} className="input-field" style={{ padding: '6px 10px', fontSize: '13px' }}>
-                      <option value="">None</option>
-                      <option value="Mr">Mr</option>
-                      <option value="Mrs">Mrs</option>
-                      <option value="Ms">Ms</option>
-                      <option value="Miss">Miss</option>
-                      <option value="Baby">Baby</option>
-                      <option value="Dr">Dr</option>
-                    </select>
+                <div className="modal-form-3col" style={{ display: 'grid', gridTemplateColumns: '1fr 2fr 2fr', gap: '12px' }}>
+                  <div className="flex flex-col family-modal-field">
+                    <label className="family-modal-label">Title *</label>
+                    <ProfileSelect
+                      compact
+                      name="title"
+                      value={memberForm.title}
+                      onChange={handleMemberFormChange}
+                      options={[{ value: "", label: "None" }, ...["Mr", "Mrs", "Ms", "Miss", "Baby", "Dr"].map(v => ({ value: v, label: v }))]}
+                    />
                   </div>
 
-                  <div className="flex flex-col gap-0.5">
-                    <label style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-main)' }}>Name *</label>
-                    <input name="name" value={memberForm.name} onChange={handleMemberFormChange} placeholder="Full Name" className="input-field" style={{ padding: '6px 10px', fontSize: '13px' }} />
+                  <div className="flex flex-col family-modal-field">
+                    <label className="family-modal-label">Name *</label>
+                    <input name="name" value={memberForm.name} onChange={handleMemberFormChange} placeholder="Full Name" className="input-field" />
                   </div>
 
-                  <div className="flex flex-col gap-0.5">
-                    <label style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-main)' }}>Relation *</label>
-                    <select name="relation" value={memberForm.relation} onChange={handleMemberFormChange} className="input-field" style={{ padding: '6px 10px', fontSize: '13px' }}>
-                      <option value="">None</option>
-                      <option value="Spouse">Spouse</option>
-                      <option value="Son">Son</option>
-                      <option value="Daughter">Daughter</option>
-                      <option value="Father">Father</option>
-                      <option value="Mother">Mother</option>
-                      <option value="Brother">Brother</option>
-                      <option value="Sister">Sister</option>
-                      <option value="Other">Other</option>
-                    </select>
+                  <div className="flex flex-col family-modal-field">
+                    <label className="family-modal-label">Relation *</label>
+                    <ProfileSelect
+                      compact
+                      name="relation"
+                      value={memberForm.relation}
+                      onChange={handleMemberFormChange}
+                      options={[{ value: "", label: "None" }, ...["Spouse", "Son", "Daughter", "Father", "Mother", "Brother", "Sister", "Other"].map(v => ({ value: v, label: v }))]}
+                    />
                   </div>
                 </div>
 
                 {/* Row 2: Date of Birth, Gender, Blood Group */}
-                <div className="modal-form-3col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
-                  <div className="flex flex-col gap-0.5">
-                    <label style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-main)' }}>Date of Birth *</label>
-                    <input type="date" name="dob" value={memberForm.dob} max={new Date().toISOString().split('T')[0]} onChange={handleMemberFormChange} className="input-field" style={{ padding: '6px 10px', fontSize: '13px' }} />
+                <div className="modal-form-3col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+                  <div className="flex flex-col family-modal-field">
+                    <label className="family-modal-label">Date of Birth *</label>
+                    <input type="date" name="dob" value={memberForm.dob} max={new Date().toISOString().split('T')[0]} onChange={handleMemberFormChange} className="input-field" />
                   </div>
 
-                  <div className="flex flex-col gap-0.5">
-                    <label style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-main)' }}>Gender *</label>
-                    <select name="gender" value={memberForm.gender} onChange={handleMemberFormChange} className="input-field" style={{ padding: '6px 10px', fontSize: '13px' }}>
-                      <option value="">None</option>
-                      <option value="Male">Male</option>
-                      <option value="Female">Female</option>
-                      <option value="Other">Other</option>
-                    </select>
+                  <div className="flex flex-col family-modal-field">
+                    <label className="family-modal-label">Gender *</label>
+                    <ProfileSelect
+                      compact
+                      name="gender"
+                      value={memberForm.gender}
+                      onChange={handleMemberFormChange}
+                      options={[{ value: "", label: "None" }, ...["Male", "Female", "Other"].map(v => ({ value: v, label: v }))]}
+                    />
                   </div>
 
-                  <div className="flex flex-col gap-0.5">
-                    <label style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-main)' }}>Blood Group *</label>
-                    <select name="bloodGroup" value={memberForm.bloodGroup} onChange={handleMemberFormChange} className="input-field" style={{ padding: '6px 10px', fontSize: '13px' }}>
-                      <option value="">None</option>
-                      <option value="B+">B+</option>
-                      <option value="A+">A+</option>
-                      <option value="O+">O+</option>
-                      <option value="AB+">AB+</option>
-                      <option value="A-">A-</option>
-                      <option value="B-">B-</option>
-                      <option value="O-">O-</option>
-                      <option value="AB-">AB-</option>
-                    </select>
+                  <div className="flex flex-col family-modal-field">
+                    <label className="family-modal-label">Blood Group *</label>
+                    <ProfileSelect
+                      compact
+                      name="bloodGroup"
+                      value={memberForm.bloodGroup}
+                      onChange={handleMemberFormChange}
+                      options={[{ value: "", label: "None" }, ...["B+", "A+", "O+", "AB+", "A-", "B-", "O-", "AB-"].map(v => ({ value: v, label: v }))]}
+                    />
                   </div>
                  </div>
 
                   {/* Row 5: Entity Location */}
-                  <div className="flex flex-col gap-0.5">
-                    <label style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-main)' }}>Entity Location *</label>
+                  <div className="flex flex-col family-modal-field">
+                    <label className="family-modal-label">Entity Location *</label>
                     <div ref={locationDropdownRef} style={{ position: 'relative' }}>
                       <div
                         onClick={() => setLocationDropdownOpen(!locationDropdownOpen)}
-                        style={{
-                          display: 'flex', alignItems: 'center', gap: '8px',
-                          border: '1.5px solid var(--border)', borderRadius: '12px', padding: '6px 10px',
-                          background: '#fff', cursor: 'pointer',
-                          width: '100%', boxSizing: 'border-box',
-                          transition: 'all 0.2s', minHeight: '38px'
-                        }}
+                        className={`family-modal-location${locationDropdownOpen ? ' is-open' : ''}`}
                       >
+                        <MapPin size={15} className="family-modal-location-pin" />
                         <div style={{
                           flex: 1, fontSize: '13px', fontWeight: '600',
                           color: memberForm.entitylocation ? 'var(--text-main)' : '#9ca3af',
@@ -1183,17 +1339,11 @@ export default function Profile() {
                             ? (getLocationLabel(locations.find(l => l.entitylocation === memberForm.entitylocation || String(l.id) === String(memberForm.entitylocation) || String(l.location_key) === String(memberForm.entitylocation))) || memberForm.entitylocation)
                             : "Select Location"}
                         </div>
-                        <ChevronDown size={14} color="var(--text-muted)" style={{ flexShrink: 0, transition: 'transform 0.2s', transform: locationDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)' }} />
+                        <ChevronDown size={15} color="#0d9488" style={{ flexShrink: 0, transition: 'transform 0.2s', transform: locationDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)' }} />
                       </div>
 
                       {locationDropdownOpen && (
-                        <div style={{
-                          position: 'absolute', bottom: 'calc(100% + 6px)', left: 0, right: 0,
-                          background: '#fff', borderRadius: '12px', border: '1px solid var(--border)',
-                          boxShadow: '0 -10px 25px -5px rgba(0,0,0,0.15), 0 -8px 10px -6px rgba(0,0,0,0.1)',
-                          maxHeight: '200px', overflowY: 'auto', zIndex: 99, padding: '6px',
-                          display: 'flex', flexDirection: 'column', gap: '4px'
-                        }}>
+                        <div className="family-modal-location-menu">
                           {locations.length === 0 ? (
                             <div style={{ padding: '12px', textAlign: 'center', fontSize: '13px', color: 'var(--text-muted)' }}>Loading locations...</div>
                           ) : (
@@ -1207,26 +1357,18 @@ export default function Profile() {
                                     setMemberForm(prev => ({ ...prev, entitylocation: loc.entitylocation || "" }));
                                     setLocationDropdownOpen(false);
                                   }}
-                                  style={{
-                                    display: 'flex', alignItems: 'flex-start', gap: '8px',
-                                    padding: '10px 12px', borderRadius: '8px', border: 'none',
-                                    background: isSelected ? 'var(--primary-light)' : 'transparent',
-                                    cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s',
-                                    width: '100%'
-                                  }}
-                                  onMouseEnter={(e) => !isSelected && (e.currentTarget.style.background = '#f8fafc')}
-                                  onMouseLeave={(e) => !isSelected && (e.currentTarget.style.background = 'transparent')}
+                                  className={`family-modal-location-option${isSelected ? ' is-selected' : ''}`}
                                 >
                                   <div style={{ flex: 1, minWidth: 0 }}>
                                     <div style={{
                                       fontSize: '13px', fontWeight: isSelected ? '700' : '600',
-                                      color: isSelected ? 'var(--primary-dark)' : 'var(--text-main)',
+                                      color: isSelected ? '#0f766e' : 'inherit',
                                       lineHeight: '1.4', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
                                     }}>
                                       {getLocationLabel(loc) || loc.entitylocation || "Location"}
                                     </div>
                                   </div>
-                                  {isSelected && <Check size={16} color="var(--primary)" style={{ flexShrink: 0, marginTop: '2px' }} />}
+                                  {isSelected && <Check size={16} color="#0d9488" style={{ flexShrink: 0, marginTop: '2px' }} />}
                                 </button>
                               );
                             })
@@ -1239,11 +1381,11 @@ export default function Profile() {
                </div>
 
               {/* Form Footer Actions */}
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '14px', paddingTop: '10px', borderTop: '1px solid var(--border)' }}>
-                <button type="button" className="btn btn-secondary" onClick={() => setIsMemberModalOpen(false)} style={{ padding: '6px 16px', fontSize: '13px' }}>
+              <div className="family-modal-footer">
+                <button type="button" className="btn btn-secondary family-modal-cancel" onClick={() => setIsMemberModalOpen(false)} style={{ padding: '9px 20px', fontSize: '13.5px' }}>
                   Cancel
                 </button>
-                <button type="submit" disabled={savingMember} className="btn btn-primary flex items-center gap-2" style={{ padding: '6px 18px', fontSize: '13px' }}>
+                <button type="submit" disabled={savingMember} className="btn btn-primary flex items-center gap-2 family-modal-save" style={{ padding: '9px 22px', fontSize: '13.5px' }}>
                   {savingMember ? <><Loader2 size={14} className="animate-spin" /> Saving...</> : "Save Member"}
                 </button>
               </div>
@@ -1255,6 +1397,924 @@ export default function Profile() {
       )}
 
       <style dangerouslySetInnerHTML={{__html: `
+        .profile-edit-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 7px;
+          padding: 9px 18px;
+          border-radius: 999px;
+          font-size: 13.5px;
+          font-weight: 700;
+          color: #0d9488;
+          background: #ffffff;
+          border: 1.5px solid rgba(13, 148, 136, 0.35);
+          cursor: pointer;
+          flex-shrink: 0;
+          transition: all 0.2s ease;
+        }
+        .profile-edit-btn:hover:not(:disabled) {
+          color: #ffffff;
+          background: #0d9488;
+          border-color: #0d9488;
+          box-shadow: 0 6px 16px rgba(13, 148, 136, 0.28);
+        }
+        .profile-edit-btn--save {
+          color: #ffffff;
+          border-color: transparent;
+          background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%);
+          box-shadow: 0 6px 16px rgba(13, 148, 136, 0.28);
+        }
+        .profile-edit-btn--save:hover:not(:disabled) {
+          transform: translateY(-1px);
+          box-shadow: 0 10px 22px rgba(13, 148, 136, 0.36);
+        }
+        .profile-edit-btn:disabled {
+          opacity: 0.75;
+          cursor: default;
+        }
+        @media (max-width: 560px) {
+          .profile-edit-btn {
+            width: 100%;
+            justify-content: center;
+          }
+        }
+        .family-section-head {
+          flex-wrap: wrap;
+        }
+        .family-count-chip {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-width: 24px;
+          height: 22px;
+          padding: 0 8px;
+          border-radius: 999px;
+          font-size: 12px;
+          font-weight: 800;
+          color: #0d9488;
+          background: #ccf4eb;
+        }
+        .family-add-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 9px 18px;
+          border: none;
+          border-radius: 999px;
+          font-size: 13.5px;
+          font-weight: 700;
+          color: #ffffff;
+          background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%);
+          box-shadow: 0 6px 16px rgba(13, 148, 136, 0.28);
+          cursor: pointer;
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .family-add-btn:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 10px 22px rgba(13, 148, 136, 0.36);
+        }
+        .family-list {
+          display: flex;
+          flex-direction: column;
+          gap: 14px;
+        }
+        .family-card {
+          position: relative;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 16px;
+          padding: 16px 18px 16px 22px;
+          border-radius: 16px;
+          background: #ffffff;
+          border: 1px solid rgba(20, 184, 166, 0.16);
+          box-shadow: 0 2px 8px rgba(11, 37, 69, 0.04);
+          overflow: hidden;
+          transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+        }
+        .family-card::before {
+          content: "";
+          position: absolute;
+          left: 0;
+          top: 0;
+          bottom: 0;
+          width: 4px;
+          background: linear-gradient(180deg, #5ccfbf 0%, #0d9488 100%);
+        }
+        .family-card:hover {
+          transform: translateY(-2px);
+          border-color: rgba(20, 184, 166, 0.35);
+          box-shadow: 0 10px 24px rgba(13, 148, 136, 0.12);
+        }
+        .family-card--primary {
+          background: linear-gradient(120deg, #f6fdfb 0%, #e9f8f3 100%);
+        }
+        .family-card--primary::before {
+          background: linear-gradient(180deg, #4ade80 0%, #16a34a 100%);
+        }
+        .family-card-main {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          min-width: 0;
+        }
+        .family-card-avatar {
+          position: relative;
+          width: 52px;
+          height: 52px;
+          flex-shrink: 0;
+          border-radius: 50%;
+          overflow: hidden;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 19px;
+          font-weight: 800;
+          color: #ffffff;
+          background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%);
+          border: 3px solid #ffffff;
+          box-shadow: 0 0 0 2px rgba(13, 148, 136, 0.22), 0 6px 14px rgba(13, 148, 136, 0.2);
+        }
+        .family-card-name-row {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex-wrap: wrap;
+        }
+        .family-card-name {
+          margin: 0;
+          font-size: 15.5px;
+          font-weight: 700;
+          color: #0b2545;
+        }
+        .family-relation-chip {
+          padding: 2px 9px;
+          border-radius: 999px;
+          font-size: 11px;
+          font-weight: 700;
+          color: #0f766e;
+          background: #e3f7f2;
+          border: 1px solid rgba(13, 148, 136, 0.18);
+        }
+        .family-card-meta {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 6px;
+          margin-top: 7px;
+        }
+        .family-meta-pill {
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+          padding: 3px 9px;
+          border-radius: 8px;
+          font-size: 12px;
+          font-weight: 600;
+          color: #55738d;
+          background: #f3f7f9;
+          border: 1px solid #e5edf1;
+        }
+        .family-meta-pill svg {
+          color: #0d9488;
+        }
+        .family-meta-pill--blood {
+          color: #be123c;
+          background: #fff1f2;
+          border-color: rgba(225, 29, 72, 0.14);
+        }
+        .family-meta-pill--blood svg {
+          color: #e11d48;
+        }
+        .family-card-actions {
+          display: flex;
+          align-items: center;
+          flex-shrink: 0;
+        }
+        .family-primary-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+          padding: 5px 11px;
+          border-radius: 999px;
+          font-size: 12px;
+          font-weight: 700;
+          color: #15803d;
+          background: #dcfce7;
+          border: 1px solid rgba(22, 163, 74, 0.2);
+        }
+        .family-edit-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 7px 14px;
+          border-radius: 999px;
+          font-size: 12.5px;
+          font-weight: 700;
+          color: #0d9488;
+          background: #ffffff;
+          border: 1px solid rgba(13, 148, 136, 0.3);
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+        .family-edit-btn:hover {
+          color: #ffffff;
+          background: #0d9488;
+          border-color: #0d9488;
+          box-shadow: 0 6px 14px rgba(13, 148, 136, 0.25);
+        }
+        .family-empty {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 6px;
+          padding: 36px 20px;
+          text-align: center;
+          border-radius: 16px;
+          border: 1.5px dashed rgba(13, 148, 136, 0.3);
+          background: linear-gradient(135deg, #f6fdfb 0%, #effaf7 100%);
+        }
+        .family-empty-icon {
+          width: 56px;
+          height: 56px;
+          border-radius: 50%;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          color: #0d9488;
+          background: #ffffff;
+          box-shadow: 0 6px 16px rgba(13, 148, 136, 0.15);
+          margin-bottom: 6px;
+        }
+        .family-empty-title {
+          font-size: 15px;
+          font-weight: 700;
+          color: #0b2545;
+        }
+        .family-empty-sub {
+          font-size: 13px;
+          color: #55738d;
+        }
+        @media (max-width: 560px) {
+          .family-card {
+            flex-direction: column;
+            align-items: flex-start;
+            padding: 14px 14px 14px 18px;
+          }
+          .family-card-actions {
+            align-self: flex-end;
+          }
+          .family-card-avatar {
+            width: 44px;
+            height: 44px;
+            font-size: 16px;
+          }
+          .family-add-btn {
+            width: 100%;
+            justify-content: center;
+          }
+        }
+        .profile-select--compact .profile-select-trigger {
+          padding: 9px 12px !important;
+          font-size: 13.5px;
+          min-height: 42px;
+        }
+        .profile-select--compact .profile-select-option {
+          font-size: 13px;
+          padding: 8px 10px;
+        }
+        .family-modal-header {
+          position: relative;
+          overflow: hidden;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          padding: 16px 20px;
+          background: linear-gradient(90deg, #effaf7 0%, #e3f7f2 50%, #ccf4eb 100%);
+          border-bottom: 1px solid rgba(20, 184, 166, 0.18);
+          flex-shrink: 0;
+        }
+        .family-modal-wave {
+          position: absolute;
+          right: 0;
+          top: 0;
+          width: 60%;
+          height: 100%;
+          pointer-events: none;
+        }
+        .family-modal-head-left {
+          position: relative;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          min-width: 0;
+        }
+        .family-modal-head-icon {
+          width: 40px;
+          height: 40px;
+          flex-shrink: 0;
+          border-radius: 12px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          color: #ffffff;
+          background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%);
+          box-shadow: 0 6px 14px rgba(13, 148, 136, 0.28);
+        }
+        .family-modal-title {
+          font-size: 17px;
+          font-weight: 800;
+          color: #0b2545;
+          margin: 0;
+          letter-spacing: -0.01em;
+        }
+        .family-modal-sub {
+          font-size: 12px;
+          color: #55738d;
+          margin: 2px 0 0 0;
+        }
+        .family-modal-close {
+          position: relative;
+          width: 32px;
+          height: 32px;
+          flex-shrink: 0;
+          border-radius: 50%;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          background: rgba(255, 255, 255, 0.85);
+          border: 1px solid rgba(13, 148, 136, 0.18);
+          color: #55738d;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+        .family-modal-close:hover {
+          background: #ffffff;
+          color: #e11d48;
+          border-color: rgba(225, 29, 72, 0.25);
+          transform: rotate(90deg);
+        }
+        .family-modal-photo {
+          display: flex;
+          align-items: center;
+          gap: 14px;
+          margin-bottom: 16px;
+          padding: 12px 14px;
+          border-radius: 14px;
+          border: 1.5px dashed rgba(13, 148, 136, 0.3);
+          background: linear-gradient(135deg, #f6fdfb 0%, #effaf7 100%);
+        }
+        .family-modal-avatar {
+          position: relative;
+          width: 52px;
+          height: 52px;
+          flex-shrink: 0;
+          border-radius: 50%;
+          overflow: hidden;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 20px;
+          font-weight: 800;
+          color: #ffffff;
+          background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%);
+          border: 3px solid #ffffff;
+          box-shadow: 0 0 0 2px rgba(13, 148, 136, 0.22), 0 6px 14px rgba(13, 148, 136, 0.22);
+        }
+        .family-modal-photo-body {
+          flex: 1;
+          min-width: 0;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          flex-wrap: wrap;
+        }
+        .family-modal-photo-title {
+          font-size: 13.5px;
+          font-weight: 700;
+          color: #0b2545;
+        }
+        .family-modal-photo-hint {
+          font-size: 11.5px;
+          color: #7a94a9;
+          margin-top: 1px;
+        }
+        .family-modal-upload-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 7px 14px;
+          border-radius: 999px;
+          font-size: 12.5px;
+          font-weight: 700;
+          color: #0d9488;
+          background: #ffffff;
+          border: 1px solid rgba(13, 148, 136, 0.3);
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+        .family-modal-upload-btn:hover {
+          background: #0d9488;
+          color: #ffffff;
+          border-color: #0d9488;
+          box-shadow: 0 6px 14px rgba(13, 148, 136, 0.25);
+        }
+        .family-modal-field {
+          gap: 6px;
+          min-width: 0;
+        }
+        .family-modal-label {
+          font-size: 11.5px;
+          font-weight: 700;
+          color: #55738d;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+        }
+        .family-modal .input-field {
+          border-radius: 12px;
+          transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        .family-modal input.input-field {
+          padding: 9px 12px;
+          font-size: 13.5px;
+          min-height: 42px;
+        }
+        .family-modal .input-field:hover {
+          border-color: rgba(20, 184, 166, 0.45);
+        }
+        .family-modal .input-field:focus {
+          outline: none;
+          border-color: #14b8a6;
+          box-shadow: 0 0 0 4px rgba(20, 184, 166, 0.14);
+        }
+        .family-modal-location {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          width: 100%;
+          box-sizing: border-box;
+          min-height: 42px;
+          padding: 9px 12px;
+          border: 1px solid var(--border);
+          border-radius: 12px;
+          background: #ffffff;
+          cursor: pointer;
+          transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        .family-modal-location:hover {
+          border-color: rgba(20, 184, 166, 0.45);
+        }
+        .family-modal-location.is-open {
+          border-color: #14b8a6;
+          box-shadow: 0 0 0 4px rgba(20, 184, 166, 0.14);
+        }
+        .family-modal-location-pin {
+          color: #0d9488;
+          flex-shrink: 0;
+        }
+        .family-modal-location-menu {
+          position: absolute;
+          bottom: calc(100% + 6px);
+          left: 0;
+          right: 0;
+          z-index: 99;
+          max-height: 220px;
+          overflow-y: auto;
+          padding: 6px;
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+          background: #ffffff;
+          border: 1px solid rgba(20, 184, 166, 0.2);
+          border-radius: 14px;
+          box-shadow: 0 -14px 32px rgba(11, 37, 69, 0.14), 0 -2px 6px rgba(11, 37, 69, 0.06);
+          animation: profileSelectIn 0.16s ease-out;
+        }
+        .family-modal-location-option {
+          display: flex;
+          align-items: flex-start;
+          gap: 8px;
+          width: 100%;
+          padding: 9px 12px;
+          border: none;
+          border-radius: 10px;
+          background: transparent;
+          color: #0b2545;
+          text-align: left;
+          cursor: pointer;
+          transition: background 0.15s ease, color 0.15s ease;
+        }
+        .family-modal-location-option:hover {
+          background: #effaf7;
+          color: #0d9488;
+        }
+        .family-modal-location-option.is-selected {
+          background: linear-gradient(135deg, #ccf4eb 0%, #b4ede1 100%);
+        }
+        .family-modal-footer {
+          display: flex;
+          justify-content: flex-end;
+          gap: 10px;
+          margin-top: 20px;
+          padding-top: 16px;
+          border-top: 1px dashed rgba(13, 148, 136, 0.22);
+        }
+        .family-modal-cancel {
+          border-radius: 999px !important;
+        }
+        .family-modal-save {
+          border-radius: 999px !important;
+          background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%) !important;
+          border: none !important;
+          box-shadow: 0 8px 18px rgba(13, 148, 136, 0.3);
+        }
+        .family-modal-save:hover:not(:disabled) {
+          box-shadow: 0 10px 22px rgba(13, 148, 136, 0.38);
+          transform: translateY(-1px);
+        }
+        @media (max-width: 480px) {
+          .family-modal-header {
+            padding: 14px 16px;
+          }
+          .family-modal-head-icon {
+            width: 36px;
+            height: 36px;
+          }
+          .family-modal-title {
+            font-size: 15.5px;
+          }
+          .family-modal-photo-hint {
+            display: none;
+          }
+        }
+        .profile-select {
+          position: relative;
+        }
+        .profile-select-trigger {
+          width: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 8px;
+          text-align: left;
+          cursor: pointer;
+          font: inherit;
+        }
+        .profile-select-trigger:disabled {
+          cursor: default;
+          opacity: 1;
+        }
+        .profile-select-value {
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+        .profile-select-chevron {
+          color: #0d9488;
+          flex-shrink: 0;
+          transition: transform 0.2s ease;
+        }
+        .profile-select-trigger.is-open {
+          border-color: #14b8a6 !important;
+          box-shadow: 0 0 0 4px rgba(20, 184, 166, 0.14);
+        }
+        .profile-select-trigger.is-open .profile-select-chevron {
+          transform: rotate(180deg);
+        }
+        .profile-select-menu {
+          position: absolute;
+          left: 0;
+          right: 0;
+          top: calc(100% + 6px);
+          z-index: 50;
+          margin: 0;
+          padding: 6px;
+          list-style: none;
+          max-height: 260px;
+          overflow-y: auto;
+          background: #ffffff;
+          border: 1px solid rgba(20, 184, 166, 0.2);
+          border-radius: 14px;
+          box-shadow: 0 14px 32px rgba(11, 37, 69, 0.14), 0 2px 6px rgba(11, 37, 69, 0.06);
+          animation: profileSelectIn 0.16s ease-out;
+        }
+        .profile-select-menu.drop-up {
+          top: auto;
+          bottom: calc(100% + 6px);
+        }
+        .profile-select-option {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 9px 12px;
+          border-radius: 10px;
+          font-size: 14px;
+          font-weight: 500;
+          color: #0b2545;
+          cursor: pointer;
+          transition: background 0.15s ease, color 0.15s ease;
+        }
+        .profile-select-option.is-active {
+          background: #effaf7;
+          color: #0d9488;
+        }
+        .profile-select-option.is-selected {
+          background: linear-gradient(135deg, #ccf4eb 0%, #b4ede1 100%);
+          color: #0f766e;
+          font-weight: 700;
+        }
+        @keyframes profileSelectIn {
+          from { opacity: 0; transform: translateY(-4px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .profile-form-card select.input-field {
+          -webkit-appearance: none;
+          -moz-appearance: none;
+          appearance: none;
+          padding-right: 40px !important;
+          cursor: pointer;
+        }
+        .profile-form-card select.input-field:not(:disabled) {
+          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%230d9488' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") !important;
+          background-repeat: no-repeat !important;
+          background-position: right 14px center !important;
+          background-size: 16px 16px !important;
+        }
+        .profile-form-card select.input-field:disabled {
+          cursor: default;
+        }
+        .profile-form-card select.input-field::-ms-expand {
+          display: none;
+        }
+        .profile-tabs-bar {
+          border: 1px solid rgba(20, 184, 166, 0.16);
+        }
+        .profile-tab-btn:not(.profile-tab-btn--active):hover {
+          color: #0d9488 !important;
+        }
+        .profile-form-card {
+          position: relative;
+          border: 1px solid rgba(20, 184, 166, 0.16);
+        }
+        .profile-form-card::before {
+          content: "";
+          position: absolute;
+          top: -1px;
+          left: -1px;
+          right: -1px;
+          height: 20px;
+          border-radius: inherit;
+          border-bottom-left-radius: 0;
+          border-bottom-right-radius: 0;
+          background: linear-gradient(90deg, #5ccfbf 0%, #14b8a6 50%, #0d9488 100%);
+          -webkit-mask: linear-gradient(#000 0 4px, transparent 4px);
+          mask: linear-gradient(#000 0 4px, transparent 4px);
+          pointer-events: none;
+        }
+        .profile-section-head {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding-bottom: 14px;
+          margin-bottom: 18px;
+          border-bottom: 1px dashed rgba(13, 148, 136, 0.2);
+        }
+        .profile-section-icon {
+          width: 38px;
+          height: 38px;
+          flex-shrink: 0;
+          border-radius: 12px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          color: #0d9488;
+          background: linear-gradient(135deg, #effaf7 0%, #ccf4eb 100%);
+          border: 1px solid rgba(13, 148, 136, 0.16);
+        }
+        .profile-section-title {
+          font-size: 18px;
+          font-weight: 800;
+          color: #0b2545;
+          margin: 0;
+          letter-spacing: -0.01em;
+        }
+        .profile-section-sub {
+          font-size: 13px;
+          color: #55738d;
+          margin: 2px 0 0 0;
+        }
+        .profile-form-card label {
+          color: #55738d !important;
+          font-size: 12px !important;
+          font-weight: 700 !important;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+        }
+        .profile-form-card .input-field {
+          border-radius: 12px;
+          transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+        }
+        .profile-form-card .input-field:not([readonly]):not(:disabled):hover {
+          border-color: rgba(20, 184, 166, 0.45);
+        }
+        .profile-form-card .input-field:not([readonly]):not(:disabled):focus {
+          outline: none;
+          border-color: #14b8a6;
+          box-shadow: 0 0 0 4px rgba(20, 184, 166, 0.14);
+        }
+        .profile-input-lock {
+          position: absolute;
+          right: 14px;
+          top: 50%;
+          transform: translateY(-50%);
+          color: #7a94a9;
+          pointer-events: none;
+        }
+        .profile-header-card {
+          position: relative;
+          overflow: hidden;
+          border: 1px solid rgba(20, 184, 166, 0.16);
+        }
+        .profile-header-card > * {
+          position: relative;
+          z-index: 1;
+        }
+        .profile-header-card > .profile-card-cover {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 86px;
+          z-index: 0;
+          background: linear-gradient(120deg, #ccf4eb 0%, #99e6d8 55%, #5ccfbf 100%);
+        }
+        .profile-card-cover svg {
+          position: absolute;
+          inset: 0;
+          width: 100%;
+          height: 100%;
+        }
+        .profile-avatar-circle {
+          border: 4px solid #ffffff;
+          box-shadow: 0 0 0 2px rgba(13, 148, 136, 0.25), 0 10px 28px rgba(13, 148, 136, 0.28) !important;
+          transition: transform 0.25s ease;
+        }
+        .profile-avatar-circle:hover {
+          transform: scale(1.03);
+        }
+        .profile-camera-btn {
+          color: #0d9488 !important;
+          border: 2px solid #ffffff !important;
+          background: #ecfdf9 !important;
+        }
+        .profile-patient-id-badge {
+          background: #ffffff !important;
+          border-style: dashed !important;
+        }
+        .profile-stat-tile {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          padding: 12px 8px 10px;
+          border-radius: 14px;
+          text-align: center;
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .profile-stat-tile:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 18px rgba(13, 148, 136, 0.12);
+        }
+        .profile-stat-tile--blood {
+          background: linear-gradient(160deg, #fff1f2 0%, #ffe4e6 100%);
+          border: 1px solid rgba(225, 29, 72, 0.14);
+          color: #be123c;
+        }
+        .profile-stat-tile--body {
+          background: linear-gradient(160deg, #effaf7 0%, #d9f5ee 100%);
+          border: 1px solid rgba(13, 148, 136, 0.16);
+          color: #0f766e;
+        }
+        .profile-stat-icon {
+          width: 28px;
+          height: 28px;
+          border-radius: 50%;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          background: #ffffff;
+          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+          margin-bottom: 6px;
+        }
+        .profile-stat-label {
+          font-size: 11px;
+          font-weight: 600;
+          opacity: 0.85;
+        }
+        .profile-stat-value {
+          font-weight: 800;
+          margin-top: 2px;
+          color: #0b2545;
+        }
+        .profile-hero-banner {
+          position: relative;
+          overflow: hidden;
+          background: linear-gradient(90deg, #effaf7 0%, #e3f7f2 50%, #ccf4eb 100%);
+          border-bottom: 1px solid rgba(20, 184, 166, 0.16);
+          padding: 16px 0;
+        }
+        .profile-hero-wave {
+          position: absolute;
+          right: 0;
+          top: 0;
+          width: 55%;
+          height: 100%;
+          pointer-events: none;
+        }
+        .profile-hero-inner {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 24px;
+          position: relative;
+          z-index: 1;
+        }
+        .profile-hero-content {
+          max-width: 680px;
+          min-width: 0;
+        }
+        .profile-hero-breadcrumb {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 12.5px;
+          font-weight: 500;
+          color: #55738d;
+          margin-bottom: 4px;
+        }
+        .profile-breadcrumb-link {
+          color: #55738d;
+          text-decoration: none;
+          transition: color 0.2s ease;
+        }
+        .profile-breadcrumb-link:hover {
+          color: #0b2545;
+        }
+        .profile-breadcrumb-sep {
+          color: #7a94a9;
+          flex-shrink: 0;
+        }
+        .profile-hero-title {
+          font-size: 22px;
+          font-weight: 800;
+          color: #0b2545;
+          margin: 0;
+          letter-spacing: -0.02em;
+          line-height: 1.2;
+        }
+        .profile-hero-desc {
+          font-size: 13.5px;
+          color: #55738d;
+          margin: 2px 0 0 0;
+          line-height: 1.5;
+        }
+        .profile-hero-actions {
+          display: flex;
+          align-items: center;
+          gap: 20px;
+          flex-shrink: 0;
+        }
+        .profile-hero-graphic {
+          flex-shrink: 0;
+          display: flex;
+        }
+        .profile-hero-svg {
+          width: 64px;
+          height: 64px;
+          filter: drop-shadow(0 6px 14px rgba(13, 148, 136, 0.12));
+        }
+        @media (max-width: 640px) {
+          .profile-hero-banner {
+            padding: 12px 0;
+          }
+          .profile-hero-title {
+            font-size: 19px;
+          }
+          .profile-hero-desc {
+            font-size: 12.5px;
+          }
+          .profile-hero-svg {
+            width: 52px;
+            height: 52px;
+          }
+          .profile-hero-inner {
+            flex-wrap: wrap;
+            gap: 12px;
+          }
+          .profile-hero-graphic {
+            display: none;
+          }
+        }
         @media (max-width: 1024px) {
           .profile-form-row-4col {
             grid-template-columns: 1fr 1fr !important;
@@ -1277,9 +2337,6 @@ export default function Profile() {
           .profile-form-row-4col {
             grid-template-columns: 1fr 1fr !important;
             gap: 12px !important;
-          }
-          #profile-heading {
-            font-size: 20px !important;
           }
         }
         @media (max-width: 480px) {
