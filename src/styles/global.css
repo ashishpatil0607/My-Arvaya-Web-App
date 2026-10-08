@@ -9479,7 +9479,8 @@ header.glass .header-secondary-nav a:focus-visible {
   .chatbot-fab,
   .chatbot-trigger,
   [class*="chatbot-float"] {
-    bottom: 88px !important;
+    bottom: max(16px, calc(env(safe-area-inset-bottom) + 10px)) !important;
+    right: 16px !important;
   }
 
   .card-elevated,

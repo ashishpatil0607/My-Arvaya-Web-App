@@ -1,7 +1,24 @@
 import { useState, useEffect } from "react";
-import { Bell, Calendar, Activity, CreditCard, Gift, AlertCircle, Info, Trash2, CheckCircle2, ChevronRight, Loader2 } from "lucide-react";
+import { Bell, Calendar, Activity, CreditCard, Gift, AlertCircle, Info, Trash2, CheckCircle2, ChevronRight, Clock } from "lucide-react";
 import { Link } from "react-router-dom";
 import { getNotifications } from "../services/dataService";
+
+const CATEGORIES = [
+  { id: "all", label: "All Notifications", icon: Bell, color: "#0d9488" },
+  { id: "appointment", label: "Appointments", icon: Calendar, color: "var(--primary)" },
+  { id: "lab", label: "Lab Reports", icon: Activity, color: "var(--success)" },
+  { id: "wallet", label: "Wallet & Payments", icon: CreditCard, color: "var(--accent)" },
+  { id: "rewards", label: "Rewards", icon: Gift, color: "#eab308" },
+  { id: "emergency", label: "Emergency", icon: AlertCircle, color: "var(--danger)" }
+];
+
+const TYPE_LABELS = {
+  appointment: "Appointment",
+  lab: "Lab Report",
+  wallet: "Payment",
+  rewards: "Rewards",
+  emergency: "Emergency",
+};
 
 function getNotificationMeta(type, title = "") {
   const t = String(type || "").toLowerCase();
@@ -121,196 +138,758 @@ export default function Notifications() {
   return (
     <main className="page animate-fade-in-up" style={{ padding: 0, background: 'var(--bg-app)' }}>
       
-      {/* ── Internal Hero ── */}
-      <div style={{ background: 'var(--bg-surface)', padding: '24px 0', borderBottom: '1px solid var(--border)' }}>
+      {/* ── Internal Hero Banner ── */}
+      <div className="notif-hero-banner">
+        <svg className="notif-hero-wave" viewBox="0 0 500 150" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M0,40 C150,90 320,10 500,45 L500,0 L0,0 Z" fill="rgba(255, 255, 255, 0.42)" />
+        </svg>
+
         <div className="container">
-          <div className="flex items-center gap-2 text-muted mb-2" style={{ fontSize: '12px', fontWeight: '500' }}>
-            <Link to="/" style={{ transition: 'color 0.2s' }} onMouseOver={e => e.currentTarget.style.color='var(--primary)'} onMouseOut={e => e.currentTarget.style.color=''}>Home</Link> <ChevronRight size={12} /> <span>Notifications</span>
-          </div>
-          <div className="flex justify-between items-center flex-wrap gap-4">
-            <div>
-              <h1 style={{ fontSize: '24px', fontWeight: '650', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                Notifications {unreadCount > 0 && <span style={{ background: 'var(--danger)', color: 'white', fontSize: '12px', padding: '2px 8px', borderRadius: '99px', verticalAlign: 'middle' }}>{unreadCount} New</span>}
-              </h1>
-              <p className="text-muted mt-1" style={{ fontSize: '14px' }}>Stay updated with your appointments and health alerts.</p>
+          <div className="notif-hero-inner">
+            <div className="notif-hero-content">
+              <nav aria-label="Breadcrumb" className="notif-hero-breadcrumb">
+                <Link to="/" className="notif-breadcrumb-link">Home</Link>
+                <ChevronRight size={13} className="notif-breadcrumb-sep" />
+                <span>Notifications</span>
+              </nav>
+
+              <div className="notif-hero-title-row">
+                <h1 className="notif-hero-title">Notifications</h1>
+                {unreadCount > 0 && (
+                  <span className="notif-hero-chip">
+                    <span className="notif-hero-chip-dot" /> {unreadCount} new
+                  </span>
+                )}
+              </div>
+              <p className="notif-hero-desc">Stay updated with your appointments and health alerts.</p>
             </div>
-            <button 
-              className="btn btn-secondary hover-glow"
-              onClick={markAllRead}
-              style={{ padding: '8px 16px', fontSize: '13px', borderRadius: 'var(--radius-full)' }}
-              disabled={unreadCount === 0}
-            >
-              <CheckCircle2 size={16} /> Mark all as read
-            </button>
+
+            <div className="notif-hero-actions">
+              <button
+                type="button"
+                className="notif-mark-read-btn"
+                onClick={markAllRead}
+                disabled={unreadCount === 0}
+              >
+                <CheckCircle2 size={15} /> Mark all as read
+              </button>
+
+              <div className="notif-hero-graphic" aria-hidden="true">
+                <svg className="notif-hero-svg" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  {/* Sparkles */}
+                  <path d="M107 19C107 23.2 109.8 26 114 26C109.8 26 107 28.8 107 33C107 28.8 104.2 26 100 26C104.2 26 107 23.2 107 19Z" fill="#14b8a6" />
+                  <path d="M13 46C13 49.5 15.5 52 19 52C15.5 52 13 54.5 13 58C13 54.5 10.5 52 7 52C10.5 52 13 49.5 13 46Z" fill="#14b8a6" />
+                  <circle cx="16" cy="78" r="2" fill="#2dd4bf" />
+                  <circle cx="110" cy="48" r="1.5" fill="#2dd4bf" />
+
+                  {/* Bell */}
+                  <path d="M60 18C62.8 18 65 20.2 65 23V25.5C78 28 87 39.5 87 53V71L95 82C96.4 84 95 86.5 92.6 86.5H27.4C25 86.5 23.6 84 25 82L33 71V53C33 39.5 42 28 55 25.5V23C55 20.2 57.2 18 60 18Z" fill="#ffffff" stroke="#0d9488" strokeWidth="3.2" strokeLinejoin="round" />
+                  <path d="M50 86.5C50 92.5 54.5 97 60 97C65.5 97 70 92.5 70 86.5" stroke="#0d9488" strokeWidth="3.2" strokeLinecap="round" />
+                  <path d="M44 52C44 45 48 39.5 54 37.5" stroke="#99f6e4" strokeWidth="3" strokeLinecap="round" />
+
+                  {/* Badge */}
+                  <circle cx="84" cy="32" r="10" fill="#ef4444" stroke="#ffffff" strokeWidth="3" />
+                </svg>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="container" style={{ paddingTop: '32px', paddingBottom: '60px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(240px, 280px) 1fr', gap: '32px', alignItems: 'start' }} className="notifications-grid">
+      <div className="container" style={{ paddingTop: '24px', paddingBottom: '28px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(240px, 280px) minmax(0, 1fr)', gap: '24px', alignItems: 'start' }} className="notifications-grid">
           
           {/* Sidebar Filters */}
           <aside className="notifications-sidebar" style={{ position: 'sticky', top: '24px' }}>
-            <div className="card-elevated" style={{ padding: '16px', borderRadius: '16px' }}>
-              <h3 style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-main)', marginBottom: '16px', textTransform: 'uppercase', letterSpacing: '0.05em', paddingLeft: '8px' }}>Categories</h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                {[
-                  { id: "all", label: "All Notifications" },
-                  { id: "appointment", label: "Appointments" },
-                  { id: "lab", label: "Lab Reports" },
-                  { id: "wallet", label: "Wallet & Payments" },
-                  { id: "rewards", label: "Rewards" },
-                  { id: "emergency", label: "Emergency" }
-                ].map(cat => (
-                  <button 
-                    key={cat.id}
-                    onClick={() => handleCategoryClick(cat.id)}
-                    style={{ 
-                      textAlign: 'left', 
-                      padding: '10px 16px', 
-                      borderRadius: '12px',
-                      fontSize: '14px',
-                      fontWeight: filter === cat.id ? '600' : '500',
-                      color: filter === cat.id ? 'var(--primary-dark)' : 'var(--text-muted)',
-                      background: filter === cat.id ? 'var(--primary-light)' : 'transparent',
-                      transition: 'all 0.2s',
-                      border: 'none',
-                      cursor: 'pointer'
-                    }}
-                    onMouseOver={e => { if(filter !== cat.id) e.currentTarget.style.background = 'var(--bg-app)'; }}
-                    onMouseOut={e => { if(filter !== cat.id) e.currentTarget.style.background = 'transparent'; }}
-                  >
-                    {cat.label}
-                  </button>
-                ))}
+            <div className="notif-cat-card">
+              <h3 className="notif-cat-heading">Categories</h3>
+              <div className="notif-cat-list" role="tablist" aria-label="Notification categories">
+                {CATEGORIES.map(cat => {
+                  const active = filter === cat.id;
+                  return (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={active}
+                      className={`notif-cat-btn ${active ? "active" : ""}`}
+                      style={{ "--cat-color": cat.color }}
+                      onClick={() => handleCategoryClick(cat.id)}
+                    >
+                      <span className="notif-cat-icon"><cat.icon size={16} /></span>
+                      <span className="notif-cat-label">{cat.label}</span>
+                      {active && !loading && (
+                        <span className="notif-cat-count">{filteredNotifications.length}</span>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </aside>
 
           {/* Notifications List */}
-          <section style={{ display: 'flex', flexDirection: 'column', gap: '16px', minWidth: 0, maxHeight: 'calc(100vh - 220px)', overflowY: 'auto', paddingRight: '12px', paddingBottom: '24px' }} className="styled-scrollbar">
+          <section className="notif-scroll styled-scrollbar">
             {loading ? (
-              <div style={{ padding: '48px', textAlign: 'center', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: '16px' }}>
-                <Loader2 size={32} color="var(--primary)" style={{ margin: '0 auto 16px auto', animation: 'spin 1s linear infinite' }} />
-                <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>Loading notifications...</p>
+              <div className="notif-list" aria-busy="true" aria-label="Loading notifications">
+                {Array.from({ length: 6 }, (_, i) => (
+                  <div key={i} className="notif-card notif-card--skeleton">
+                    <div className="skeleton" style={{ width: '42px', height: '42px', borderRadius: '12px', flexShrink: 0 }} />
+                    <div style={{ flex: 1 }}>
+                      <div className="skeleton" style={{ height: '14px', width: '45%', marginBottom: '10px' }} />
+                      <div className="skeleton" style={{ height: '11px', width: '85%', marginBottom: '8px' }} />
+                      <div className="skeleton" style={{ height: '11px', width: '60%', marginBottom: '12px' }} />
+                      <div className="skeleton" style={{ height: '10px', width: '130px' }} />
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : filteredNotifications.length === 0 ? (
-              <div style={{ padding: '48px', textAlign: 'center', background: 'var(--bg-surface)', border: '1px dashed var(--border)', borderRadius: '16px' }}>
-                <Bell size={48} color="var(--border)" style={{ margin: '0 auto 16px auto' }} />
-                <h3 style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text-main)' }}>No Notifications</h3>
-                <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>You are all caught up! There are no new alerts in this category.</p>
+              <div className="notif-empty">
+                <div className="notif-empty-art" aria-hidden="true">
+                  <span className="notif-empty-ring notif-empty-ring--outer" />
+                  <span className="notif-empty-ring notif-empty-ring--inner" />
+                  <svg className="notif-empty-svg" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    {/* Sparkles */}
+                    <path d="M101 22C101 25.6 103.4 28 107 28C103.4 28 101 30.4 101 34C101 30.4 98.6 28 95 28C98.6 28 101 25.6 101 22Z" fill="#14b8a6" />
+                    <path d="M19 70C19 72.8 20.9 74.7 23.7 74.7C20.9 74.7 19 76.6 19 79.4C19 76.6 17.1 74.7 14.3 74.7C17.1 74.7 19 72.8 19 70Z" fill="#2dd4bf" />
+                    <circle cx="24" cy="36" r="2" fill="#5eead4" />
+                    <circle cx="98" cy="84" r="1.6" fill="#5eead4" />
+
+                    {/* Bell */}
+                    <path d="M60 24C62.5 24 64.5 26 64.5 28.5V30.5C75.5 32.7 83 42.3 83 53.5V68.5L89.5 77.5C90.7 79.2 89.5 81.5 87.4 81.5H32.6C30.5 81.5 29.3 79.2 30.5 77.5L37 68.5V53.5C37 42.3 44.5 32.7 55.5 30.5V28.5C55.5 26 57.5 24 60 24Z" fill="#ffffff" stroke="#0d9488" strokeWidth="3" strokeLinejoin="round" />
+                    <path d="M51.5 81.5C51.5 86.5 55.3 90.5 60 90.5C64.7 90.5 68.5 86.5 68.5 81.5" stroke="#0d9488" strokeWidth="3" strokeLinecap="round" />
+                    <path d="M46.5 52.5C46.5 46.5 50 41.8 55 40" stroke="#99f6e4" strokeWidth="3" strokeLinecap="round" />
+
+                    {/* Check badge */}
+                    <circle cx="81" cy="36" r="11" fill="#0d9488" stroke="#ffffff" strokeWidth="3" />
+                    <path d="M76.5 36.2L79.6 39.2L85.5 33" stroke="#ffffff" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </div>
+
+                <h3 className="notif-empty-title">You're all caught up!</h3>
+                <p className="notif-empty-text">
+                  {filter === "all"
+                    ? "No notifications right now. We'll let you know when there's an update on your appointments, reports or payments."
+                    : `No ${(CATEGORIES.find(c => c.id === filter)?.label || "").toLowerCase()} notifications yet. Check back later or browse all your alerts.`}
+                </p>
+
+                {filter !== "all" && (
+                  <button type="button" className="notif-empty-btn" onClick={() => handleCategoryClick("all")}>
+                    <Bell size={14} /> View all notifications
+                  </button>
+                )}
               </div>
             ) : (
-              filteredNotifications.map(notification => (
-                <div key={notification.id} className="card-elevated hover-glow notification-item-card" style={{ padding: '20px', borderRadius: '12px', display: 'flex', gap: '16px', background: notification.read ? 'var(--bg-surface)' : 'white', borderLeft: notification.read ? '1px solid var(--border)' : `4px solid ${notification.color}` }}>
-                  <div className="notification-icon-box" style={{ width: '40px', height: '40px', borderRadius: '50%', background: `${notification.color}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <notification.icon size={20} color={notification.color} />
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    {/* Header Row: Title on left, Timestamp + Delete Icon on right (>426px) */}
-                    <div className="notification-header-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', gap: '8px' }}>
-                      <h3 className="notification-title" style={{ fontSize: '15px', fontWeight: notification.read ? '600' : '700', margin: 0, color: 'var(--text-main)' }}>{notification.title}</h3>
-                      <div className="notification-meta-right" style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
-                        <span className="notification-time desktop-time" style={{ fontSize: '12px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{notification.time}</span>
-                        <button 
-                          onClick={() => deleteNotification(notification.id)}
-                          className="notification-delete-btn"
-                          style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
-                          title="Delete"
-                        >
-                          <Trash2 size={16} />
-                        </button>
+              <div className="notif-list">
+                {filteredNotifications.map(notification => (
+                  <article
+                    key={notification.id}
+                    className={`notif-card ${notification.read ? "" : "notif-card--unread"}`}
+                    style={{ "--notif-color": notification.color }}
+                  >
+                    <div className="notif-card-icon">
+                      <notification.icon size={20} />
+                    </div>
+
+                    <div className="notif-card-body">
+                      <div className="notif-card-head">
+                        <h3 className="notif-card-title">{notification.title}</h3>
+                        {!notification.read && <span className="notif-unread-dot" aria-label="Unread" />}
+                      </div>
+                      {notification.message && (
+                        <p className="notif-card-message">{notification.message}</p>
+                      )}
+                      <div className="notif-card-meta">
+                        <span><Clock size={12} /> {notification.time}</span>
+                        <span className="notif-card-tag">{TYPE_LABELS[notification.type] || "General"}</span>
                       </div>
                     </div>
 
-                    {/* Mobile Date Row: Date timestamp below title (<=426px) */}
-                    <div className="notification-time-row mobile-time-row" style={{ marginBottom: '6px' }}>
-                      <span className="notification-time mobile-time" style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{notification.time}</span>
-                    </div>
-
-                    {/* Body Message */}
-                    <p className="notification-message" style={{ fontSize: '14px', color: 'var(--text-muted)', margin: 0, lineHeight: 1.5 }}>{notification.message}</p>
-                  </div>
-                </div>
-              ))
+                    <button
+                      type="button"
+                      onClick={() => deleteNotification(notification.id)}
+                      className="notif-delete-btn"
+                      title="Delete"
+                      aria-label="Delete notification"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </article>
+                ))}
+              </div>
             )}
           </section>
 
         </div>
       </div>
       <style dangerouslySetInnerHTML={{__html: `
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
+        .notif-hero-banner {
+          position: relative;
+          overflow: hidden;
+          background: linear-gradient(90deg, #effaf7 0%, #e3f7f2 50%, #ccf4eb 100%);
+          border-bottom: 1px solid rgba(20, 184, 166, 0.16);
+          padding: 16px 0;
         }
-        .desktop-time {
-          display: inline-block;
+        .notif-hero-wave {
+          position: absolute;
+          right: 0;
+          top: 0;
+          width: 55%;
+          height: 100%;
+          pointer-events: none;
         }
-        .mobile-time-row {
-          display: none;
+        .notif-hero-inner {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 24px;
+          position: relative;
+          z-index: 1;
+        }
+        .notif-hero-content {
+          max-width: 680px;
+          min-width: 0;
+        }
+        .notif-hero-breadcrumb {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 12.5px;
+          font-weight: 500;
+          color: #55738d;
+          margin-bottom: 4px;
+        }
+        .notif-breadcrumb-link {
+          color: #55738d;
+          text-decoration: none;
+          transition: color 0.2s ease;
+        }
+        .notif-breadcrumb-link:hover {
+          color: #0b2545;
+        }
+        .notif-breadcrumb-sep {
+          color: #7a94a9;
+          flex-shrink: 0;
+        }
+        .notif-hero-title-row {
+          display: flex;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 10px;
+        }
+        .notif-hero-title {
+          font-size: 22px;
+          font-weight: 800;
+          color: #0b2545;
+          margin: 0;
+          letter-spacing: -0.02em;
+          line-height: 1.2;
+        }
+        .notif-hero-chip {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 3px 10px;
+          border-radius: 999px;
+          background: rgba(255, 255, 255, 0.75);
+          border: 1px solid rgba(239, 68, 68, 0.25);
+          color: #dc2626;
+          font-size: 12.5px;
+          font-weight: 700;
+        }
+        .notif-hero-chip-dot {
+          width: 7px;
+          height: 7px;
+          border-radius: 50%;
+          background: #ef4444;
+          box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.18);
+        }
+        .notif-hero-desc {
+          font-size: 13.5px;
+          color: #55738d;
+          margin: 2px 0 0 0;
+          line-height: 1.5;
+        }
+        .notif-hero-actions {
+          display: flex;
+          align-items: center;
+          gap: 20px;
+          flex-shrink: 0;
+        }
+        .notif-mark-read-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 7px;
+          padding: 8px 16px;
+          border-radius: 999px;
+          background: rgba(255, 255, 255, 0.85);
+          border: 1px solid rgba(13, 148, 136, 0.25);
+          color: #0d9488;
+          font-size: 13px;
+          font-weight: 700;
+          cursor: pointer;
+          white-space: nowrap;
+          transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+        }
+        .notif-mark-read-btn:not(:disabled):hover {
+          background: #ffffff;
+          border-color: rgba(13, 148, 136, 0.5);
+          box-shadow: 0 6px 16px rgba(13, 148, 136, 0.12);
+          transform: translateY(-1px);
+        }
+        .notif-mark-read-btn:disabled {
+          opacity: 0.55;
+          cursor: not-allowed;
+        }
+        .notif-hero-graphic {
+          display: flex;
+        }
+        .notif-hero-svg {
+          width: 64px;
+          height: 64px;
+          filter: drop-shadow(0 6px 14px rgba(13, 148, 136, 0.12));
+        }
+        @media (max-width: 640px) {
+          .notif-hero-banner {
+            padding: 12px 0;
+          }
+          .notif-hero-title {
+            font-size: 19px;
+          }
+          .notif-hero-desc {
+            font-size: 12.5px;
+          }
+          .notif-hero-svg {
+            width: 52px;
+            height: 52px;
+          }
+          .notif-hero-graphic {
+            display: none;
+          }
+          .notif-mark-read-btn {
+            padding: 7px 12px;
+            font-size: 12px;
+          }
+        }
+        @media (max-width: 480px) {
+          .notif-hero-inner {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 10px;
+          }
+        }
+        .notif-scroll {
+          min-width: 0;
+          max-height: max(360px, calc(100vh - 270px));
+          overflow-y: auto;
+          padding: 2px 8px 4px 0;
+        }
+        .notif-list {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+        .notif-card {
+          position: relative;
+          display: flex;
+          align-items: flex-start;
+          gap: 14px;
+          padding: 16px 14px 14px 16px;
+          background: var(--bg-surface, #ffffff);
+          border: 1px solid var(--border);
+          border-radius: 16px;
+          overflow: hidden;
+          transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+        }
+        .notif-card:not(.notif-card--skeleton):hover {
+          transform: translateY(-2px);
+          border-color: rgba(13, 148, 136, 0.35);
+          box-shadow: 0 10px 24px rgba(13, 148, 136, 0.08);
+        }
+        .notif-card--unread {
+          background: linear-gradient(90deg, rgba(13, 148, 136, 0.05) 0%, var(--bg-surface, #ffffff) 45%);
+        }
+        .notif-card--unread::before {
+          content: "";
+          position: absolute;
+          left: 0;
+          top: 0;
+          bottom: 0;
+          width: 4px;
+          background: var(--notif-color, var(--primary));
+        }
+        .notif-card-icon {
+          width: 42px;
+          height: 42px;
+          border-radius: 12px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+          color: var(--notif-color, var(--primary));
+          background: color-mix(in srgb, var(--notif-color, var(--primary)) 12%, transparent);
+        }
+        .notif-card-body {
+          flex: 1;
+          min-width: 0;
+        }
+        .notif-card-head {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin: 1px 0 4px;
+        }
+        .notif-card-title {
+          font-size: 14.5px;
+          font-weight: 600;
+          color: var(--text-main);
+          margin: 0;
+          line-height: 1.35;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+        .notif-card--unread .notif-card-title {
+          font-weight: 700;
+        }
+        .notif-unread-dot {
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background: #ef4444;
+          box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+          flex-shrink: 0;
+        }
+        .notif-card-message {
+          font-size: 13.5px;
+          color: var(--text-muted);
+          margin: 0 0 8px;
+          line-height: 1.5;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+        .notif-card-meta {
+          display: flex;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 6px 12px;
+          font-size: 12px;
+          color: var(--text-muted);
+        }
+        .notif-card-meta > span:first-child {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+        }
+        .notif-card-tag {
+          padding: 2px 8px;
+          border-radius: 999px;
+          font-size: 11px;
+          font-weight: 700;
+          color: var(--notif-color, var(--primary));
+          background: color-mix(in srgb, var(--notif-color, var(--primary)) 10%, transparent);
+        }
+        .notif-delete-btn {
+          width: 30px;
+          height: 30px;
+          border-radius: 8px;
+          border: none;
+          background: transparent;
+          color: var(--text-muted);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+          cursor: pointer;
+          opacity: 0.6;
+          transition: opacity 0.2s ease, background 0.2s ease, color 0.2s ease;
+        }
+        .notif-card:hover .notif-delete-btn,
+        .notif-delete-btn:focus-visible {
+          opacity: 1;
+        }
+        .notif-delete-btn:hover {
+          color: #dc2626;
+          background: #fee2e2;
+        }
+        .notif-cat-card {
+          padding: 14px 12px;
+          background: var(--bg-surface, #ffffff);
+          border: 1px solid var(--border);
+          border-radius: 16px;
+          box-shadow: 0 6px 18px rgba(13, 148, 136, 0.05);
+        }
+        .notif-cat-heading {
+          font-size: 11.5px;
+          font-weight: 700;
+          color: #7a94a9;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          margin: 2px 0 10px;
+          padding-left: 8px;
+        }
+        .notif-cat-list {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+        .notif-cat-btn {
+          position: relative;
+          display: flex;
+          align-items: center;
+          gap: 11px;
+          width: 100%;
+          padding: 8px 10px 8px 8px;
+          border: none;
+          border-radius: 12px;
+          background: transparent;
+          color: #55738d;
+          font-size: 14px;
+          font-weight: 500;
+          text-align: left;
+          cursor: pointer;
+          transition: background 0.2s ease, color 0.2s ease;
+        }
+        .notif-cat-btn:hover {
+          background: var(--bg-app);
+          color: #0b2545;
+        }
+        .notif-cat-btn:focus-visible {
+          outline: 2px solid rgba(13, 148, 136, 0.45);
+          outline-offset: 1px;
+        }
+        .notif-cat-icon {
+          width: 32px;
+          height: 32px;
+          border-radius: 10px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+          color: var(--cat-color);
+          background: color-mix(in srgb, var(--cat-color) 11%, transparent);
+          transition: background 0.2s ease, color 0.2s ease;
+        }
+        .notif-cat-label {
+          flex: 1;
+          min-width: 0;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .notif-cat-count {
+          min-width: 24px;
+          padding: 2px 8px;
+          border-radius: 999px;
+          background: #0d9488;
+          color: #ffffff;
+          font-size: 11.5px;
+          font-weight: 700;
+          text-align: center;
+        }
+        .notif-cat-btn.active {
+          background: var(--primary-light);
+          color: #0b2545;
+          font-weight: 700;
+        }
+        .notif-cat-btn.active::before {
+          content: "";
+          position: absolute;
+          left: -12px;
+          top: 9px;
+          bottom: 9px;
+          width: 3px;
+          border-radius: 0 3px 3px 0;
+          background: #0d9488;
+        }
+        .notif-cat-btn.active .notif-cat-icon {
+          background: var(--cat-color);
+          color: #ffffff;
+          box-shadow: 0 4px 10px color-mix(in srgb, var(--cat-color) 30%, transparent);
         }
         @media (max-width: 768px) {
-          .notifications-grid { grid-template-columns: 1fr !important; }
-          .notifications-sidebar { position: relative !important; top: 0 !important; }
+          .notif-cat-card {
+            padding: 0;
+            background: transparent;
+            border: none;
+            box-shadow: none;
+          }
+          .notif-cat-heading {
+            display: none;
+          }
+          .notif-cat-list {
+            flex-direction: row;
+            flex-wrap: wrap;
+            gap: 8px;
+          }
+          .notif-cat-btn {
+            width: auto;
+            max-width: 100%;
+            gap: 6px;
+            padding: 4px 11px 4px 4px;
+            border-radius: 999px;
+            background: var(--bg-surface, #ffffff);
+            border: 1px solid var(--border);
+            font-size: 12.5px;
+          }
+          .notif-cat-btn.active {
+            border-color: rgba(13, 148, 136, 0.35);
+          }
+          .notif-cat-btn.active::before {
+            display: none;
+          }
+          .notif-cat-icon {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+          }
+          .notif-cat-icon svg {
+            width: 14px;
+            height: 14px;
+          }
+          .notif-cat-label {
+            overflow: visible;
+          }
+          .notif-cat-count {
+            min-width: 20px;
+            padding: 1px 6px;
+            font-size: 11px;
+          }
+        }
+        .notif-empty {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          text-align: center;
+          padding: 44px 24px 40px;
+          background:
+            radial-gradient(circle at 50% 0%, rgba(20, 184, 166, 0.10) 0%, rgba(20, 184, 166, 0) 55%),
+            var(--bg-surface, #ffffff);
+          border: 1px solid var(--border);
+          border-radius: 16px;
+          animation: notifEmptyIn 0.35s ease both;
+        }
+        .notif-empty-art {
+          position: relative;
+          width: 132px;
+          height: 132px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin-bottom: 14px;
+        }
+        .notif-empty-ring {
+          position: absolute;
+          border-radius: 50%;
+        }
+        .notif-empty-ring--outer {
+          inset: 0;
+          background: rgba(20, 184, 166, 0.07);
+          border: 1px dashed rgba(13, 148, 136, 0.22);
+        }
+        .notif-empty-ring--inner {
+          inset: 20px;
+          background: rgba(20, 184, 166, 0.12);
+        }
+        .notif-empty-svg {
+          position: relative;
+          width: 92px;
+          height: 92px;
+          filter: drop-shadow(0 8px 16px rgba(13, 148, 136, 0.16));
+          animation: notifBellSway 3.2s ease-in-out infinite;
+          transform-origin: 50% 22%;
+        }
+        .notif-empty-title {
+          font-size: 17px;
+          font-weight: 800;
+          color: #0b2545;
+          margin: 0 0 6px;
+          letter-spacing: -0.01em;
+        }
+        .notif-empty-text {
+          max-width: 380px;
+          font-size: 13.5px;
+          line-height: 1.55;
+          color: var(--text-muted);
+          margin: 0;
+        }
+        .notif-empty-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 7px;
+          margin-top: 18px;
+          padding: 8px 16px;
+          border-radius: 999px;
+          background: var(--primary-light);
+          border: 1px solid rgba(13, 148, 136, 0.25);
+          color: #0d9488;
+          font-size: 13px;
+          font-weight: 700;
+          cursor: pointer;
+          transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+        }
+        .notif-empty-btn:hover {
+          background: #ffffff;
+          box-shadow: 0 6px 16px rgba(13, 148, 136, 0.12);
+          transform: translateY(-1px);
+        }
+        @keyframes notifBellSway {
+          0%, 100% { transform: rotate(0deg); }
+          8% { transform: rotate(8deg); }
+          16% { transform: rotate(-6deg); }
+          24% { transform: rotate(3deg); }
+          32% { transform: rotate(0deg); }
+        }
+        @keyframes notifEmptyIn {
+          from { opacity: 0; transform: translateY(6px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .notif-empty, .notif-empty-svg { animation: none; }
         }
         @media (max-width: 426px) {
-          .desktop-time {
-            display: none !important;
-          }
-          .mobile-time-row {
-            display: block !important;
-          }
-          .notification-item-card {
-            gap: 12px !important;
-          }
-          .notification-icon-box {
-            width: 32px !important;
-            height: 32px !important;
-          }
-          .notification-icon-box svg {
-            width: 16px !important;
-            height: 16px !important;
-          }
-          .notification-title {
-            font-size: 14px !important;
-          }
-          .notification-time {
-            font-size: 11px !important;
-          }
-          .notification-delete-btn svg {
-            width: 15px !important;
-            height: 15px !important;
-          }
-          .notification-message {
-            font-size: 12.5px !important;
-            line-height: 1.4 !important;
-          }
+          .notif-empty { padding: 32px 16px 28px; }
+          .notif-empty-art { width: 108px; height: 108px; }
+          .notif-empty-ring--inner { inset: 16px; }
+          .notif-empty-svg { width: 76px; height: 76px; }
+          .notif-empty-title { font-size: 15.5px; }
+          .notif-empty-text { font-size: 12.5px; }
         }
-        @media (max-width: 320px) {
-          .notification-item-card {
-            gap: 10px !important;
+        @media (max-width: 768px) {
+          .notifications-grid { grid-template-columns: minmax(0, 1fr) !important; gap: 14px !important; }
+          .notifications-sidebar { position: relative !important; top: 0 !important; min-width: 0; }
+          .notif-scroll { max-height: none; overflow: visible; padding-right: 0; }
+        }
+        @media (max-width: 426px) {
+          .notif-card {
+            gap: 12px;
+            padding: 14px 10px 12px 14px;
           }
-          .notification-icon-box {
-            width: 28px !important;
-            height: 28px !important;
+          .notif-card-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
           }
-          .notification-icon-box svg {
-            width: 14px !important;
-            height: 14px !important;
+          .notif-card-icon svg {
+            width: 17px;
+            height: 17px;
           }
-          .notification-title {
-            font-size: 13px !important;
+          .notif-card-title {
+            font-size: 13.5px;
           }
-          .notification-time {
-            font-size: 10px !important;
+          .notif-card-message {
+            font-size: 12.5px;
           }
-          .notification-delete-btn svg {
-            width: 14px !important;
-            height: 14px !important;
+          .notif-card-meta {
+            font-size: 11px;
           }
-          .notification-message {
-            font-size: 11.5px !important;
-            line-height: 1.35 !important;
+          .notif-delete-btn {
+            opacity: 1;
+            width: 26px;
+            height: 26px;
           }
         }
       `}} />
