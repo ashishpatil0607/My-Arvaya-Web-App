@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Calendar as CalendarIcon, Clock, MapPin, Video, User, CheckCircle, CheckCircle2, XCircle, AlertCircle, ChevronRight, ChevronLeft, Sunrise, Sun, Loader2, MoreHorizontal, Stethoscope, FileText } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, MapPin, Video, User, CheckCircle, CheckCircle2, XCircle, AlertCircle, ChevronRight, ChevronLeft, Sunrise, Sun, Stethoscope, FileText } from "lucide-react";
 import { Link } from "react-router-dom";
 import { getAppointments, cancelAppointment, rescheduleAppointment, getStoredUserId, getDoctorSlots } from "../services/dataService";
 import Modal from "../components/common/Modal";
@@ -14,31 +14,27 @@ const getLocalDateString = (dateObj) => {
   return `${y}-${m}-${day}`;
 };
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 5;
 
-function getPaginationRange(current, total) {
-  if (total <= 6) {
-    return Array.from({ length: total }, (_, i) => i + 1);
-  }
-  if (current <= 3) {
-    return [1, 2, 3, "...", total];
-  }
-  if (current >= total - 2) {
-    return [1, "...", total - 2, total - 1, total];
-  }
-  return [1, "...", current - 1, current, current + 1, "...", total];
+function getPageRange(current, total) {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  const pages = [1];
+  const from = Math.max(2, current - 1);
+  const to = Math.min(total - 1, current + 1);
+  if (from > 2) pages.push("...");
+  for (let p = from; p <= to; p++) pages.push(p);
+  if (to < total - 1) pages.push("...");
+  pages.push(total);
+  return pages;
 }
 
 export default function MyAppointments() {
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [isPageFetching, setIsPageFetching] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-
-  const pageCacheRef = useRef({});
-  const allAppointmentsPoolRef = useRef(null);
-  const maxKnownPagesRef = useRef(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const requestIdRef = useRef(0);
 
   // Toast
   const [toast, setToast] = useState({ isOpen: false, message: "", type: "success" });
@@ -59,102 +55,46 @@ export default function MyAppointments() {
   const [slotsLoading, setSlotsLoading] = useState(false);
   const [isRescheduling, setIsRescheduling] = useState(false);
 
-  const fetchAppointmentsForPage = async (pageToFetch = 1) => {
-    // Check if page data already exists in memory cache
-    if (pageCacheRef.current[pageToFetch]) {
-      setAppointments(pageCacheRef.current[pageToFetch]);
-      setCurrentPage(pageToFetch);
-      return;
-    }
-
-    // Check if full array was returned by backend on initial call
-    if (allAppointmentsPoolRef.current && allAppointmentsPoolRef.current.length > 0) {
-      const start = (pageToFetch - 1) * PAGE_SIZE;
-      const sliced = allAppointmentsPoolRef.current.slice(start, start + PAGE_SIZE);
-      pageCacheRef.current[pageToFetch] = sliced;
-      setAppointments(sliced);
-      setCurrentPage(pageToFetch);
-      return;
-    }
-
-    if (pageToFetch === 1) {
-      setLoading(true);
-    } else {
-      setIsPageFetching(true);
-    }
+  const fetchAppointmentsForPage = async (page) => {
+    const requestId = ++requestIdRef.current;
+    setLoading(true);
 
     try {
       const data = await getAppointments({
         pageSize: PAGE_SIZE,
-        pageIndex: pageToFetch,
-        page: pageToFetch
+        pageIndex: page,
+        page
       });
+      if (requestId !== requestIdRef.current) return;
 
       const list = Array.isArray(data) ? data : [];
+      // Backend may ignore paging and return the full list — slice it client-side.
+      const isFullList = list.length > PAGE_SIZE;
+      const total = isFullList ? list.length : Number(list.total) || list.length;
+      const start = (page - 1) * PAGE_SIZE;
 
-      // If backend returned more than PAGE_SIZE in one call (full dataset)
-      if (list.length > PAGE_SIZE) {
-        allAppointmentsPoolRef.current = list;
-        const total = Math.max(1, Math.ceil(list.length / PAGE_SIZE));
-        setTotalPages(total);
-        maxKnownPagesRef.current = total;
-
-        const start = (pageToFetch - 1) * PAGE_SIZE;
-        const sliced = list.slice(start, start + PAGE_SIZE);
-        pageCacheRef.current[pageToFetch] = sliced;
-        setAppointments(sliced);
-      } else {
-        // Backend returned dynamic page data
-        pageCacheRef.current[pageToFetch] = list;
-        setAppointments(list);
-
-        const totalCount = data?.count ?? data?.total;
-        if (totalCount != null) {
-          const total = Math.max(1, Math.ceil(Number(totalCount) / PAGE_SIZE));
-          setTotalPages(total);
-          maxKnownPagesRef.current = total;
-        } else if (data?.totalPages != null) {
-          const total = Math.max(1, Number(data.totalPages));
-          setTotalPages(total);
-          maxKnownPagesRef.current = total;
-        } else {
-          if (list.length === PAGE_SIZE) {
-            const nextPages = Math.max(maxKnownPagesRef.current, pageToFetch + 1);
-            maxKnownPagesRef.current = nextPages;
-            setTotalPages(nextPages);
-          } else {
-            maxKnownPagesRef.current = Math.max(1, pageToFetch);
-            setTotalPages(Math.max(1, pageToFetch));
-          }
-        }
-      }
-
-      setCurrentPage(pageToFetch);
+      setAppointments(isFullList ? list.slice(start, start + PAGE_SIZE) : list);
+      setTotalCount(total);
+      setTotalPages(Math.max(1, Math.ceil(total / PAGE_SIZE)));
     } catch (err) {
       console.error("Failed to fetch appointments:", err);
     } finally {
-      setLoading(false);
-      setIsPageFetching(false);
+      if (requestId === requestIdRef.current) setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchAppointmentsForPage(1);
-  }, []);
+    fetchAppointmentsForPage(currentPage);
+  }, [currentPage]);
 
   const filteredAppointments = appointments;
 
-  const fetchAppointments = async () => {
-    pageCacheRef.current = {};
-    allAppointmentsPoolRef.current = null;
-    fetchAppointmentsForPage(currentPage);
-  };
+  const fetchAppointments = () => fetchAppointmentsForPage(currentPage);
 
-  const paginationRange = getPaginationRange(currentPage, totalPages);
-
-  const handlePageChange = (newPage) => {
-    if (newPage < 1 || newPage > totalPages || newPage === currentPage) return;
-    fetchAppointmentsForPage(newPage);
+  const goToPage = (page) => {
+    if (page < 1 || page > totalPages || page === currentPage) return;
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const openCancelModal = (apt) => {
@@ -306,22 +246,37 @@ export default function MyAppointments() {
   const getStatusBadge = (status) => {
     switch(status) {
       case 'upcoming': return (
-        <span style={{ background: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0', padding: '5px 14px', borderRadius: '20px', fontSize: '13px', fontWeight: '600', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-          <CheckCircle2 size={13} /> Upcoming
+        <span style={{ background: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0', padding: '3px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '600', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+          <CheckCircle2 size={12} /> Upcoming
         </span>
       );
       case 'completed': return (
-        <span style={{ background: 'var(--success-light, #d1fae5)', color: 'var(--success, #059669)', padding: '5px 14px', borderRadius: '20px', fontSize: '13px', fontWeight: '600', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-          <CheckCircle size={13} /> Completed
+        <span style={{ background: 'var(--success-light, #d1fae5)', color: 'var(--success, #059669)', padding: '3px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '600', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+          <CheckCircle size={12} /> Completed
         </span>
       );
       case 'cancelled': return (
-        <span style={{ background: 'var(--danger-light, #fee2e2)', color: 'var(--danger, #dc2626)', padding: '5px 14px', borderRadius: '20px', fontSize: '13px', fontWeight: '600', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-          <XCircle size={13} /> Cancelled
+        <span style={{ background: 'var(--danger-light, #fee2e2)', color: 'var(--danger, #dc2626)', padding: '3px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '600', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+          <XCircle size={12} /> Cancelled
         </span>
       );
       default: return null;
     }
+  };
+
+  const formatTime = (time) => {
+    const m = /^(\d{1,2}):(\d{2})(?::\d{2})?$/.exec(String(time || "").trim());
+    if (!m) return time;
+    const h = Number(m[1]);
+    return `${h % 12 || 12}:${m[2]} ${h < 12 ? "AM" : "PM"}`;
+  };
+
+  const formatVisitType = (type) => {
+    if (!type) return "";
+    return String(type)
+      .replace(/[_-]+/g, " ")
+      .toLowerCase()
+      .replace(/^\w/, (c) => c.toUpperCase());
   };
 
   const isPastDate = (dateString) => {
@@ -440,13 +395,33 @@ export default function MyAppointments() {
       <div className="container" style={{ paddingTop: '24px', paddingBottom: '60px' }}>
 
       {/* List */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }} aria-busy={loading}>
         {loading ? (
-          <div style={{ padding: '64px 20px', textAlign: 'center', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: '16px' }}>
-            <Loader2 size={48} className="animate-spin" color="var(--primary)" style={{ margin: '0 auto 16px auto' }} />
-            <h3 style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text-main)', marginBottom: '8px' }}>Loading appointments...</h3>
-            <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>Please wait while we fetch your appointments.</p>
-          </div>
+          Array.from({ length: PAGE_SIZE }, (_, i) => (
+            <div key={i} className="appointment-card appointment-card--skeleton" aria-busy="true">
+              <div className="appointment-card-header">
+                <div className="appointment-doctor" style={{ flex: 1 }}>
+                  <div className="skeleton" style={{ width: '38px', height: '38px', borderRadius: '10px', flexShrink: 0 }} />
+                  <div style={{ flex: 1 }}>
+                    <div className="skeleton" style={{ height: '14px', width: '40%', marginBottom: '10px' }} />
+                    <div className="skeleton" style={{ height: '11px', width: '25%' }} />
+                  </div>
+                </div>
+                <div className="skeleton" style={{ height: '22px', width: '84px', borderRadius: '999px' }} />
+              </div>
+              <div className="appointment-details-grid">
+                {Array.from({ length: 4 }, (_, j) => (
+                  <div key={j} className="appointment-detail">
+                    <div className="skeleton" style={{ width: '28px', height: '28px', borderRadius: '8px', flexShrink: 0 }} />
+                    <div style={{ flex: 1 }}>
+                      <div className="skeleton" style={{ height: '10px', width: '50%', marginBottom: '8px' }} />
+                      <div className="skeleton" style={{ height: '13px', width: '80%' }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))
         ) : filteredAppointments.length === 0 ? (
           <div style={{ padding: '64px 20px', textAlign: 'center', background: 'var(--bg-surface)', border: '1px dashed var(--border)', borderRadius: '16px' }}>
             <CalendarIcon size={48} color="var(--border)" style={{ margin: '0 auto 16px auto' }} />
@@ -454,324 +429,191 @@ export default function MyAppointments() {
             <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>You don't have any appointments at the moment.</p>
           </div>
         ) : (
-          filteredAppointments.map(apt => (
-            <div key={apt.id} className="appointment-card card-elevated">
-              
+          filteredAppointments.map(apt => {
+            const isPast = isPastDate(apt.date);
+            const visitType = formatVisitType(apt.type);
+            const location = apt.raw?.hospital_address || apt.raw?.location_name;
+            const patientMeta = apt.raw?.patient_age && apt.raw?.patient_gender
+              ? `Age ${apt.raw.patient_age} • ${apt.raw.patient_gender}`
+              : apt.patientMobile;
+            const showFooter = apt.status === "upcoming" || apt.status === "completed";
+
+            return (
+            <div key={apt.id} className="appointment-card">
+
               {/* Top Row: Doctor Info & Status */}
               <div className="appointment-card-header">
-                <div style={{ display: 'flex', gap: '14px', alignItems: 'center' }}>
-                  <div
-                    style={{
-                      width: '48px',
-                      height: '48px',
-                      borderRadius: '50%',
-                      background: '#e6f7f5',
-                      color: '#0d9488',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexShrink: 0,
-                    }}
-                  >
-                    <Stethoscope size={24} />
+                <div className="appointment-doctor">
+                  <div className="appointment-doctor-icon">
+                    <Stethoscope size={19} />
                   </div>
-                  <div>
-                    <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#0b2545', margin: '0 0 3px 0' }}>{apt.doctor}</h3>
-                    <p style={{ fontSize: '14px', color: '#64748b', margin: 0 }}>
-                      {apt.specialty}
-                    </p>
+                  <div style={{ minWidth: 0 }}>
+                    <h3 className="appointment-doctor-name">{apt.doctor}</h3>
+                    <div className="appointment-doctor-meta">
+                      <span>{apt.specialty}</span>
+                      {visitType && <span className="appointment-type-chip">{visitType}</span>}
+                    </div>
                   </div>
                 </div>
-                <div>{getStatusBadge(apt.status)}</div>
+                <div style={{ flexShrink: 0 }}>{getStatusBadge(apt.status)}</div>
               </div>
 
               {/* Middle Row: Details Grid */}
               <div className="appointment-details-grid">
-                {/* 1. Date & Time */}
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
-                  <div
-                    style={{
-                      width: '38px',
-                      height: '38px',
-                      borderRadius: '50%',
-                      background: '#e0f2fe',
-                      color: '#0284c7',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexShrink: 0,
-                    }}
-                  >
-                    <CalendarIcon size={18} />
+                <div className="appointment-detail">
+                  <div className="appointment-detail-icon" style={{ background: '#e0f2fe', color: '#0284c7' }}>
+                    <CalendarIcon size={14} />
                   </div>
                   <div style={{ minWidth: 0 }}>
-                    <span style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '2px', fontWeight: '500' }}>
-                      Date & Time
-                    </span>
-                    <span style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-main, #0f172a)' }}>
-                      {new Date(apt.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} • {apt.time}
+                    <span className="appointment-detail-label">Date & Time</span>
+                    <span className="appointment-detail-value">
+                      {new Date(apt.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} • {formatTime(apt.time)}
                     </span>
                   </div>
                 </div>
 
-                {/* 2. Location */}
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
-                  <div
-                    style={{
-                      width: '38px',
-                      height: '38px',
-                      borderRadius: '50%',
-                      background: '#f3e8ff',
-                      color: '#7c3aed',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexShrink: 0,
-                    }}
-                  >
-                    <MapPin size={18} />
+                <div className="appointment-detail">
+                  <div className="appointment-detail-icon" style={{ background: '#f3e8ff', color: '#7c3aed' }}>
+                    <MapPin size={14} />
                   </div>
                   <div style={{ minWidth: 0 }}>
-                    <span style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '2px', fontWeight: '500' }}>
-                      Location
-                    </span>
-                    <span style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-main, #0f172a)', display: 'block' }}>
-                      {apt.hospital || "Sunrise Health Centre"}
-                    </span>
-                    {(apt.raw?.hospital_address || apt.raw?.location_name || apt.type) && (
-                      <span style={{ fontSize: '12px', color: '#94a3b8', display: 'block', marginTop: '1px' }}>
-                        {apt.raw?.hospital_address || apt.raw?.location_name || apt.type}
-                      </span>
-                    )}
+                    <span className="appointment-detail-label">Location</span>
+                    <span className="appointment-detail-value">{apt.hospital || "Sunrise Health Centre"}</span>
+                    {location && <span className="appointment-detail-sub">{location}</span>}
                   </div>
                 </div>
 
-                {/* 3. Fee */}
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
-                  <div
-                    style={{
-                      width: '38px',
-                      height: '38px',
-                      borderRadius: '50%',
-                      background: '#dcfce7',
-                      color: '#16a34a',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexShrink: 0,
-                      fontWeight: '700',
-                      fontSize: '17px',
-                    }}
-                  >
+                <div className="appointment-detail">
+                  <div className="appointment-detail-icon" style={{ background: '#dcfce7', color: '#16a34a', fontWeight: 700, fontSize: '13px' }}>
                     ₹
                   </div>
                   <div style={{ minWidth: 0 }}>
-                    <span style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '2px', fontWeight: '500' }}>
-                      Fee
-                    </span>
-                    <span style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-main, #0f172a)', display: 'block' }}>
-                      ₹ {apt.amount}
-                    </span>
-                    {/* <span style={{ fontSize: '12px', color: '#16a34a', display: 'block', marginTop: '1px', fontWeight: '500' }}>
-                      {apt.raw?.payment_received ? "(Paid Online)" : (apt.raw?.payment_status ? `(${apt.raw.payment_status})` : "(Paid Online)")}
-                    </span> */}
+                    <span className="appointment-detail-label">Fee</span>
+                    <span className="appointment-detail-value">₹ {apt.amount}</span>
                   </div>
                 </div>
 
-                {/* 4. Patient */}
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
-                  <div
-                    style={{
-                      width: '38px',
-                      height: '38px',
-                      borderRadius: '50%',
-                      background: '#ffedd5',
-                      color: '#ea580c',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexShrink: 0,
-                    }}
-                  >
-                    <User size={18} />
+                <div className="appointment-detail">
+                  <div className="appointment-detail-icon" style={{ background: '#ffedd5', color: '#ea580c' }}>
+                    <User size={14} />
                   </div>
                   <div style={{ minWidth: 0 }}>
-                    <span style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '2px', fontWeight: '500' }}>
-                      Patient
-                    </span>
-                    <span style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-main, #0f172a)', display: 'block' }}>
-                      {apt.patientName || "Kundan Bhagat"}
-                    </span>
-                    {(apt.raw?.patient_age || apt.raw?.patient_gender || apt.patientMobile) && (
-                      <span style={{ fontSize: '12px', color: '#94a3b8', display: 'block', marginTop: '1px' }}>
-                        {apt.raw?.patient_age && apt.raw?.patient_gender
-                          ? `Age ${apt.raw.patient_age} • ${apt.raw.patient_gender}`
-                          : (apt.patientMobile ? `${apt.patientMobile}` : '')}
-                      </span>
-                    )}
+                    <span className="appointment-detail-label">Patient</span>
+                    <span className="appointment-detail-value">{apt.patientName || "Kundan Bhagat"}</span>
+                    {patientMeta && <span className="appointment-detail-sub">{patientMeta}</span>}
                   </div>
                 </div>
               </div>
 
-              {/* Bottom Row: Appointment ID on Left, Actions on Right */}
-              <div
-                className="appointment-footer-row"
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  flexWrap: 'wrap',
-                  gap: '14px',
-                  borderTop: '1px solid var(--border)',
-                  paddingTop: '16px',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#64748b' }}>
-                  {/* <FileText size={15} style={{ color: '#0d9488', flexShrink: 0 }} />
-                  <span>
-                    Appointment ID: <strong style={{ color: '#334155' }}>
-                      {apt.raw?.appointment_id ? (String(apt.raw.appointment_id).startsWith('APPT') ? apt.raw.appointment_id : `APPT-${apt.raw.appointment_id}`) : `APPT-${apt.id}`}
-                    </strong>
-                  </span> */}
+              {/* Bottom Row: Past-date note / Actions */}
+              {showFooter && (
+              <div className="appointment-footer-row">
+                <div className="appointment-footer-note">
+                  {apt.status === "upcoming" && isPast && (
+                    <>
+                      <AlertCircle size={14} />
+                      <span>This appointment date has passed and can no longer be changed.</span>
+                    </>
+                  )}
                 </div>
 
-                {apt.status === "upcoming" && (() => {
-                  const isPast = isPastDate(apt.date);
-                  return (
-                    <div className="appointment-btn-group" style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
-                      <button
-                        onClick={() => !isPast && openRescheduleModal(apt)}
-                        disabled={isPast}
-                        title={isPast ? "Cannot reschedule past appointments" : ""}
-                        className="appointment-btn-reschedule hover-glow"
-                        style={{
-                          background: '#ffffff',
-                          border: `1.5px solid ${isPast ? 'var(--border)' : '#0d9488'}`,
-                          color: isPast ? 'var(--text-muted)' : '#0d9488',
-                          padding: '8px 18px',
-                          fontSize: '13px',
-                          fontWeight: '600',
-                          borderRadius: '10px',
-                          cursor: isPast ? 'not-allowed' : 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          opacity: isPast ? 0.6 : 1,
-                          transition: 'all 0.2s ease',
-                        }}
-                      >
-                        <CalendarIcon size={14} />
-                        <span>Reschedule</span>
-                      </button>
+                {apt.status === "upcoming" && !isPast && (
+                  <div className="appointment-btn-group">
+                    <button
+                      type="button"
+                      onClick={() => openRescheduleModal(apt)}
+                      className="appointment-btn appointment-btn-reschedule"
+                    >
+                      <CalendarIcon size={14} />
+                      <span>Reschedule</span>
+                    </button>
 
-                      <button
-                        onClick={() => !isPast && openCancelModal(apt)}
-                        disabled={isPast}
-                        title={isPast ? "Cannot cancel past appointments" : ""}
-                        className="appointment-btn-cancel hover-glow"
-                        style={{
-                          background: isPast ? 'var(--border)' : '#0d9488',
-                          border: 'none',
-                          color: '#ffffff',
-                          padding: '8.5px 18px',
-                          fontSize: '13px',
-                          fontWeight: '600',
-                          borderRadius: '10px',
-                          cursor: isPast ? 'not-allowed' : 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          opacity: isPast ? 0.6 : 1,
-                          transition: 'all 0.2s ease',
-                        }}
-                      >
-                        <XCircle size={14} />
-                        <span>Cancel</span>
-                      </button>
+                    <button
+                      type="button"
+                      onClick={() => openCancelModal(apt)}
+                      className="appointment-btn appointment-btn-cancel"
+                    >
+                      <XCircle size={14} />
+                      <span>Cancel</span>
+                    </button>
 
-                      {apt.type === "Video Consult" && (
-                        <button
-                          className="btn btn-primary hover-glow"
-                          style={{
-                            padding: '8.5px 18px',
-                            fontSize: '13px',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            borderRadius: '10px',
-                          }}
-                        >
-                          <Video size={14} />
-                          <span>Join Call</span>
-                        </button>
-                      )}
-                    </div>
-                  );
-                })()}
+                    {apt.type === "Video Consult" && (
+                      <button type="button" className="appointment-btn appointment-btn-primary">
+                        <Video size={14} />
+                        <span>Join Call</span>
+                      </button>
+                    )}
+                  </div>
+                )}
 
                 {apt.status === "completed" && (
-                  <div className="appointment-btn-group" style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                    <button className="btn btn-secondary hover-glow" style={{ padding: '8px 16px', fontSize: '13px', borderRadius: '10px' }}>
+                  <div className="appointment-btn-group">
+                    <button type="button" className="appointment-btn appointment-btn-reschedule">
                       View Summary
                     </button>
-                    <button className="btn btn-primary hover-glow" style={{ padding: '8px 16px', fontSize: '13px', borderRadius: '10px' }}>
+                    <button type="button" className="appointment-btn appointment-btn-primary">
                       Book Again
                     </button>
                   </div>
                 )}
               </div>
+              )}
             </div>
-          ))
+            );
+          })
         )}
       </div>
 
-      {/* ── Compact Right-Bottom Corner Pagination ── */}
-      {!loading && appointments.length > 0 && totalPages >= 1 && (
-        <div className="appointments-pagination-wrapper">
-          <div className="appointments-pagination-group" role="navigation" aria-label="Pagination">
-            <button
-              type="button"
-              className="pagination-btn pagination-nav-btn"
-              disabled={currentPage === 1 || isPageFetching}
-              onClick={() => handlePageChange(currentPage - 1)}
-              aria-label="Previous Page"
-            >
-              <ChevronLeft size={16} />
-              <span className="pagination-text">Previous</span>
-            </button>
+      {/* ── Pagination ── */}
+      {totalCount > 0 && (
+        <div className="specialty-pagination-bar" style={{ marginTop: '16px', paddingTop: 0, borderTop: 'none' }}>
+          <span className="pagination-info-text">
+            Showing <strong>{(currentPage - 1) * PAGE_SIZE + 1}</strong>–<strong>{Math.min(currentPage * PAGE_SIZE, totalCount)}</strong> of <strong>{totalCount}</strong> {totalCount === 1 ? "appointment" : "appointments"}
+          </span>
 
-            <div className="pagination-pages">
-              {paginationRange.map((p, idx) =>
-                p === "..." ? (
-                  <div key={`dots-${idx}`} className="pagination-ellipsis" aria-hidden="true">
-                    <MoreHorizontal size={15} />
-                  </div>
-                ) : (
-                  <button
-                    key={`p-${p}`}
-                    type="button"
-                    className={`pagination-btn pagination-num-btn ${currentPage === p ? "active" : ""}`}
-                    onClick={() => handlePageChange(p)}
-                    disabled={isPageFetching}
-                    aria-current={currentPage === p ? "page" : undefined}
-                  >
-                    {p}
-                  </button>
-                )
-              )}
+          {totalPages > 1 && (
+            <div className="pagination-controls">
+              <button
+                type="button"
+                className="pagination-btn"
+                disabled={loading || currentPage === 1}
+                onClick={() => goToPage(currentPage - 1)}
+                aria-label="Previous page"
+              >
+                <ChevronLeft size={14} /> Prev
+              </button>
+
+              <div className="pagination-pages-list">
+                {getPageRange(currentPage, totalPages).map((p, idx) =>
+                  p === "..." ? (
+                    <span key={`dots-${idx}`} className="pagination-info-text" aria-hidden="true">…</span>
+                  ) : (
+                    <button
+                      key={p}
+                      type="button"
+                      className={`pagination-num-btn ${currentPage === p ? "active" : ""}`}
+                      onClick={() => goToPage(p)}
+                      disabled={loading}
+                      aria-label={`Page ${p}`}
+                      aria-current={currentPage === p ? "page" : undefined}
+                    >
+                      {p}
+                    </button>
+                  )
+                )}
+              </div>
+
+              <button
+                type="button"
+                className="pagination-btn"
+                disabled={loading || currentPage === totalPages}
+                onClick={() => goToPage(currentPage + 1)}
+                aria-label="Next page"
+              >
+                Next <ChevronRight size={14} />
+              </button>
             </div>
-
-            <button
-              type="button"
-              className="pagination-btn pagination-nav-btn"
-              disabled={currentPage === totalPages || isPageFetching}
-              onClick={() => handlePageChange(currentPage + 1)}
-              aria-label="Next Page"
-            >
-              <span className="pagination-text">Next</span>
-              <ChevronRight size={16} />
-            </button>
-          </div>
+          )}
         </div>
       )}
 
@@ -919,7 +761,7 @@ export default function MyAppointments() {
           overflow: hidden;
           background: linear-gradient(90deg, #effaf7 0%, #e3f7f2 50%, #ccf4eb 100%);
           border-bottom: 1px solid rgba(20, 184, 166, 0.16);
-          padding: 30px 0 32px;
+          padding: 16px 0;
         }
 
         .appointments-hero-wave {
@@ -949,10 +791,10 @@ export default function MyAppointments() {
           display: flex;
           align-items: center;
           gap: 8px;
-          font-size: 13.5px;
+          font-size: 12.5px;
           font-weight: 500;
           color: #55738d;
-          margin-bottom: 10px;
+          margin-bottom: 4px;
         }
 
         .appointments-breadcrumb-link {
@@ -975,18 +817,18 @@ export default function MyAppointments() {
         }
 
         .appointments-hero-title {
-          font-size: 28px;
+          font-size: 22px;
           font-weight: 800;
           color: #0b2545;
-          margin: 0 0 6px 0;
+          margin: 0;
           letter-spacing: -0.02em;
           line-height: 1.2;
         }
 
         .appointments-hero-desc {
-          font-size: 14.5px;
+          font-size: 13.5px;
           color: #55738d;
-          margin: 0;
+          margin: 2px 0 0 0;
           line-height: 1.5;
         }
 
@@ -998,137 +840,213 @@ export default function MyAppointments() {
         }
 
         .appointments-hero-svg {
-          width: 116px;
-          height: 116px;
+          width: 64px;
+          height: 64px;
           filter: drop-shadow(0 6px 14px rgba(13, 148, 136, 0.12));
         }
 
         /* ── Appointment Card ── */
         .appointment-card {
-          padding: 24px;
-          border-radius: 16px;
+          padding: 14px 16px;
+          border-radius: 14px;
           display: flex;
           flex-direction: column;
-          gap: 20px;
-          background: #ffffff;
+          gap: 10px;
+          background: var(--bg-surface, #ffffff);
           border: 1px solid var(--border, #e2e8f0);
-          box-shadow: 0 4px 18px rgba(15, 23, 42, 0.04);
-          transition: transform 0.2s ease, box-shadow 0.2s ease;
+          box-shadow: 0 2px 10px rgba(15, 23, 42, 0.03);
+          transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
         }
 
-        .appointment-card:hover {
-          box-shadow: 0 6px 24px rgba(15, 23, 42, 0.07);
+        .appointment-card:not(.appointment-card--skeleton):hover {
+          transform: translateY(-2px);
+          border-color: rgba(13, 148, 136, 0.35);
+          box-shadow: 0 10px 24px rgba(13, 148, 136, 0.08);
         }
 
         .appointment-card-header {
           display: flex;
           justify-content: space-between;
+          align-items: flex-start;
+          gap: 12px;
+        }
+
+        .appointment-doctor {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          min-width: 0;
+        }
+
+        .appointment-doctor-icon {
+          width: 38px;
+          height: 38px;
+          border-radius: 10px;
+          background: #e6f7f5;
+          color: #0d9488;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+
+        .appointment-doctor-name {
+          font-size: 15px;
+          font-weight: 700;
+          color: #0b2545;
+          margin: 0 0 1px 0;
+          line-height: 1.3;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .appointment-doctor-meta {
+          display: flex;
           align-items: center;
           flex-wrap: wrap;
-          gap: 16px;
+          gap: 8px;
+          font-size: 12.5px;
+          color: #64748b;
+        }
+
+        .appointment-type-chip {
+          padding: 1px 8px;
+          border-radius: 999px;
+          background: #f1f5f9;
+          color: #475569;
+          font-size: 11.5px;
+          font-weight: 600;
         }
 
         /* ── 4-Column Details Grid ── */
         .appointment-details-grid {
           display: grid;
           grid-template-columns: repeat(4, 1fr);
-          gap: 16px;
-          background: var(--bg-app, #f8fafc);
-          padding: 16px 20px;
-          border-radius: 14px;
-          border: 1px solid rgba(226, 232, 240, 0.85);
+          gap: 12px;
+          background: #f8fafb;
+          padding: 10px 14px;
+          border-radius: 10px;
+          border: 1px solid #edf2f4;
         }
 
-        .appointment-btn-reschedule:hover:not(:disabled) {
-          background: #f0fdfa !important;
-          border-color: #0d9488 !important;
-          color: #0f766e !important;
-        }
-
-        .appointment-btn-cancel:hover:not(:disabled) {
-          background: #0f766e !important;
-        }
-
-        /* ── Pagination ── */
-        .appointments-pagination-wrapper {
+        .appointment-detail {
           display: flex;
-          justify-content: flex-end;
           align-items: center;
-          margin-top: 20px;
-          width: 100%;
+          gap: 10px;
+          min-width: 0;
         }
 
-        .appointments-pagination-group {
-          display: inline-flex;
+        .appointment-detail-icon {
+          width: 28px;
+          height: 28px;
+          border-radius: 8px;
+          display: flex;
           align-items: center;
-          gap: 8px;
-          background: transparent;
+          justify-content: center;
+          flex-shrink: 0;
         }
 
-        .pagination-pages {
-          display: inline-flex;
+        .appointment-detail-label {
+          display: block;
+          font-size: 10.5px;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+          color: #94a3b8;
+          margin-bottom: 1px;
+        }
+
+        .appointment-detail-value {
+          display: block;
+          font-size: 13px;
+          font-weight: 700;
+          color: var(--text-main, #0f172a);
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .appointment-detail-sub {
+          display: block;
+          font-size: 11.5px;
+          color: #64748b;
+          margin-top: 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        /* ── Footer ── */
+        .appointment-footer-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 12px;
+          border-top: none;
+          padding-top: 0;
+        }
+
+        .appointment-footer-note {
+          display: flex;
           align-items: center;
           gap: 6px;
+          font-size: 12px;
+          color: #94a3b8;
         }
 
-        .pagination-btn {
-          border: none;
-          background: #edf2f7;
-          color: #475569;
-          font-size: 13.5px;
+        .appointment-btn-group {
+          display: flex;
+          gap: 8px;
+          align-items: center;
+          flex-wrap: wrap;
+          margin-left: auto;
+        }
+
+        .appointment-btn {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          padding: 6px 14px;
+          font-size: 12.5px;
           font-weight: 600;
           border-radius: 10px;
           cursor: pointer;
           transition: all 0.2s ease;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          outline: none;
-          user-select: none;
-          height: 38px;
-          box-sizing: border-box;
+          border: 1.5px solid transparent;
         }
 
-        .pagination-btn:hover:not(:disabled):not(.active) {
-          background: #e2e8f0;
-          color: #1e293b;
+        .appointment-btn-reschedule {
+          background: #ffffff;
+          border-color: #0d9488;
+          color: #0d9488;
         }
 
-        .pagination-btn:disabled {
-          opacity: 0.45;
-          cursor: not-allowed;
+        .appointment-btn-reschedule:hover {
+          background: #f0fdfa;
+          color: #0f766e;
         }
 
-        .pagination-nav-btn {
-          padding: 0 14px;
-          gap: 6px;
+        .appointment-btn-cancel {
+          background: #ffffff;
+          border-color: #fecaca;
+          color: #dc2626;
         }
 
-        .pagination-num-btn {
-          min-width: 38px;
-          padding: 0 8px;
-          font-size: 14px;
+        .appointment-btn-cancel:hover {
+          background: #fef2f2;
+          border-color: #f87171;
         }
 
-        .pagination-num-btn.active {
-          background: var(--primary, #1b6b72);
+        .appointment-btn-primary {
+          background: #0d9488;
           color: #ffffff;
-          font-weight: 700;
-          box-shadow: 0 2px 8px rgba(27, 107, 114, 0.28);
-          cursor: default;
         }
 
-        .pagination-ellipsis {
-          min-width: 38px;
-          height: 38px;
-          background: #edf2f7;
-          color: #64748b;
-          border-radius: 10px;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          user-select: none;
-          pointer-events: none;
+        .appointment-btn-primary:hover {
+          background: #0f766e;
         }
 
         /* ── Breakpoints ── */
@@ -1141,60 +1059,36 @@ export default function MyAppointments() {
 
         @media (max-width: 640px) {
           .appointments-hero-banner {
-            padding: 22px 0 24px;
+            padding: 12px 0;
           }
           .appointments-hero-title {
-            font-size: 22px;
+            font-size: 19px;
           }
           .appointments-hero-desc {
-            font-size: 13.5px;
+            font-size: 12.5px;
           }
           .appointments-hero-svg {
-            width: 86px;
-            height: 86px;
+            width: 52px;
+            height: 52px;
           }
           .appointment-card {
-            padding: 18px 16px;
-            gap: 16px;
+            padding: 16px 14px;
+            gap: 12px;
           }
           .appointment-footer-row {
             flex-direction: column;
-            align-items: stretch !important;
-            gap: 12px !important;
+            align-items: stretch;
+            gap: 10px;
+          }
+          .appointment-footer-note:empty {
+            display: none;
           }
           .appointment-btn-group {
             width: 100%;
+            margin-left: 0;
           }
-          .appointment-btn-reschedule,
-          .appointment-btn-cancel {
+          .appointment-btn {
             flex: 1;
-            justify-content: center;
-          }
-          .appointments-pagination-wrapper {
-            margin-top: 16px;
-          }
-          .pagination-text {
-            display: none;
-          }
-          .pagination-nav-btn {
-            padding: 0 10px;
-            min-width: 36px;
-            height: 36px;
-          }
-          .pagination-num-btn {
-            min-width: 34px;
-            height: 36px;
-            font-size: 13px;
-          }
-          .pagination-ellipsis {
-            min-width: 34px;
-            height: 36px;
-          }
-          .appointments-pagination-group {
-            gap: 6px;
-          }
-          .pagination-pages {
-            gap: 4px;
           }
         }
 
@@ -1210,32 +1104,8 @@ export default function MyAppointments() {
           .appointments-hero-inner {
             gap: 12px;
           }
-          .appointments-hero-svg {
-            width: 72px;
-            height: 72px;
-          }
-          .appointments-pagination-wrapper {
-            justify-content: center;
-          }
-          .appointments-pagination-group {
-            gap: 4px;
-          }
-          .pagination-nav-btn {
-            min-width: 32px;
-            height: 34px;
-            padding: 0 8px;
-          }
-          .pagination-num-btn {
-            min-width: 30px;
-            height: 34px;
-            padding: 0 4px;
-            font-size: 12.5px;
-            border-radius: 8px;
-          }
-          .pagination-ellipsis {
-            min-width: 28px;
-            height: 34px;
-            border-radius: 8px;
+          .appointments-hero-graphic {
+            display: none;
           }
         }
       `}</style>
