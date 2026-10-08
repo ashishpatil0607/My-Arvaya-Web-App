@@ -29,7 +29,11 @@ import {
   getAmbulanceRequests,
   STATUS_FLOW,
   EMERGENCY_TYPES,
+  trackAmbulance,
+  distanceMeters,
+  parseLocation,
 } from "../services/ambulanceService";
+
 import LiveAmbulanceTracker from "../components/ambulance/LiveAmbulanceTracker";
 import AmbulanceRequestModal from "../components/ambulance/AmbulanceRequestModal";
 import CancelAmbulanceModal from "../components/ambulance/CancelAmbulanceModal";
@@ -438,6 +442,111 @@ export default function AmbulancePage() {
     queueRequests.find((r) => isRequestMatch(r, currentSelectedId)) ||
     queueRequests[0] ||
     null;
+
+  useEffect(() => {
+    if (!selectedRequest) return;
+    const reqId =
+      selectedRequest.requestId ||
+      selectedRequest.request_id ||
+      selectedRequest.id;
+    if (!reqId) return;
+    const sLower = String(selectedRequest.status || "").toLowerCase();
+    if (sLower.includes("complete") || sLower.includes("cancel")) return;
+
+    // If modal is open for this request, LiveAmbulanceTracker already polls & updates activeTracking
+    const isModalTrackingThis =
+      viewMapRequest &&
+      (viewMapRequest.requestId || viewMapRequest.request_id || viewMapRequest.id) === reqId;
+    if (isModalTrackingThis) return;
+
+    let mounted = true;
+    let timerId = null;
+    let lastPos = null;
+    let consecutiveStationary = 0;
+
+    const scheduleNext = (delayMs) => {
+      if (!mounted) return;
+      timerId = setTimeout(pollTracking, delayMs);
+    };
+
+    const pollTracking = async () => {
+      if (!mounted) return;
+
+      // Slow down when tab is hidden to save server resources
+      if (document.hidden) {
+        scheduleNext(30000);
+        return;
+      }
+
+      try {
+        const trk = await trackAmbulance(reqId);
+        if (mounted && trk) {
+          setActiveTracking(trk);
+
+          const r = trk.data || trk;
+          const curLoc = parseLocation(r.current_location || r.currentLocation || r.live_location || r);
+          if (curLoc) {
+            if (lastPos) {
+              const dist = distanceMeters(lastPos, curLoc);
+              if (dist < 15) {
+                consecutiveStationary += 1;
+              } else {
+                consecutiveStationary = 0;
+              }
+            }
+            lastPos = curLoc;
+          } else {
+            consecutiveStationary += 1;
+          }
+
+          // If ambulance is stationary (not moving), back off polling to reduce server load
+          // Moving: 10s | Stationary 1-2 ticks: 20s | Stationary 3+ ticks: 30s
+          let nextDelay = 10000;
+          if (consecutiveStationary >= 3) {
+            nextDelay = 30000;
+          } else if (consecutiveStationary >= 1) {
+            nextDelay = 20000;
+          }
+
+          // If not yet dispatched (e.g. pending/requested), poll at lower frequency (25s)
+          const currentStatus = String(r.status || r.request_status || selectedRequest.status || "").toLowerCase();
+          if (currentStatus.includes("request") || currentStatus.includes("assign")) {
+            nextDelay = Math.max(nextDelay, 25000);
+          }
+
+          scheduleNext(nextDelay);
+          return;
+        }
+      } catch (err) {
+        // silent fallback
+      }
+
+      if (mounted) {
+        scheduleNext(15000);
+      }
+    };
+
+    pollTracking();
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden && mounted) {
+        if (timerId) clearTimeout(timerId);
+        pollTracking();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      mounted = false;
+      if (timerId) clearTimeout(timerId);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [
+    selectedRequest?.id,
+    selectedRequest?.requestId,
+    selectedRequest?.status,
+    viewMapRequest,
+  ]);
 
   const filteredPastRequests = (
     historyFilter === "all" ? sortedRequests : pastRequests
@@ -952,21 +1061,23 @@ export default function AmbulancePage() {
                               >
                                 {shortName} · {formatTimeShort(req.createdAt)}
                               </span>
-                              <span
-                                style={{
-                                  fontSize: "11px",
-                                  fontWeight: "700",
-                                  padding: "2px 8px",
-                                  borderRadius: "10px",
-                                  background: sc.bg,
-                                  color: sc.color,
-                                  border: `1px solid ${sc.border}`,
-                                  whiteSpace: "nowrap",
-                                  flexShrink: 0,
-                                }}
-                              >
-                                {displayStatus}
-                              </span>
+                              <div style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0 }}>
+                                <span
+                                  style={{
+                                    fontSize: "11px",
+                                    fontWeight: "700",
+                                    padding: "2px 8px",
+                                    borderRadius: "10px",
+                                    background: sc.bg,
+                                    color: sc.color,
+                                    border: `1px solid ${sc.border}`,
+                                    whiteSpace: "nowrap",
+                                    flexShrink: 0,
+                                  }}
+                                >
+                                  {displayStatus}
+                                </span>
+                              </div>
                             </div>
                           </div>
                         );
@@ -1035,9 +1146,14 @@ export default function AmbulancePage() {
                           .toLowerCase()
                           .replace(/_/g, " ");
                         const isCancelled = sLower.includes("cancel");
+
                         const isRequested =
                           !isCancelled &&
                           (sLower === "requested" || sLower === "request");
+
+                        const isDispatched =
+                          !isCancelled && sLower.includes("dispatch");
+
                         const displayStatus = rawStatus
                           .replace(/_/g, " ")
                           .replace(/\b\w/g, (c) => c.toUpperCase());
@@ -1142,25 +1258,69 @@ export default function AmbulancePage() {
                                 style={{
                                   display: "flex",
                                   alignItems: "center",
-                                  gap: "7px",
-                                  padding: "6px 14px",
-                                  borderRadius: "20px",
-                                  background: sc.bg,
-                                  color: sc.color,
-                                  border: `1px solid ${sc.border}`,
-                                  fontSize: "12.5px",
-                                  fontWeight: "700",
+                                  gap: "10px",
+                                  flexWrap: "wrap",
                                 }}
                               >
-                                <span
+                                {isDispatched && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setViewMapRequest(selectedRequest)}
+                                    className="ambulance-detail-map-btn"
+                                    style={{
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      gap: "7px",
+                                      padding: "8px 16px",
+                                      borderRadius: "10px",
+                                      background: "var(--primary, #1b6b72)",
+                                      color: "#ffffff",
+                                      border: "none",
+                                      fontSize: "13px",
+                                      fontWeight: "700",
+                                      cursor: "pointer",
+                                      boxShadow: "0 3px 10px rgba(27, 107, 114, 0.28)",
+                                      transition: "all 0.18s ease",
+                                    }}
+                                    onMouseEnter={(e) => {
+                                      e.currentTarget.style.transform = "translateY(-1px)";
+                                      e.currentTarget.style.boxShadow = "0 5px 14px rgba(27, 107, 114, 0.38)";
+                                      e.currentTarget.style.filter = "brightness(1.08)";
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      e.currentTarget.style.transform = "none";
+                                      e.currentTarget.style.boxShadow = "0 3px 10px rgba(27, 107, 114, 0.28)";
+                                      e.currentTarget.style.filter = "none";
+                                    }}
+                                  >
+                                    <Map size={15} color="#ffffff" />
+                                    <span>View Map</span>
+                                  </button>
+                                )}
+                                <div
                                   style={{
-                                    width: "8px",
-                                    height: "8px",
-                                    borderRadius: "50%",
-                                    background: sc.color,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "7px",
+                                    padding: "6px 14px",
+                                    borderRadius: "20px",
+                                    background: sc.bg,
+                                    color: sc.color,
+                                    border: `1px solid ${sc.border}`,
+                                    fontSize: "12.5px",
+                                    fontWeight: "700",
                                   }}
-                                />
-                                {displayStatus}
+                                >
+                                  <span
+                                    style={{
+                                      width: "8px",
+                                      height: "8px",
+                                      borderRadius: "50%",
+                                      background: sc.color,
+                                    }}
+                                  />
+                                  {displayStatus}
+                                </div>
                               </div>
                             </div>
 
@@ -1333,7 +1493,7 @@ export default function AmbulancePage() {
                             </div>
 
                             {/* Live Map Tracking */}
-                            {selectedRequest.status !== "Completed" && (
+                            {/* {selectedRequest.status !== "Completed" && (
                               <div
                                 style={{
                                   height: "360px",
@@ -1371,7 +1531,7 @@ export default function AmbulancePage() {
                                   }}
                                 />
                               </div>
-                            )}
+                            )} */}
 
                             {/* Driver Card Bar */}
                             <div
@@ -1480,63 +1640,73 @@ export default function AmbulancePage() {
                                   </button>
                                 )}
 
-                                {!isRequested &&
-                                  !isCancelled &&
-                                  (driverPhone ? (
-                                    <a
-                                      href={`tel:${driverPhone}`}
-                                      style={{
-                                        background: "#16a34a",
-                                        color: "#ffffff",
-                                        border: "none",
-                                        borderRadius: "10px",
-                                        padding: "9px 18px",
-                                        fontSize: "13.5px",
-                                        fontWeight: "700",
-                                        cursor: "pointer",
-                                        display: "inline-flex",
-                                        alignItems: "center",
-                                        gap: "6px",
-                                        textDecoration: "none",
-                                        transition: "all 0.15s ease",
-                                        boxShadow:
-                                          "0 2px 8px rgba(22,163,74,0.22)",
-                                      }}
-                                      onMouseEnter={(e) =>
-                                      (e.currentTarget.style.background =
-                                        "#15803d")
-                                      }
-                                      onMouseLeave={(e) =>
-                                      (e.currentTarget.style.background =
-                                        "#16a34a")
-                                      }
-                                    >
-                                      <Phone size={15} />
-                                      <span>Call</span>
-                                    </a>
-                                  ) : (
-                                    <button
-                                      type="button"
-                                      disabled
-                                      style={{
-                                        background: "#16a34a",
-                                        color: "#ffffff",
-                                        border: "none",
-                                        borderRadius: "10px",
-                                        padding: "9px 18px",
-                                        fontSize: "13.5px",
-                                        fontWeight: "700",
-                                        opacity: 0.85,
-                                        cursor: "not-allowed",
-                                        display: "inline-flex",
-                                        alignItems: "center",
-                                        gap: "6px",
-                                      }}
-                                    >
-                                      <Phone size={15} />
-                                      <span>Call</span>
-                                    </button>
-                                  ))}
+                                {!isRequested && !isCancelled && (
+                                  <div
+                                    style={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: "10px",
+                                      flexWrap: "wrap",
+                                    }}
+                                  >
+
+                                    {driverPhone ? (
+                                      <a
+                                        href={`tel:${driverPhone}`}
+                                        style={{
+                                          background: "#16a34a",
+                                          color: "#ffffff",
+                                          border: "none",
+                                          borderRadius: "10px",
+                                          padding: "9px 18px",
+                                          fontSize: "13.5px",
+                                          fontWeight: "700",
+                                          cursor: "pointer",
+                                          display: "inline-flex",
+                                          alignItems: "center",
+                                          gap: "6px",
+                                          textDecoration: "none",
+                                          transition: "all 0.15s ease",
+                                          boxShadow:
+                                            "0 2px 8px rgba(22,163,74,0.22)",
+                                        }}
+                                        onMouseEnter={(e) =>
+                                        (e.currentTarget.style.background =
+                                          "#15803d")
+                                        }
+                                        onMouseLeave={(e) =>
+                                        (e.currentTarget.style.background =
+                                          "#16a34a")
+                                        }
+                                      >
+                                        <Phone size={15} />
+                                        <span>Call</span>
+                                      </a>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        disabled
+                                        style={{
+                                          background: "#16a34a",
+                                          color: "#ffffff",
+                                          border: "none",
+                                          borderRadius: "10px",
+                                          padding: "9px 18px",
+                                          fontSize: "13.5px",
+                                          fontWeight: "700",
+                                          opacity: 0.85,
+                                          cursor: "not-allowed",
+                                          display: "inline-flex",
+                                          alignItems: "center",
+                                          gap: "6px",
+                                        }}
+                                      >
+                                        <Phone size={15} />
+                                        <span>Call</span>
+                                      </button>
+                                    )}
+                                  </div>
+                                )}
 
                                 {isCancelled && (
                                   <span
@@ -1884,7 +2054,7 @@ export default function AmbulancePage() {
                                 }}
                               >
                                 {/* {displayId}  */}
-                                
+
                                 {emergencyLabel}
                               </div>
                               <div
@@ -2963,14 +3133,16 @@ export default function AmbulancePage() {
                   <div
                     className="ambulance-map-modal-map"
                     style={{
-                      height: "360px",
+                      height: "min(460px, 55vh)",
                       overflow: "hidden",
                       width: "100%",
                     }}
                   >
                     <LiveAmbulanceTracker
                       requestId={
-                        viewMapRequest.requestId || viewMapRequest.request_id
+                        viewMapRequest.requestId ||
+                        viewMapRequest.request_id ||
+                        viewMapRequest.id
                       }
                       pickupLat={viewMapRequest.pickupLat}
                       pickupLng={viewMapRequest.pickupLng}
@@ -2978,7 +3150,20 @@ export default function AmbulancePage() {
                       patientName={viewMapRequest.patientName}
                       contactNumber={viewMapRequest.contactNumber}
                       status={viewMapRequest.status}
-                      live={false}
+                      live={true}
+                      hideBottomBar={true}
+                      onCancelRequest={(cId, trk, reason) =>
+                        handleCancelRequest(
+                          cId,
+                          viewMapRequest,
+                          reason,
+                        )
+                      }
+                      onTrackingData={(tracking) => {
+                        if (tracking) {
+                          setActiveTracking(tracking);
+                        }
+                      }}
                     />
                   </div>
                   <div
@@ -3031,6 +3216,7 @@ export default function AmbulancePage() {
               </div>
             </div>
           );
+
           if (typeof window === "undefined") return content;
           return ReactDOM.createPortal(content, document.body);
         })()}

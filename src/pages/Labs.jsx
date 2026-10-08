@@ -2133,54 +2133,69 @@ function toTitleCase(str) {
           }
         }
 
-        /* Packages: price beside "View Details" (same as Home) */
-        .pkg-card .lab-card-footer {
-          gap: 10px;
+        /* Packages: no price — full-width CTA, two-line title, image fade */
+        .pkg-card .pkg-card-img-container {
+          height: 160px;
         }
 
-        .pkg-card-price {
+        .pkg-card .pkg-card-img-container::after {
+          content: "";
+          display: block;
+          position: absolute;
+          inset: auto 0 0;
+          width: auto;
+          height: 45%;
+          border: none;
+          border-radius: 0;
+          background: linear-gradient(180deg, transparent, rgba(5, 44, 52, 0.22));
+          pointer-events: none;
+          z-index: 1;
+        }
+
+        .pkg-card .pkg-card-body {
           display: flex;
           flex: 1;
           flex-direction: column;
-          gap: 2px;
-          margin-right: auto;
-          min-width: 0;
-          line-height: 1.1;
-          text-align: left;
+          gap: 12px;
+          padding: 16px 16px 16px;
         }
 
-        .pkg-card-price small {
-          color: var(--text-muted);
-          font-size: 10px;
-          font-weight: 600;
-          letter-spacing: 0.04em;
-          text-transform: uppercase;
+        .pkg-card .pkg-card-title {
+          display: -webkit-box;
+          min-height: 2.6em;
+          margin: 0;
+          overflow: hidden;
+          font-size: 15px;
+          line-height: 1.3;
+          letter-spacing: -0.01em;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
         }
 
-        .pkg-card-price strong {
-          color: #12333a;
-          font-family: var(--font-display);
-          font-size: 17px;
-          font-weight: 800;
-          letter-spacing: -0.02em;
-          white-space: nowrap;
+        .pkg-card .pkg-card-tests-badge {
+          width: fit-content;
+          gap: 6px;
+          margin: 0;
+          padding: 5px 11px;
+          font-size: 11px;
+        }
+
+        .pkg-card .lab-card-footer {
+          display: block;
+          margin-top: auto;
+          padding-top: 14px;
         }
 
         .pkg-card .lab-card-footer .pkg-card-btn {
-          width: auto;
-          flex-shrink: 0;
-          padding: 9px 14px;
-        }
-
-        @media (max-width: 640px) {
-          .pkg-card-price strong {
-            font-size: 15px;
-          }
-
-          .pkg-card .lab-card-footer .pkg-card-btn {
-            padding: 8px 11px;
-            font-size: 11.5px;
-          }
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          width: 100%;
+          min-height: 40px;
+          padding: 10px 16px;
+          font-size: 13px;
+          font-weight: 700;
+          border-radius: 13px;
         }
 
         .pkg-card .pkg-card-badge::before {
@@ -2618,10 +2633,6 @@ function toTitleCase(str) {
                       <ShieldCheck size={12} /> {pkg.tests}
                     </div>
                     <div className="lab-card-footer">
-                      <div className="pkg-card-price">
-                        <small>Starting at</small>
-                        <strong>₹{Number(pkg.price).toLocaleString('en-IN')}</strong>
-                      </div>
                       <button className="pkg-card-btn" onClick={() => go(`/labs/package-details/${encodeURIComponent(pkg.id)}`, { state: { package: pkg } })}>
                         View Details <ArrowRight size={14} />
                       </button>
@@ -2649,10 +2660,6 @@ function toTitleCase(str) {
                         <ShieldCheck size={12} /> {pkg.tests}
                       </div>
                       <div className="lab-card-footer">
-                        <div className="pkg-card-price">
-                          <small>Starting at</small>
-                          <strong>₹{Number(pkg.price).toLocaleString('en-IN')}</strong>
-                        </div>
                         <button className="pkg-card-btn" onClick={() => go(`/labs/package-details/${encodeURIComponent(pkg.id)}`, { state: { package: pkg } })}>
                           View Details <ArrowRight size={14} />
                         </button>

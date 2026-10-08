@@ -293,7 +293,7 @@ export default function Footer() {
                 ["Consult Doctors", "/doctors"],
                 ["Lab Tests", "/labs"],
                 // ["ABHA Hub", "/abha"],
-                ["Patient Portal", "/records"]
+                ["Ambulance", "/ambulance"]
               ].map(([label, path]) => (
                 <Link key={label} to={path} className="footer-link">
                   {label}

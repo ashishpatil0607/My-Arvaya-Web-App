@@ -831,10 +831,6 @@ export default function Home() {
                       <ShieldCheck size={13} /> {pkg.tests}
                     </span>
                     <div className="home-pkg-footer">
-                      <div className="home-pkg-price">
-                        <small>Starting at</small>
-                        <strong>{pkg.price}</strong>
-                      </div>
                       <button
                         className="home-pkg-btn"
                         onClick={(e) => {

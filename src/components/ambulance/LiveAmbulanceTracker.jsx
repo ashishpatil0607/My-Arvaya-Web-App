@@ -1,8 +1,124 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { Truck, Clock, Plus, Minus, MapPin, XCircle } from "lucide-react";
 import { fetchTrackingData, GOOGLE_MAPS_API_KEY } from "../../services/ambulanceService";
 import CancelAmbulanceModal from "./CancelAmbulanceModal";
 import useGoogleMapsScript from "./useGoogleMapsScript";
+
+import { MapContainer, TileLayer, Marker, Polyline, Popup, useMap } from "react-leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
+  iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
+  shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
+});
+
+function getAmbulanceSvgString(rotation = 0) {
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="34" viewBox="0 0 48 34" fill="none">
+    <g transform="rotate(${rotation} 24 17)">
+      <!-- Ground contact shadow -->
+      <ellipse cx="24" cy="30.5" rx="19" ry="2.5" fill="#0f172a" fill-opacity="0.28"/>
+ 
+      <!-- Emergency Siren Lightbar (Red & Blue with center flash) -->
+      <rect x="21" y="2" width="6" height="3.5" rx="1.5" fill="#dc2626"/>
+      <rect x="27" y="2" width="6" height="3.5" rx="1.5" fill="#2563eb"/>
+      <circle cx="27" cy="3.75" r="0.9" fill="#ffffff"/>
+ 
+      <!-- Main Ambulance Body (Clean Medical White with crisp dark outline) -->
+      <path d="M5 9.5C5 7.6 6.6 6 8.5 6H33.5C34.7 6 35.8 6.6 36.6 7.5L42.5 14.3C43.5 15.5 44 17.1 44 18.7V25.5C44 26.6 43.1 27.5 42 27.5H6.5C5.4 27.5 4.5 26.6 4.5 25.5V9.5Z" fill="#FFFFFF" stroke="#1e293b" stroke-width="1.3" stroke-linejoin="round"/>
+ 
+      <!-- Red Emergency Reflective Side Stripe -->
+      <path d="M4.5 17.5H44V21.5H4.5V17.5Z" fill="#DC2626"/>
+ 
+      <!-- Medical Red Cross -->
+      <rect x="14.5" y="10" width="4" height="11" rx="0.8" fill="#DC2626"/>
+      <rect x="11" y="13.5" width="11" height="4" rx="0.8" fill="#DC2626"/>
+      <circle cx="16.5" cy="15.5" r="1.2" fill="#FFFFFF"/>
+ 
+      <!-- Front Windshield & Cab Window (Tinted Glass with reflection) -->
+      <path d="M33.5 7.8H27.5V14.5H39.5L34.6 8.5C34.3 8.1 33.9 7.8 33.5 7.8Z" fill="#0f172a"/>
+      <path d="M29.5 8.8L35.5 14H32L28 8.8H29.5Z" fill="#60A5FA" fill-opacity="0.65"/>
+ 
+      <!-- Rear Patient Window -->
+      <rect x="7.5" y="8.8" width="7" height="6" rx="1.2" fill="#E2E8F0" stroke="#94A3B8" stroke-width="0.8"/>
+ 
+      <!-- Headlight (Front Amber) -->
+      <path d="M43 18.5H44V21H43C42.4 21 42 20.6 42 19.75C42 19.1 42.4 18.5 43 18.5Z" fill="#FBBF24"/>
+      <!-- Taillight (Rear Red) -->
+      <rect x="4.5" y="18.5" width="1.2" height="3" rx="0.6" fill="#EF4444"/>
+ 
+      <!-- Front Bumper -->
+      <rect x="42.5" y="23" width="2" height="3" rx="1" fill="#64748B"/>
+ 
+      <!-- Wheels (Front & Rear) -->
+      <circle cx="13" cy="27" r="4.2" fill="#0f172a"/>
+      <circle cx="13" cy="27" r="2" fill="#94a3b8"/>
+      <circle cx="13" cy="27" r="0.9" fill="#f8fafc"/>
+ 
+      <circle cx="35" cy="27" r="4.2" fill="#0f172a"/>
+      <circle cx="35" cy="27" r="2" fill="#94a3b8"/>
+      <circle cx="35" cy="27" r="0.9" fill="#f8fafc"/>
+    </g>
+  </svg>`;
+}
+
+function makeAmbulanceLeafletIcon(rotation = 0) {
+  return L.divIcon({
+    className: "leaflet-amb-marker-wrapper",
+    html: `
+      <div style="display: flex; align-items: center; justify-content: center; width: 48px; height: 34px; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3)); cursor: pointer;">
+        ${getAmbulanceSvgString(rotation)}
+      </div>
+    `,
+    iconSize: [48, 34],
+    iconAnchor: [24, 17],
+    popupAnchor: [0, -17],
+  });
+}
+
+function makePickupLeafletIcon() {
+  return L.divIcon({
+    className: "leaflet-pickup-marker-wrapper",
+    html: `
+      <div style="display: flex; align-items: center; justify-content: center; filter: drop-shadow(0 3px 6px rgba(220,38,38,0.45)); cursor: pointer;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="40" viewBox="0 0 32 40">
+          <path d="M16 0C7.163 0 0 7.163 0 16c0 11 16 24 16 24S32 27 32 16C32 7.163 24.837 0 16 0z" fill="#dc2626"/>
+          <circle cx="16" cy="10" r="4" fill="white"/>
+          <path d="M8 26c0-4.418 3.582-8 8-8s8 3.582 8 8" fill="white"/>
+        </svg>
+      </div>
+    `,
+    iconSize: [32, 40],
+    iconAnchor: [16, 40],
+    popupAnchor: [0, -40],
+  });
+}
+
+function LeafletFitBoundsHelper({ points }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!map || !points) return;
+    const valid = points.filter((p) => p && p.lat != null && p.lng != null);
+    if (valid.length === 0) return;
+    if (valid.length === 1) {
+      map.setView([valid[0].lat, valid[0].lng], Math.max(map.getZoom(), 15));
+    } else {
+      const bounds = L.latLngBounds(valid.map((p) => [p.lat, p.lng]));
+      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
+    }
+  }, [map, JSON.stringify(points)]);
+  return null;
+}
+
+function LeafletMapInstanceSync({ onMapReady }) {
+  const map = useMap();
+  useEffect(() => {
+    onMapReady(map);
+  }, [map, onMapReady]);
+  return null;
+}
 
 const STATUS_LABELS = {
   requested: "Requested",
@@ -29,42 +145,24 @@ const STATUS_COLORS = {
 };
 
 const DEFAULT_CENTER = [20.5937, 78.9629];
-const POLL_INTERVAL_MS = 10000;
+const POLL_INTERVAL_MS = 15000;
 const ACTIVE_STATUSES = new Set(["requested", "assigned", "dispatched", "arriving"]);
 const TERMINAL_STATUSES = new Set(["completed", "cancelled", "cancel", "unavailable", "delayed"]);
 
 // ─── SVG icon helpers ────────────────────────────────────────────────────────
 
 function makeAmbulanceSvg(rotation = 0) {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36">
-    <g transform="rotate(${rotation} 18 18)">
-      <rect x="4" y="10" width="28" height="18" rx="3" fill="#ef4444"/>
-      <rect x="4" y="10" width="28" height="18" rx="3" fill="white" fill-opacity="0.15"/>
-      <rect x="6" y="12" width="14" height="10" rx="1.5" fill="white" fill-opacity="0.9"/>
-      <rect x="22" y="12" width="8" height="10" rx="1.5" fill="white" fill-opacity="0.9"/>
-      <rect x="7" y="13" width="5" height="8" rx="1" fill="#3b82f6" fill-opacity="0.5"/>
-      <rect x="13" y="13" width="5" height="8" rx="1" fill="#3b82f6" fill-opacity="0.5"/>
-      <rect x="15" y="15" width="4" height="1.5" rx="0.75" fill="#ef4444"/>
-      <rect x="16.25" y="14" width="1.5" height="4" rx="0.75" fill="#ef4444"/>
-      <circle cx="10" cy="29" r="3.5" fill="#1e293b"/>
-      <circle cx="10" cy="29" r="1.8" fill="#94a3b8"/>
-      <circle cx="26" cy="29" r="3.5" fill="#1e293b"/>
-      <circle cx="26" cy="29" r="1.8" fill="#94a3b8"/>
-      <rect x="2" y="14" width="3" height="5" rx="1" fill="#fbbf24"/>
-      <rect x="31" y="14" width="3" height="5" rx="1" fill="#fbbf24"/>
-    </g>
-  </svg>`;
-  return "data:image/svg+xml," + encodeURIComponent(svg);
+  return "data:image/svg+xml," + encodeURIComponent(getAmbulanceSvgString(rotation));
 }
 
 const PICKUP_SVG_URL =
   "data:image/svg+xml," +
   encodeURIComponent(
     '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="40" viewBox="0 0 32 40">' +
-      '<path d="M16 0C7.163 0 0 7.163 0 16c0 11 16 24 16 24S32 27 32 16C32 7.163 24.837 0 16 0z" fill="#dc2626"/>' +
-      '<circle cx="16" cy="10" r="4" fill="white"/>' +
-      '<path d="M8 26c0-4.418 3.582-8 8-8s8 3.582 8 8" fill="white"/>' +
-      "</svg>"
+    '<path d="M16 0C7.163 0 0 7.163 0 16c0 11 16 24 16 24S32 27 32 16C32 7.163 24.837 0 16 0z" fill="#dc2626"/>' +
+    '<circle cx="16" cy="10" r="4" fill="white"/>' +
+    '<path d="M8 26c0-4.418 3.582-8 8-8s8 3.582 8 8" fill="white"/>' +
+    "</svg>"
   );
 
 // ─── Coordinate & Parsing Helpers (from Admin Panel) ─────────────────────────
@@ -252,20 +350,88 @@ const getCoordinates = (item) => {
   return { lat, lng, currentLat, currentLng, pickupLat, pickupLng, dropLat, dropLng, address };
 };
 
+const ROUTE_REFRESH_INTERVAL_MS = 60000;
+const ROUTE_MIN_MOVE_METERS = 150;
+const ROUTE_ERROR_BACKOFF_MS = 90000;
+
+const toCoord = (val) => {
+  if (val === null || val === undefined || val === "") return null;
+  const n = typeof val === "string" ? parseFloat(val) : typeof val === "number" ? val : NaN;
+  return Number.isFinite(n) && n !== 0 ? n : null;
+};
+
+
+function decodePolyline(encoded) {
+  if (!encoded) return [];
+  const points = [];
+  let index = 0;
+  let lat = 0;
+  let lng = 0;
+
+  while (index < encoded.length) {
+    let b;
+    let shift = 0;
+    let result = 0;
+    do {
+      b = encoded.charCodeAt(index++) - 63;
+      result |= (b & 0x1f) << shift;
+      shift += 5;
+    } while (b >= 0x20);
+    lat += result & 1 ? ~(result >> 1) : result >> 1;
+
+    shift = 0;
+    result = 0;
+    do {
+      b = encoded.charCodeAt(index++) - 63;
+      result |= (b & 0x1f) << shift;
+      shift += 5;
+    } while (b >= 0x20);
+    lng += result & 1 ? ~(result >> 1) : result >> 1;
+
+    points.push({ lat: lat / 1e5, lng: lng / 1e5 });
+  }
+  return points;
+}
+
 /** Calculate great-circle distance between two { lat, lng } points in meters (Haversine). */
-function distanceMeters(p1, p2) {
-  if (!p1 || !p2) return Infinity;
+function distanceMeters(a, b) {
+  if (!a || !b) return Infinity;
   const R = 6371e3;
   const toRad = (d) => (d * Math.PI) / 180;
-  const dLat = toRad(p2.lat - p1.lat);
-  const dLng = toRad(p2.lng - p1.lng);
-  const lat1 = toRad(p1.lat);
-  const lat2 = toRad(p2.lat);
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
+  const φ1 = toRad(a.lat);
+  const φ2 = toRad(b.lat);
+  const Δφ = toRad(b.lat - a.lat);
+  const Δλ = toRad(b.lng - a.lng);
+
+  const sinΔφ2 = Math.sin(Δφ / 2);
+  const sinΔλ2 = Math.sin(Δλ / 2);
+
+  const d =
+    2 *
+    R *
+    Math.asin(Math.sqrt(sinΔφ2 * sinΔφ2 + Math.cos(φ1) * Math.cos(φ2) * sinΔλ2 * sinΔλ2));
+  return d;
+}
+
+/** Trims the completed portion of the polyline as ambulance travels (matching RN trimPolyline). */
+function trimPolyline(coords, current) {
+  if (!coords || coords.length < 2 || !current) return coords;
+  let closestIndex = 0;
+  let minDistance = Infinity;
+
+  for (let i = 0; i < coords.length; i++) {
+    const d = distanceMeters(coords[i], current);
+    if (d < minDistance) {
+      minDistance = d;
+      closestIndex = i;
+    }
+  }
+
+  // If within 150m of the path, trim the points passed and start directly at ambulance
+  if (minDistance < 150) {
+    return [current, ...coords.slice(closestIndex + 1)];
+  }
+  return coords;
 }
 
 /**
@@ -282,20 +448,7 @@ async function snapRoute(startPoint, endPoint) {
   if (data?.code !== "Ok") throw new Error(`OSRM ${data?.code || "error"}`);
   const coords = data?.routes?.[0]?.geometry?.coordinates;
   if (!Array.isArray(coords) || coords.length < 2) throw new Error("OSRM empty geometry");
-
-  const roadPoints = coords.map((c) => ({ lat: c[1], lng: c[0] }));
-
-  // Connect startPoint (ambulance) to road if there's any gap
-  if (distanceMeters(startPoint, roadPoints[0]) > 1) {
-    roadPoints.unshift({ lat: startPoint.lat, lng: startPoint.lng });
-  }
-
-  // Connect end of road route directly into endPoint (pickup / user icon) to close any gap
-  if (distanceMeters(endPoint, roadPoints[roadPoints.length - 1]) > 1) {
-    roadPoints.push({ lat: endPoint.lat, lng: endPoint.lng });
-  }
-
-  return roadPoints;
+  return coords.map((c) => ({ lat: c[1], lng: c[0] }));
 }
 
 function normalizeStatus(raw) {
@@ -361,8 +514,7 @@ export default function LiveAmbulanceTracker({
   const pickupMarkerRef = useRef(null);
   const lastLocationMarkerRef = useRef(null);
   const infoWindowRef = useRef(null);
-  const polylineRef = useRef(null);
-  const routeDrawnRef = useRef(false);       // track if animated draw already done
+  const polylineRef = useRef(null);      // track if animated draw already done
 
   // Animation frame handles
   const glideRafRef = useRef(null);
@@ -376,12 +528,13 @@ export default function LiveAmbulanceTracker({
   const prevPosRef = useRef(null);
   const lastRotationRef = useRef(0);
 
-  // Track last routed ambulance & pickup positions to avoid redundant route API calls
-  const lastRoutedAmbPosRef = useRef(null);
-  const lastRoutedPickupPosRef = useRef(null);
-
-  // Directions failure counter (for straight-line fallback)
-  const directionFailsRef = useRef(0);
+  const lastRouteOriginRef = useRef(null);
+  const lastRouteDestRef = useRef(null);
+  const lastRouteFetchTsRef = useRef(0);
+  const routeBackoffUntilRef = useRef(0);
+  const lastTripTypeRef = useRef(null);
+  const roadCoordsRef = useRef([]);
+  const hasFitInitialBoundsRef = useRef(false);
 
   // Keep stable ref to callback
   const onTrackingDataRef = useRef(onTrackingData);
@@ -394,7 +547,33 @@ export default function LiveAmbulanceTracker({
   const [localStatus, setLocalStatus] = useState(null);
   const [showCancelModal, setShowCancelModal] = useState(false);
 
-  const { loaded: mapsLoaded, error: mapsError } = useGoogleMapsScript(GOOGLE_MAPS_API_KEY);
+  const [forceFallback, setForceFallback] = useState(false);
+  const [fallbackRoute, setFallbackRoute] = useState([]);
+  const fallbackRouteRef = useRef([]);
+  const lastFallbackOriginRef = useRef(null);
+  const lastFallbackDestRef = useRef(null);
+  const leafletMapRef = useRef(null);
+
+  // Sync ref with state
+  useEffect(() => {
+    fallbackRouteRef.current = fallbackRoute;
+  }, [fallbackRoute]);
+
+  const { loaded: mapsLoaded, error: mapsError } = useGoogleMapsScript(GOOGLE_MAPS_API_KEY, ["routes"]);
+
+  // If Google Maps fails to load or takes longer than 3.5s, smoothly activate Leaflet fallback
+  useEffect(() => {
+    if (!mapsLoaded && !mapsError) {
+      const timer = setTimeout(() => {
+        if (!window.google?.maps) {
+          setForceFallback(true);
+        }
+      }, 3500);
+      return () => clearTimeout(timer);
+    }
+  }, [mapsLoaded, mapsError]);
+
+  const isUsingFallback = Boolean(forceFallback || mapsError || !GOOGLE_MAPS_API_KEY);
 
   // ── Derived status ──────────────────────────────────────────────────────────
   const rawStatus = (localStatus || tracking?.status || propStatus || "requested").toString().trim();
@@ -411,10 +590,113 @@ export default function LiveAmbulanceTracker({
     ? "Request Cancelled"
     : (tracking?.driverName || (sc === "dispatched" || sc === "arriving" ? "Driver assigned" : "Awaiting driver"));
 
+  const rawLoc =
+    tracking?.current_location ||
+    tracking?.location ||
+    tracking?.currentLocation ||
+    tracking?.live_location ||
+    tracking?.raw?.current_location;
+  const rawLat =
+    rawLoc?.latitude ??
+    rawLoc?.lat ??
+    tracking?.latitude ??
+    tracking?.current_lat ??
+    tracking?.driver_latitude ??
+    tracking?.raw?.latitude;
+  const rawLng =
+    rawLoc?.longitude ??
+    rawLoc?.lng ??
+    tracking?.longitude ??
+    tracking?.current_lng ??
+    tracking?.driver_longitude ??
+    tracking?.raw?.longitude;
+  const ambLat = toCoord(rawLat);
+  const ambLng = toCoord(rawLng);
+  const ambPos = ambLat != null && ambLng != null ? { lat: ambLat, lng: ambLng } : null;
+
+  const pLat = toCoord(pickupLat ?? tracking?.pickupLat ?? tracking?.pickup_lat ?? tracking?.raw?.pickup_lat);
+  const pLng = toCoord(pickupLng ?? tracking?.pickupLng ?? tracking?.pickup_lng ?? tracking?.raw?.pickup_lng);
+  const pickupPos = pLat != null && pLng != null ? { lat: pLat, lng: pLng } : null;
+
+  // Extract history points from tracking data
+  const historyPoints = useMemo(() => {
+    if (!tracking) return [];
+    return extractTrackCoordinates(tracking).filter((p) => p.type === "history");
+  }, [tracking]);
+
+  // Update ambulance heading/bearing
+  useEffect(() => {
+    if (prevPosRef.current && ambPos) {
+      const moved = Math.abs(ambPos.lat - prevPosRef.current.lat) > 1e-6 || Math.abs(ambPos.lng - prevPosRef.current.lng) > 1e-6;
+      if (moved) {
+        lastRotationRef.current = bearing(prevPosRef.current.lat, prevPosRef.current.lng, ambPos.lat, ambPos.lng);
+      }
+    } else if (ambPos && pickupPos) {
+      lastRotationRef.current = bearing(ambPos.lat, ambPos.lng, pickupPos.lat, pickupPos.lng);
+    }
+  }, [ambPos?.lat, ambPos?.lng]);
+
+  // Fetch road route for fallback Leaflet map (stationary-aware with client-side trimming)
+  useEffect(() => {
+    if (!ambPos || !pickupPos) {
+      setFallbackRoute([]);
+      fallbackRouteRef.current = [];
+      lastFallbackOriginRef.current = null;
+      lastFallbackDestRef.current = null;
+      return;
+    }
+
+    const lastOrig = lastFallbackOriginRef.current;
+    const lastDest = lastFallbackDestRef.current;
+    const hasExistingRoute = fallbackRouteRef.current && fallbackRouteRef.current.length >= 2;
+
+    if (hasExistingRoute && lastOrig && lastDest) {
+      const destMoved = distanceMeters(lastDest, pickupPos) > 50;
+      const ambMovedSignificantly = distanceMeters(lastOrig, ambPos) >= ROUTE_MIN_MOVE_METERS;
+
+      // When ambulance is stationary or moved < 150m and destination hasn't changed,
+      // completely skip external OSRM API call and trim the existing path client-side!
+      if (!destMoved && !ambMovedSignificantly) {
+        setFallbackRoute((prev) => {
+          if (prev && prev.length >= 2) {
+            const trimmed = trimPolyline(prev, ambPos);
+            fallbackRouteRef.current = trimmed;
+            return trimmed;
+          }
+          return prev;
+        });
+        return;
+      }
+    }
+
+    let cancelled = false;
+    snapRoute(ambPos, pickupPos)
+      .then((coords) => {
+        if (!cancelled && coords && coords.length >= 2) {
+          lastFallbackOriginRef.current = ambPos;
+          lastFallbackDestRef.current = pickupPos;
+          fallbackRouteRef.current = coords;
+          setFallbackRoute(coords);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          const direct = [ambPos, pickupPos];
+          lastFallbackOriginRef.current = ambPos;
+          lastFallbackDestRef.current = pickupPos;
+          fallbackRouteRef.current = direct;
+          setFallbackRoute(direct);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [ambPos?.lat, ambPos?.lng, pickupPos?.lat, pickupPos?.lng]);
+
   // ── Cancel animation frames on unmount ─────────────────────────────────────
   function cancelAnimations() {
     if (glideRafRef.current) { cancelAnimationFrame(glideRafRef.current); glideRafRef.current = null; }
-    if (drawRafRef.current)  { cancelAnimationFrame(drawRafRef.current);  drawRafRef.current  = null; }
+    if (drawRafRef.current) { cancelAnimationFrame(drawRafRef.current); drawRafRef.current = null; }
   }
 
   // ── Glide ambulance marker from old pos to new pos ─────────────────────────
@@ -434,8 +716,8 @@ export default function LiveAmbulanceTracker({
         markerRef.current.setPosition(pos);
         markerRef.current.setIcon({
           url: makeAmbulanceSvg(lastRotationRef.current),
-          scaledSize: new window.google.maps.Size(36, 36),
-          anchor: new window.google.maps.Point(18, 18),
+          scaledSize: new window.google.maps.Size(48, 34),
+          anchor: new window.google.maps.Point(24, 17),
         });
       }
       if (t < 1) {
@@ -468,127 +750,110 @@ export default function LiveAmbulanceTracker({
   }
 
   // ── Draw straight dashed fallback line ─────────────────────────────────────
-  function drawStraightLine(ambPos, pickupPos) {
-    if (!polylineRef.current) return;
+  function drawStraightLine(ambPos, targetPos) {
+    if (!polylineRef.current || !ambPos || !targetPos) return;
     if (drawRafRef.current) cancelAnimationFrame(drawRafRef.current);
-    polylineRef.current.setPath([ambPos, pickupPos]);
+    polylineRef.current.setPath([ambPos, targetPos]);
     polylineRef.current.setOptions({
       strokeColor: "#2563eb",
       strokeOpacity: 0,
-      icons: [{
-        icon: { path: "M 0,-1 0,1", strokeOpacity: 0.9, scale: 6 },
-        offset: "0",
-        repeat: "22px",
-      }],
+      strokeWeight: 7,
+      icons: [
+        {
+          icon: { path: "M 0,-1 0,1", strokeOpacity: 0.9, scale: 5 },
+          offset: "0",
+          repeat: "20px",
+        },
+      ],
     });
   }
 
   // ── Request a route and update polyline ────────────────────────────────────
-  async function refreshRoute(ambPos, pickupPos, animate = false) {
-    if (!polylineRef.current) return;
+  function applyRoadRoute(points, animate = false) {
+    if (!polylineRef.current || !points || points.length < 2) return;
+    roadCoordsRef.current = points;
+    polylineRef.current.setOptions({
+      strokeColor: "#2563eb",
+      strokeOpacity: 0.95,
+      strokeWeight: 7,
+      icons: [],
+    });
 
-    // 1. Primary: Use OSRM for road-snapped routing (identical to Admin panel)
-    try {
-      const snapped = await snapRoute(ambPos, pickupPos);
-      if (snapped && snapped.length >= 2) {
-        directionFailsRef.current = 0;
-        polylineRef.current.setOptions({
-          strokeColor: "#2563eb",
-          strokeOpacity: 0.95,
-          strokeWeight: 7,
-          icons: [],
-        });
-
-        if (animate) {
-          animateRouteDraw(snapped, 800);
-        } else {
-          polylineRef.current.setPath(snapped);
-        }
-
-        // Fit map bounds around the road route
-        if (mapInstanceRef.current) {
-          const bounds = new window.google.maps.LatLngBounds();
-          snapped.forEach((p) => bounds.extend(p));
-          mapInstanceRef.current.fitBounds(bounds, { top: 60, bottom: 80, left: 40, right: 40 });
-        }
-        return;
-      }
-    } catch (osrmErr) {
-      console.warn("OSRM road route failed, trying fallback:", osrmErr);
+    if (animate) {
+      animateRouteDraw(points, 800);
+    } else {
+      polylineRef.current.setPath(points);
     }
 
-    // 2. Secondary fallback: Google DirectionsService
-    if (window.google?.maps?.DirectionsService) {
-      try {
-        const svc = new window.google.maps.DirectionsService();
-        svc.route(
-          {
-            origin: ambPos,
-            destination: pickupPos,
-            travelMode: window.google.maps.TravelMode.DRIVING,
-          },
-          (result, status) => {
-            if (status === window.google.maps.DirectionsStatus.OK && result?.routes?.length) {
-              directionFailsRef.current = 0;
-              const rawPath =
-                result.routes[0].overview_path ||
-                result.routes[0].legs?.flatMap((leg) =>
-                  leg.steps?.flatMap((step) => step.path || []) || []
-                ) || [];
-
-              const path = rawPath.map((p) =>
-                typeof p?.lat === "function" ? { lat: p.lat(), lng: p.lng() } : p
-              );
-
-              // Connect directly to ambulance and pickup to eliminate any gaps
-              if (path.length > 0 && distanceMeters(ambPos, path[0]) > 1) {
-                path.unshift({ lat: ambPos.lat, lng: ambPos.lng });
-              }
-              if (path.length > 0 && distanceMeters(pickupPos, path[path.length - 1]) > 1) {
-                path.push({ lat: pickupPos.lat, lng: pickupPos.lng });
-              }
-
-              polylineRef.current?.setOptions({
-                strokeColor: "#2563eb",
-                strokeOpacity: 0.95,
-                strokeWeight: 7,
-                icons: [],
-              });
-
-              if (animate) {
-                animateRouteDraw(path, 800);
-              } else {
-                polylineRef.current?.setPath(path);
-              }
-
-              if (mapInstanceRef.current && path.length) {
-                const bounds = new window.google.maps.LatLngBounds();
-                path.forEach((p) => bounds.extend(p));
-                mapInstanceRef.current.fitBounds(bounds, { top: 60, bottom: 80, left: 40, right: 40 });
-              }
-              return;
-            }
-
-            // Both failed
-            directionFailsRef.current += 1;
-            console.warn("Google Directions failed:", status);
-            if (directionFailsRef.current >= 3) {
-              drawStraightLine(ambPos, pickupPos);
-            }
-          }
-        );
-        return;
-      } catch (gErr) {
-        console.warn("Directions routing error:", gErr);
-      }
-    }
-
-    // 3. Fallback straight line
-    directionFailsRef.current += 1;
-    if (directionFailsRef.current >= 3) {
-      drawStraightLine(ambPos, pickupPos);
+    if (mapInstanceRef.current && points.length) {
+      const bounds = new window.google.maps.LatLngBounds();
+      points.forEach((p) => bounds.extend(p));
+      mapInstanceRef.current.fitBounds(bounds, { top: 60, bottom: 80, left: 40, right: 40 });
     }
   }
+
+  // ── Request a route and update polyline (OSRM primary, DirectionsService secondary) ──
+  async function fetchRoadRoute(origin, destination, animate = false) {
+    if (!polylineRef.current || !origin || !destination) return;
+
+    let routePoints = null;
+
+    // 1. Primary: OSRM driving route (free, no Google Cloud Console setup required)
+    try {
+      const osrmPoints = await snapRoute(origin, destination);
+      if (osrmPoints && osrmPoints.length >= 2) {
+        console.debug("[Routes] Used OSRM route");
+        routePoints = osrmPoints;
+      }
+    } catch (osrmErr) {
+      console.debug("[Routes] OSRM route unavailable:", osrmErr?.message);
+    }
+
+    // 2. Secondary: Google Maps DirectionsService (if available)
+    if (!routePoints && window.google?.maps?.DirectionsService) {
+      try {
+        const directionsService = new window.google.maps.DirectionsService();
+        const result = await new Promise((resolve, reject) => {
+          directionsService.route(
+            {
+              origin: { lat: origin.lat, lng: origin.lng },
+              destination: { lat: destination.lat, lng: destination.lng },
+              travelMode: window.google.maps.TravelMode.DRIVING,
+            },
+            (res, status) => {
+              if (status === window.google.maps.DirectionsStatus.OK && res?.routes?.length) {
+                resolve(res);
+              } else {
+                reject(new Error(status));
+              }
+            }
+          );
+        });
+        if (result?.routes?.[0]?.overview_path) {
+          const points = result.routes[0].overview_path.map((p) => ({
+            lat: p.lat(),
+            lng: p.lng(),
+          }));
+          if (points.length >= 2) {
+            console.debug("[Routes] Used Google DirectionsService");
+            routePoints = points;
+          }
+        }
+      } catch (dirErr) {
+        console.debug("[Routes] DirectionsService unavailable:", dirErr?.message);
+      }
+    }
+
+    if (routePoints && routePoints.length >= 2) {
+      applyRoadRoute(routePoints, animate);
+      return;
+    }
+
+    // 3. Fallback: Straight dashed line while loading or unavailable
+    console.debug("[Routes] Used straight-line fallback");
+    drawStraightLine(origin, destination);
+  }
+
 
   // ── Show / hide route and ambulance marker based on status ─────────────────
   function applyVisibility(currentSc) {
@@ -605,10 +870,19 @@ export default function LiveAmbulanceTracker({
     if (!mapInstanceRef.current) return;
     const historyPoints = extractTrackCoordinates(mergedItem).filter((p) => p.type === "history");
     const lastH = historyPoints.length > 0 ? historyPoints[historyPoints.length - 1] : null;
-    if (!lastH) return;
+    if (!lastH) {
+      if (lastLocationMarkerRef.current) lastLocationMarkerRef.current.setMap(null);
+      return;
+    }
+    // If the last history point is right at the active ambulance position, hide redundant overlapping dot
+    if (prevPosRef.current && Math.abs(lastH.lat - prevPosRef.current.lat) < 0.0001 && Math.abs(lastH.lng - prevPosRef.current.lng) < 0.0001) {
+      if (lastLocationMarkerRef.current) lastLocationMarkerRef.current.setMap(null);
+      return;
+    }
     const pos = { lat: lastH.lat, lng: lastH.lng };
     if (lastLocationMarkerRef.current) {
       lastLocationMarkerRef.current.setPosition(pos);
+      lastLocationMarkerRef.current.setMap(mapInstanceRef.current);
     } else {
       lastLocationMarkerRef.current = new window.google.maps.Marker({
         position: pos,
@@ -618,9 +892,10 @@ export default function LiveAmbulanceTracker({
           url:
             "data:image/svg+xml," +
             encodeURIComponent(
-              '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="#f59e0b" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.5"/></svg>'
+              '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="#0891b2" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/></svg>'
             ),
-          scaledSize: new window.google.maps.Size(22, 22),
+          scaledSize: new window.google.maps.Size(16, 16),
+          anchor: new window.google.maps.Point(8, 8),
         },
       });
     }
@@ -643,46 +918,87 @@ export default function LiveAmbulanceTracker({
       contact_number: contactNumber ?? data?.contactNumber ?? data?.raw?.requester_phone,
     };
 
-    const trackPoints = extractTrackCoordinates(mergedItem);
+    // 1. Raw Origin (Ambulance): Use raw current_location only (matching RN)
+    const rawLoc =
+      data?.current_location ||
+      data?.location ||
+      data?.currentLocation ||
+      data?.live_location ||
+      data?.raw?.current_location;
+    const rawLat =
+      rawLoc?.latitude ??
+      rawLoc?.lat ??
+      data?.latitude ??
+      data?.current_lat ??
+      data?.driver_latitude ??
+      data?.raw?.latitude;
+    const rawLng =
+      rawLoc?.longitude ??
+      rawLoc?.lng ??
+      data?.longitude ??
+      data?.current_lng ??
+      data?.driver_longitude ??
+      data?.raw?.longitude;
+    const ambLat = toCoord(rawLat);
+    const ambLng = toCoord(rawLng);
+    const ambPos = ambLat != null && ambLng != null ? { lat: ambLat, lng: ambLng } : null;
 
-    // Pickup location point
-    const pickupPt = trackPoints.find((p) => p.type === "pickup") || (() => {
-      const pLat = parseCoordVal(pickupLat ?? data?.pickupLat);
-      const pLng = parseLngVal(pickupLng ?? data?.pickupLng);
-      return pLat !== null && pLng !== null ? { lat: pLat, lng: pLng } : null;
-    })();
+    // 2. Pickup Coordinate
+    const pLat = toCoord(pickupLat ?? data?.pickupLat ?? data?.pickup_lat ?? data?.raw?.pickup_lat);
+    const pLng = toCoord(pickupLng ?? data?.pickupLng ?? data?.pickup_lng ?? data?.raw?.pickup_lng);
+    const pickupPos = pLat != null && pLng != null ? { lat: pLat, lng: pLng } : null;
 
-    // Ambulance location point
-    const currentPt = trackPoints.slice().reverse().find((p) => p.type === "current") || (() => {
-      const cLat = parseCoordVal(data?.latitude ?? data?.currentLocation);
-      const cLng = parseLngVal(data?.longitude ?? data?.currentLocation);
-      return cLat !== null && cLng !== null ? { lat: cLat, lng: cLng } : null;
-    })();
+    // 3. Drop / Hospital Coordinate
+    const dLat = toCoord(data?.drop_lat ?? data?.dropLat ?? data?.raw?.drop_lat);
+    const dLng = toCoord(data?.drop_lng ?? data?.dropLng ?? data?.raw?.drop_lng);
+    const dropPos = dLat != null && dLng != null ? { lat: dLat, lng: dLng } : null;
 
-    const hasAmb = currentPt != null;
-    const hasPickup = pickupPt != null;
+    // 4. Destination by phase: "np" -> pickup; "ph" -> drop/hospital (matching RN)
+    const tripType = String(data?.type || data?.raw?.type || "").toLowerCase();
+    const isPatientToHospital = tripType === "ph";
+    const targetPos = isPatientToHospital && dropPos ? dropPos : pickupPos;
+
+    // Re-fit camera bounds when phase changes ("np" -> "ph")
+    if (lastTripTypeRef.current && lastTripTypeRef.current !== tripType) {
+      if (ambPos && targetPos) {
+        const b = new window.google.maps.LatLngBounds();
+        b.extend(ambPos);
+        b.extend(targetPos);
+        mapInstanceRef.current.fitBounds(b, { top: 60, bottom: 80, left: 40, right: 40 });
+      }
+    }
+    lastTripTypeRef.current = tripType;
+
+    // Initial camera fitting (matching RN)
+    if (!hasFitInitialBoundsRef.current && ambPos && targetPos) {
+      hasFitInitialBoundsRef.current = true;
+      const b = new window.google.maps.LatLngBounds();
+      b.extend(ambPos);
+      b.extend(targetPos);
+      mapInstanceRef.current.fitBounds(b, { top: 60, bottom: 80, left: 40, right: 40 });
+    }
+
+    const hasAmb = ambPos != null;
+    const hasPickup = pickupPos != null;
     const showRoute = isActiveStatus(currentSc);
 
     // ── Ambulance marker ──────────────────────────────────────────────────
     if (hasAmb && showRoute) {
-      const newPos = { lat: currentPt.lat, lng: currentPt.lng };
       const prev = prevPosRef.current;
 
       if (!markerRef.current) {
-        // create on first appearance
         markerRef.current = new window.google.maps.Marker({
-          position: newPos,
+          position: ambPos,
           map: mapInstanceRef.current,
           title: "Ambulance",
           icon: {
             url: makeAmbulanceSvg(lastRotationRef.current),
-            scaledSize: new window.google.maps.Size(36, 36),
-            anchor: new window.google.maps.Point(18, 18),
+            scaledSize: new window.google.maps.Size(48, 34),
+            anchor: new window.google.maps.Point(24, 17),
           },
           zIndex: 10,
         });
 
-        // InfoWindow for ambulance marker
         if (infoWindowRef.current) {
           markerRef.current.addListener("click", () => {
             const sc2 = normalizeStatus(data?.status || "");
@@ -694,28 +1010,26 @@ export default function LiveAmbulanceTracker({
       }
 
       if (prev) {
-        glideMarker(prev, newPos);
+        glideMarker(prev, ambPos);
       } else {
-        markerRef.current.setPosition(newPos);
+        markerRef.current.setPosition(ambPos);
         markerRef.current.setIcon({
           url: makeAmbulanceSvg(lastRotationRef.current),
-          scaledSize: new window.google.maps.Size(36, 36),
-          anchor: new window.google.maps.Point(18, 18),
+          scaledSize: new window.google.maps.Size(48, 34),
+          anchor: new window.google.maps.Point(24, 17),
         });
       }
 
-      prevPosRef.current = newPos;
+      prevPosRef.current = ambPos;
 
-      // Keep InfoWindow content fresh
       if (infoWindowRef.current && infoWindowRef.current.getMap()) {
         const sc2 = normalizeStatus(data?.status || "");
         const col = STATUS_COLORS[sc2] || STATUS_COLORS.requested;
         infoWindowRef.current.setContent(buildAmbInfoContent(data, col));
       }
 
-      // Sync pickup marker position if pickup is available
+      // Sync pickup marker position (DO NOT add hospital marker)
       if (hasPickup) {
-        const pickupPos = { lat: pickupPt.lat, lng: pickupPt.lng };
         if (pickupMarkerRef.current) {
           pickupMarkerRef.current.setPosition(pickupPos);
         } else {
@@ -735,33 +1049,49 @@ export default function LiveAmbulanceTracker({
             infoWindowRef.current.open(mapInstanceRef.current, pickupMarkerRef.current);
           });
         }
+      }
 
-        // Route: only call route API if distance has moved by >= 10m or on first draw
-        const firstDraw = !routeDrawnRef.current;
-        const lastAmb = lastRoutedAmbPosRef.current;
-        const lastPickup = lastRoutedPickupPosRef.current;
-        const ambDist = lastAmb ? distanceMeters(lastAmb, newPos) : Infinity;
-        const pickupDist = lastPickup ? distanceMeters(lastPickup, pickupPos) : Infinity;
-        const distanceMoved = ambDist >= 10 || pickupDist >= 10;
-        const shouldCallRouteApi = firstDraw || distanceMoved;
+      // ── Client-side Route Trimming between API fetches (matching RN) ───────
+      if (roadCoordsRef.current && roadCoordsRef.current.length >= 2) {
+        const trimmed = trimPolyline(roadCoordsRef.current, ambPos);
+        roadCoordsRef.current = trimmed;
+        if (polylineRef.current) {
+          polylineRef.current.setPath(trimmed);
+        }
+      }
 
-        if (shouldCallRouteApi) {
-          // On initial page/modal load: directly show route (no animation delay)
-          // When ambulance moves: show smooth animation
-          const animateOnMove = !firstDraw;
-          refreshRoute(newPos, pickupPos, animateOnMove);
-          routeDrawnRef.current = true;
-          lastRoutedAmbPosRef.current = newPos;
-          lastRoutedPickupPosRef.current = pickupPos;
+      // ── Route refresh rules (matching RN exactly) ──────────────────────────
+      if (targetPos) {
+        const now = Date.now();
+        if (now >= routeBackoffUntilRef.current) {
+          const targetChanged =
+            !lastRouteDestRef.current || distanceMeters(lastRouteDestRef.current, targetPos) > 50;
+          const lastOrigin = lastRouteOriginRef.current;
+          const movedSignificantly =
+            !lastOrigin || distanceMeters(lastOrigin, ambPos) >= ROUTE_MIN_MOVE_METERS;
+          const dueForRefresh = now - lastRouteFetchTsRef.current > ROUTE_REFRESH_INTERVAL_MS;
+
+          const shouldFetch =
+            targetChanged ||
+            (roadCoordsRef.current.length === 0 && now - lastRouteFetchTsRef.current > 15000) ||
+            (movedSignificantly && now - lastRouteFetchTsRef.current > 20000) ||
+            (dueForRefresh && lastOrigin && distanceMeters(lastOrigin, ambPos) > 50);
+
+          if (shouldFetch) {
+            lastRouteOriginRef.current = ambPos;
+            lastRouteDestRef.current = targetPos;
+            lastRouteFetchTsRef.current = now;
+            const animateOnMove = roadCoordsRef.current.length > 0;
+            fetchRoadRoute(ambPos, targetPos, animateOnMove);
+          }
         }
       }
     } else if (!showRoute) {
-      // terminal — clear route, hide marker
       if (markerRef.current) markerRef.current.setMap(null);
       if (polylineRef.current) polylineRef.current.setPath([]);
+      roadCoordsRef.current = [];
     }
 
-    // ── Update location history tail marker ───────────────────────────────
     updateLastLocationMarker(mergedItem);
   }
 
@@ -865,7 +1195,7 @@ export default function LiveAmbulanceTracker({
       console.error("Error initializing Google Map:", e);
       setError(e.message || "Failed to initialize map");
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapsLoaded]);
 
   // ── Keep pickup marker position synced if props change ─────────────────────
@@ -887,18 +1217,21 @@ export default function LiveAmbulanceTracker({
 
     let cancelled = false;
     pollingStoppedRef.current = false;
+    let consecutiveStationaryTicks = 0;
+    let lastPolledPos = null;
 
-    function scheduleNext() {
+    function scheduleNext(customDelayMs) {
       if (cancelled || pollingStoppedRef.current) return;
-      pollingTimerRef.current = setTimeout(tick, POLL_INTERVAL_MS);
+      const delay = customDelayMs ?? POLL_INTERVAL_MS;
+      pollingTimerRef.current = setTimeout(tick, delay);
     }
 
     async function tick() {
       if (cancelled || pollingStoppedRef.current) return;
 
-      // Pause when tab is hidden
+      // Slow down when tab is in background to save server resources
       if (document.hidden) {
-        scheduleNext();
+        scheduleNext(30000);
         return;
       }
 
@@ -927,11 +1260,45 @@ export default function LiveAmbulanceTracker({
           pollingStoppedRef.current = true;
           return; // do not schedule next tick
         }
+
+        // Check if ambulance moved or is stationary
+        const curLat = data.latitude ?? data.currentLocation?.lat;
+        const curLng = data.longitude ?? data.currentLocation?.lng;
+
+        if (curLat != null && curLng != null) {
+          const curPos = { lat: Number(curLat), lng: Number(curLng) };
+          if (lastPolledPos) {
+            const dist = distanceMeters(lastPolledPos, curPos);
+            // If moved less than 15 meters, the vehicle is stationary (idle/parked/red light)
+            if (dist < 15) {
+              consecutiveStationaryTicks += 1;
+            } else {
+              // Ambulance is actively moving! Reset stationary counter to resume 10s polling
+              consecutiveStationaryTicks = 0;
+            }
+          }
+          lastPolledPos = curPos;
+        } else {
+          // No coordinates yet (e.g. pending dispatch)
+          consecutiveStationaryTicks += 1;
+        }
+
+        // Adaptive polling interval based on stationary state:
+        // Moving (0 stationary ticks): 10,000ms (10s)
+        // Stationary 1-2 ticks: 20,000ms (20s)
+        // Stationary 3+ ticks: 30,000ms (30s)
+        let nextInterval = POLL_INTERVAL_MS;
+        if (consecutiveStationaryTicks >= 3) {
+          nextInterval = 30000;
+        } else if (consecutiveStationaryTicks >= 1) {
+          nextInterval = 20000;
+        }
+
+        scheduleNext(nextInterval);
       } else {
         setLoading(false);
+        scheduleNext(POLL_INTERVAL_MS * 1.5);
       }
-
-      scheduleNext();
     }
 
     // Resume immediately when tab becomes visible again
@@ -960,7 +1327,7 @@ export default function LiveAmbulanceTracker({
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       cancelAnimations();
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [requestId, mapsLoaded]);
 
   // ── Stop polling when status becomes terminal ──────────────────────────────
@@ -976,11 +1343,11 @@ export default function LiveAmbulanceTracker({
       if (markerRef.current) markerRef.current.setMap(null);
       if (polylineRef.current) polylineRef.current.setPath([]);
       if (pickupMarkerRef.current) pickupMarkerRef.current.setVisible(false);
-      routeDrawnRef.current = false;
-      lastRoutedAmbPosRef.current = null;
-      lastRoutedPickupPosRef.current = null;
+      roadCoordsRef.current = [];
+      lastRouteOriginRef.current = null;
+      lastRouteDestRef.current = null;
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isTerminal]);
 
   // ── Cleanup on full unmount ────────────────────────────────────────────────
@@ -993,7 +1360,7 @@ export default function LiveAmbulanceTracker({
       }
       cancelAnimations();
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ── Cancel handlers ────────────────────────────────────────────────────────
@@ -1020,32 +1387,107 @@ export default function LiveAmbulanceTracker({
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="live-tracker" style={{ height: "100%", width: "100%", borderRadius: "12px", overflow: "hidden", position: "relative", background: "var(--bg-app)" }}>
-      {(!mapsLoaded && !error && !mapsError) ? (
+      {(!mapsLoaded && !isUsingFallback && !error) ? (
         <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: "10px", color: "var(--text-muted)" }}>
           <div style={{ width: "32px", height: "32px", border: "3px solid var(--border)", borderTopColor: "var(--primary)", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
           <span style={{ fontSize: "12px" }}>Loading map…</span>
         </div>
-      ) : (mapsError || error) ? (
-        <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: "8px", color: "var(--text-muted)", padding: "16px", textAlign: "center" }}>
-          <MapPin size={24} color="var(--danger)" />
-          <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>
-            {(mapsError?.message || error?.message || "Map failed to load")}
-          </span>
-          <button
-            onClick={() => {
-              if (typeof window !== "undefined") {
-                delete window.google;
-                window.location.reload();
-              }
-            }}
-            style={{ padding: "4px 12px", fontSize: "11px", borderRadius: "6px", border: "1px solid var(--border)", background: "var(--bg-surface)", color: "var(--text-main)", cursor: "pointer" }}
-          >
-            Retry
-          </button>
-        </div>
       ) : (
         <>
-          <div ref={mapRef} style={{ height: "100%", width: "100%" }} />
+          {isUsingFallback ? (
+            /* ── Leaflet OpenStreetMap Fallback with Live Route & Tracking ── */
+            <div style={{ height: "100%", width: "100%", position: "relative" }}>
+              <MapContainer
+                center={ambPos ? [ambPos.lat, ambPos.lng] : pickupPos ? [pickupPos.lat, pickupPos.lng] : DEFAULT_CENTER}
+                zoom={15}
+                style={{ height: "100%", width: "100%" }}
+                zoomControl={false}
+              >
+                <TileLayer
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                />
+                <LeafletMapInstanceSync onMapReady={(m) => { leafletMapRef.current = m; }} />
+                <LeafletFitBoundsHelper points={[ambPos, pickupPos].filter(Boolean)} />
+
+                {/* History trail (past recorded ambulance route) */}
+                {historyPoints.length >= 2 && (
+                  <Polyline
+                    positions={historyPoints.map((p) => [p.lat, p.lng])}
+                    pathOptions={{
+                      color: "#0891b2",
+                      weight: 4,
+                      opacity: 0.7,
+                      dashArray: "6, 8",
+                    }}
+                  />
+                )}
+
+                {/* Live road route to destination */}
+                {fallbackRoute.length >= 2 && isActive && (
+                  <Polyline
+                    positions={fallbackRoute.map((p) => [p.lat, p.lng])}
+                    pathOptions={{
+                      color: "#2563eb",
+                      weight: 6,
+                      opacity: 0.9,
+                      lineCap: "round",
+                      lineJoin: "round",
+                    }}
+                  />
+                )}
+
+                {/* Pickup Location Marker */}
+                {pickupPos && !isTerminal && (
+                  <Marker position={[pickupPos.lat, pickupPos.lng]} icon={makePickupLeafletIcon()}>
+                    <Popup>
+                      <div style={{ padding: "4px" }}>
+                        <div style={{ fontWeight: 800, fontSize: "13px", color: "#0f172a", marginBottom: "4px" }}>
+                          Pickup Location
+                        </div>
+                        <div style={{ fontSize: "12px", color: "#334155" }}>
+                          <strong>Patient:</strong> {patientName || tracking?.patientName || "Patient"}
+                        </div>
+                        {pickupAddress && (
+                          <div style={{ fontSize: "11px", color: "#64748b", marginTop: "3px" }}>
+                            {pickupAddress}
+                          </div>
+                        )}
+                      </div>
+                    </Popup>
+                  </Marker>
+                )}
+
+                {/* Live Ambulance Location Marker */}
+                {ambPos && isActive && (
+                  <Marker position={[ambPos.lat, ambPos.lng]} icon={makeAmbulanceLeafletIcon(lastRotationRef.current || 0)}>
+                    <Popup>
+                      <div style={{ padding: "4px" }}>
+                        <div style={{ fontWeight: 800, fontSize: "13px", color: "#0f172a", marginBottom: "4px" }}>
+                          🚑 Ambulance En Route
+                        </div>
+                        <div style={{ fontSize: "12px", color: "#334155" }}>
+                          <strong>Driver:</strong> {driverDisplayName}
+                        </div>
+                        {tracking?.ambulanceNo && (
+                          <div style={{ fontSize: "11px", color: "#64748b", marginTop: "2px" }}>
+                            Vehicle: {tracking.ambulanceNo}
+                          </div>
+                        )}
+                        {tracking?.eta && (
+                          <div style={{ fontSize: "11px", color: "#0891b2", fontWeight: 700, marginTop: "4px" }}>
+                            ETA: {tracking.eta} min
+                          </div>
+                        )}
+                      </div>
+                    </Popup>
+                  </Marker>
+                )}
+              </MapContainer>
+            </div>
+          ) : (
+            <div ref={mapRef} style={{ height: "100%", width: "100%" }} />
+          )}
 
           {/* Floating ETA Badge (Top-Left) */}
           {showOverlays && (
@@ -1054,7 +1496,7 @@ export default function LiveAmbulanceTracker({
                 position: "absolute",
                 top: "8px",
                 left: "8px",
-                zIndex: 4,
+                zIndex: 1000,
                 background: "#ffffff",
                 padding: "4px 10px",
                 borderRadius: "16px",
@@ -1076,10 +1518,16 @@ export default function LiveAmbulanceTracker({
           )}
 
           {/* Floating Zoom Controls (Top-Right) */}
-          <div style={{ position: "absolute", top: "8px", right: "8px", display: "flex", flexDirection: "column", gap: "3px", zIndex: 4 }}>
+          <div style={{ position: "absolute", top: "8px", right: "8px", display: "flex", flexDirection: "column", gap: "3px", zIndex: 1000 }}>
             <button
               type="button"
-              onClick={() => { if (mapInstanceRef.current) mapInstanceRef.current.setZoom((mapInstanceRef.current.getZoom() || 15) + 1); }}
+              onClick={() => {
+                if (mapInstanceRef.current) {
+                  mapInstanceRef.current.setZoom((mapInstanceRef.current.getZoom() || 15) + 1);
+                } else if (leafletMapRef.current) {
+                  leafletMapRef.current.zoomIn();
+                }
+              }}
               style={{ width: "26px", height: "26px", borderRadius: "6px", background: "var(--bg-surface)", border: "1px solid var(--border)", color: "var(--text-main)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 2px 6px rgba(0,0,0,0.1)" }}
               title="Zoom in"
             >
@@ -1087,7 +1535,13 @@ export default function LiveAmbulanceTracker({
             </button>
             <button
               type="button"
-              onClick={() => { if (mapInstanceRef.current) mapInstanceRef.current.setZoom((mapInstanceRef.current.getZoom() || 15) - 1); }}
+              onClick={() => {
+                if (mapInstanceRef.current) {
+                  mapInstanceRef.current.setZoom((mapInstanceRef.current.getZoom() || 15) - 1);
+                } else if (leafletMapRef.current) {
+                  leafletMapRef.current.zoomOut();
+                }
+              }}
               style={{ width: "26px", height: "26px", borderRadius: "6px", background: "var(--bg-surface)", border: "1px solid var(--border)", color: "var(--text-main)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 2px 6px rgba(0,0,0,0.1)" }}
               title="Zoom out"
             >
@@ -1098,168 +1552,167 @@ export default function LiveAmbulanceTracker({
 
           {/* Bottom Driver / Address / Status overlay bar (only if not hideBottomBar) */}
           {!hideBottomBar && (
-          <div
-            className="live-tracker-bottom-bar"
-            style={{
-              position: "absolute",
-              bottom: 0,
-              left: 0,
-              right: 0,
-              background: "rgba(255, 255, 255, 0.97)",
-              backdropFilter: "blur(12px)",
-              borderTop: "1px solid var(--border)",
-              padding: "10px 14px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: "10px",
-              zIndex: 10,
-              boxShadow: "0 -4px 16px rgba(0,0,0,0.06)",
-              flexWrap: "wrap"
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: "10px", flex: 1, minWidth: "180px" }}>
-              <div
-                style={{
-                  width: "30px",
-                  height: "30px",
-                  borderRadius: "50%",
-                  background: isCancelled
-                    ? "rgba(220, 38, 38, 0.12)"
-                    : isAwaitingDriver
-                    ? "rgba(245, 158, 11, 0.12)"
-                    : "var(--primary-light)",
-                  border: `1.5px solid ${
-                    isCancelled
-                      ? "rgba(220, 38, 38, 0.35)"
+            <div
+              className="live-tracker-bottom-bar"
+              style={{
+                position: "absolute",
+                bottom: 0,
+                left: 0,
+                right: 0,
+                background: "rgba(255, 255, 255, 0.97)",
+                backdropFilter: "blur(12px)",
+                borderTop: "1px solid var(--border)",
+                padding: "10px 14px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: "10px",
+                zIndex: 10,
+                boxShadow: "0 -4px 16px rgba(0,0,0,0.06)",
+                flexWrap: "wrap"
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "10px", flex: 1, minWidth: "180px" }}>
+                <div
+                  style={{
+                    width: "30px",
+                    height: "30px",
+                    borderRadius: "50%",
+                    background: isCancelled
+                      ? "rgba(220, 38, 38, 0.12)"
                       : isAwaitingDriver
-                      ? "rgba(245, 158, 11, 0.35)"
-                      : "rgba(46,102,110,0.25)"
-                  }`,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0
-                }}
-              >
-                {isCancelled ? (
-                  <XCircle size={15} color="#dc2626" />
-                ) : (
-                  <Truck size={15} color={isAwaitingDriver ? "#d97706" : "var(--primary)"} />
-                )}
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
-                  <span
-                    style={{
-                      fontSize: "13px",
-                      fontWeight: "800",
-                      color: isCancelled ? "#dc2626" : isAwaitingDriver ? "#b45309" : "var(--text-main)",
-                      letterSpacing: "-0.01em",
-                      lineHeight: "1.2"
-                    }}
-                  >
-                    {driverDisplayName}
-                  </span>
-                  {isAwaitingDriver && !isCancelled && (
-                    <span
-                      style={{
-                        fontSize: "10px",
-                        fontWeight: "700",
-                        padding: "1px 6px",
-                        borderRadius: "8px",
-                        background: "rgba(245, 158, 11, 0.15)",
-                        color: "#b45309",
-                        border: "1px solid rgba(245, 158, 11, 0.3)",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "4px",
-                        lineHeight: "1.2"
-                      }}
-                    >
-                      <span style={{ width: "5px", height: "5px", borderRadius: "50%", background: "#f59e0b", display: "inline-block", animation: "pulse-dot 1.5s infinite" }} />
-                      Searching
-                    </span>
-                  )}
-                  {isCancelled && (
-                    <span
-                      style={{
-                        fontSize: "10px",
-                        fontWeight: "700",
-                        padding: "1px 6px",
-                        borderRadius: "8px",
-                        background: "rgba(220, 38, 38, 0.12)",
-                        color: "#dc2626",
-                        border: "1px solid rgba(220, 38, 38, 0.3)",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "4px",
-                        lineHeight: "1.2"
-                      }}
-                    >
-                      Cancelled
-                    </span>
+                        ? "rgba(245, 158, 11, 0.12)"
+                        : "var(--primary-light)",
+                    border: `1.5px solid ${isCancelled
+                        ? "rgba(220, 38, 38, 0.35)"
+                        : isAwaitingDriver
+                          ? "rgba(245, 158, 11, 0.35)"
+                          : "rgba(46,102,110,0.25)"
+                      }`,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0
+                  }}
+                >
+                  {isCancelled ? (
+                    <XCircle size={15} color="#dc2626" />
+                  ) : (
+                    <Truck size={15} color={isAwaitingDriver ? "#d97706" : "var(--primary)"} />
                   )}
                 </div>
-                {pickupAddress && (
-                  <div
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                    <span
+                      style={{
+                        fontSize: "13px",
+                        fontWeight: "800",
+                        color: isCancelled ? "#dc2626" : isAwaitingDriver ? "#b45309" : "var(--text-main)",
+                        letterSpacing: "-0.01em",
+                        lineHeight: "1.2"
+                      }}
+                    >
+                      {driverDisplayName}
+                    </span>
+                    {isAwaitingDriver && !isCancelled && (
+                      <span
+                        style={{
+                          fontSize: "10px",
+                          fontWeight: "700",
+                          padding: "1px 6px",
+                          borderRadius: "8px",
+                          background: "rgba(245, 158, 11, 0.15)",
+                          color: "#b45309",
+                          border: "1px solid rgba(245, 158, 11, 0.3)",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "4px",
+                          lineHeight: "1.2"
+                        }}
+                      >
+                        <span style={{ width: "5px", height: "5px", borderRadius: "50%", background: "#f59e0b", display: "inline-block", animation: "pulse-dot 1.5s infinite" }} />
+                        Searching
+                      </span>
+                    )}
+                    {isCancelled && (
+                      <span
+                        style={{
+                          fontSize: "10px",
+                          fontWeight: "700",
+                          padding: "1px 6px",
+                          borderRadius: "8px",
+                          background: "rgba(220, 38, 38, 0.12)",
+                          color: "#dc2626",
+                          border: "1px solid rgba(220, 38, 38, 0.3)",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "4px",
+                          lineHeight: "1.2"
+                        }}
+                      >
+                        Cancelled
+                      </span>
+                    )}
+                  </div>
+                  {pickupAddress && (
+                    <div
+                      style={{
+                        fontSize: "11px",
+                        color: "var(--text-muted)",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                        marginTop: "2px",
+                        lineHeight: "1.2"
+                      }}
+                      title={pickupAddress}
+                    >
+                      {pickupAddress}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="live-tracker-badges" style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0 }}>
+                {/* Cancel Request button */}
+                {isRequested && !isCancelled && (
+                  <button
+                    type="button"
+                    onClick={handleOpenCancelModal}
+                    className="live-tracker-cancel-btn"
                     style={{
-                      fontSize: "11px",
-                      color: "var(--text-muted)",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      padding: "7px 14px",
+                      borderRadius: "10px",
+                      background: "#dc2626",
+                      color: "#ffffff",
+                      border: "none",
+                      fontSize: "12px",
+                      fontWeight: "700",
+                      cursor: "pointer",
+                      transition: "all 0.2s ease",
                       whiteSpace: "nowrap",
-                      marginTop: "2px",
-                      lineHeight: "1.2"
+                      lineHeight: "1.2",
                     }}
-                    title={pickupAddress}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = "#b91c1c"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = "#dc2626"; }}
+                    title="Cancel ambulance request"
                   >
-                    {pickupAddress}
+                    <XCircle size={14} color="#ffffff" />
+                    <span>Cancel Request</span>
+                  </button>
+                )}
+
+                {!isCancelled && tracking?.eta && (
+                  <div style={{ display: "flex", alignItems: "center", gap: "4px", background: "var(--primary-light)", padding: "3px 8px", borderRadius: "12px", border: "1px solid rgba(46,102,110,0.15)" }}>
+                    <Clock size={11} color="var(--primary)" />
+                    <span style={{ fontSize: "11px", fontWeight: "700", color: "var(--primary)" }}>{tracking.eta} min</span>
                   </div>
                 )}
               </div>
             </div>
-
-            <div className="live-tracker-badges" style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0 }}>
-              {/* Cancel Request button */}
-              {isRequested && !isCancelled && (
-                <button
-                  type="button"
-                  onClick={handleOpenCancelModal}
-                  className="live-tracker-cancel-btn"
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "6px",
-                    padding: "7px 14px",
-                    borderRadius: "10px",
-                    background: "#dc2626",
-                    color: "#ffffff",
-                    border: "none",
-                    fontSize: "12px",
-                    fontWeight: "700",
-                    cursor: "pointer",
-                    transition: "all 0.2s ease",
-                    whiteSpace: "nowrap",
-                    lineHeight: "1.2",
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = "#b91c1c"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = "#dc2626"; }}
-                  title="Cancel ambulance request"
-                >
-                  <XCircle size={14} color="#ffffff" />
-                  <span>Cancel Request</span>
-                </button>
-              )}
-
-              {!isCancelled && tracking?.eta && (
-                <div style={{ display: "flex", alignItems: "center", gap: "4px", background: "var(--primary-light)", padding: "3px 8px", borderRadius: "12px", border: "1px solid rgba(46,102,110,0.15)" }}>
-                  <Clock size={11} color="var(--primary)" />
-                  <span style={{ fontSize: "11px", fontWeight: "700", color: "var(--primary)" }}>{tracking.eta} min</span>
-                </div>
-              )}
-            </div>
-          </div>
           )}
         </>
       )}
