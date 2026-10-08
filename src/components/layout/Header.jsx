@@ -1,4 +1,4 @@
-import { Search, MapPin, ChevronDown, ChevronRight, ChevronLeft, Users, User, LogOut, Smartphone, HelpCircle, Menu, X, ArrowRight, Check, Stethoscope, FlaskConical, Building2, Settings, Bell, Gift, Send, Mail, Copy, Share2, Shield, Home, Wallet, Truck, Phone, Siren } from "lucide-react";
+import { Search, MapPin, ChevronDown, ChevronRight, ChevronLeft, Users, User, LogOut, Smartphone, HelpCircle, Menu, X, ArrowRight, Check, Stethoscope, FlaskConical, Building2, Settings, Bell, Gift, Send, Mail, Copy, Share2, Shield, Home, Wallet, Truck, Phone, Siren, CalendarCheck, ShoppingBag } from "lucide-react";
 import { Link, NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useState, useRef, useEffect, useMemo } from "react";
@@ -506,7 +506,8 @@ export default function Header() {
                 className="header-location-picker flex items-center gap-1.5"
                 onClick={() => setIsLocationOpen(!isLocationOpen)}
                 style={{
-                  padding: '0 14px',
+                  padding: '0 7px 0 14px',
+                  width: '150px',
                   border: '1px solid var(--border)',
                   borderRadius: '30px',
                   color: 'var(--text-main)',
@@ -531,8 +532,10 @@ export default function Header() {
                 }}
               >
                 <MapPin size={15} style={{ color: 'var(--primary)' }} />
-                <span>{selectedCity}</span>
-                <ChevronDown size={14} className="text-muted" style={{ transform: isLocationOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+                <span className="header-location-city" title={selectedCity}>{selectedCity}</span>
+                <span className={`header-location-chevron${isLocationOpen ? ' is-open' : ''}`}>
+                  <ChevronDown size={13} strokeWidth={2.5} />
+                </span>
               </div>
 
               {/* Location Dropdown Menu */}
@@ -666,7 +669,7 @@ export default function Header() {
           <div className="flex-1 header-flex-spacer" />
 
           {/* Right Auth CTA (Desktop & Mobile Icon) */}
-          <div className="header-desktop-auth flex items-center gap-2.5" style={{ flexShrink: 0 }}>
+          <div className="header-desktop-auth flex items-center" style={{ flexShrink: 0, gap: '14px' }}>
             {/* Refer & Earn Icon Button (Icon only, left of profile tab) */}
             <button
               onClick={() => setIsReferralModalOpen(true)}
@@ -690,52 +693,41 @@ export default function Header() {
               className="hover:scale-105 header-gift-btn"
             >
               <Gift size={18} color="var(--primary)" />
-            </button> &nbsp;
+            </button>
             {user ? (
               <div className="flex items-center gap-2.5" ref={profileMenuRef} style={{ position: 'relative' }}>
                 <div
-                  className="flex items-center gap-3 cursor-pointer header-profile-pill"
+                  className={`flex items-center cursor-pointer header-profile-pill${isProfileMenuOpen ? ' is-open' : ''}`}
                   onClick={() => {
                     setIsProfileMenuOpen(!isProfileMenuOpen);
                     setIsPillHovered(false);
                   }}
                   onMouseEnter={() => setIsPillHovered(true)}
                   onMouseLeave={() => setIsPillHovered(false)}
-                  style={{ padding: '6px 12px', border: '1px solid var(--border)', borderRadius: '30px', background: 'var(--bg-surface)', transition: 'background 0.2s', position: 'relative' }}
-                  onMouseOver={e => e.currentTarget.style.background = 'var(--bg-app)'}
-                  onMouseOut={e => e.currentTarget.style.background = 'var(--bg-surface)'}
                   title={displayName}
                 >
-                  <div className="flex flex-col items-end header-user-text">
-                    <span className="text-muted" style={{ fontSize: '11px', lineHeight: '1' }}>Welcome,</span>
-                    <span style={{
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      color: 'var(--text-main)',
-                      maxWidth: '120px',
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      display: 'inline-block',
-                      textAlign: 'right'
-                    }}>
-                      {displayName}
-                    </span>
+                  <div className="header-profile-avatar">
+                    <div className="header-profile-avatar-inner">
+                      {headerAvatar ? (
+                        <img
+                          src={headerAvatar}
+                          alt={displayName}
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                          }}
+                        />
+                      ) : null}
+                      {displayInitial}
+                    </div>
+                    <span className="header-profile-status" />
                   </div>
-                  <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--primary-light)', color: 'var(--primary-dark)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '16px', overflow: 'hidden', position: 'relative' }}>
-                    {headerAvatar ? (
-                      <img
-                        src={headerAvatar}
-                        alt={displayName}
-                        style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', top: 0, left: 0, zIndex: 1 }}
-                        onError={(e) => {
-                          e.currentTarget.style.display = 'none';
-                        }}
-                      />
-                    ) : null}
-                    {displayInitial}
+                  <div className="flex flex-col items-start header-user-text">
+                    <span className="header-user-greeting">Welcome Back</span>
+                    <span className="header-user-name">{displayName}</span>
                   </div>
-                  <ChevronDown size={16} className="text-muted header-user-chevron" style={{ transform: isProfileMenuOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+                  <span className="header-user-chevron">
+                    <ChevronDown size={14} />
+                  </span>
                 </div>
 
                 {/* Name Hover Tooltip */}
@@ -781,7 +773,7 @@ export default function Header() {
 
                 {/* Profile Dropdown */}
                 {isProfileMenuOpen && (
-                  <div className="header-profile-dropdown" style={{ position: 'absolute', top: '56px', right: 0, width: '260px', maxWidth: 'calc(100vw - 20px)', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: '16px', boxShadow: '0 12px 32px rgba(18,51,58,0.18)', zIndex: 120, padding: '8px 0', animation: 'fadeIn 0.2s ease', overflow: 'hidden' }}>
+                  <div className="header-profile-dropdown" style={{ position: 'absolute', top: '58px', right: 0, width: '280px', maxWidth: 'calc(100vw - 20px)', background: 'var(--bg-surface)', border: '1px solid rgba(8, 120, 125, 0.14)', borderRadius: '18px', boxShadow: '0 18px 40px rgba(18,51,58,0.18), 0 2px 6px rgba(18,51,58,0.06)', zIndex: 120, padding: profileMenuTab === "switch" ? '8px 0' : '0', animation: 'fadeIn 0.2s ease', overflow: 'hidden' }}>
                     {profileMenuTab === "switch" ? (
                       <div style={{ animation: 'fadeIn 0.2s ease' }}>
                         {/* Header bar with Back button */}
@@ -890,168 +882,78 @@ export default function Header() {
                       </div>
                     ) : (
                       <>
-                        <div style={{ padding: '8px 14px 10px', borderBottom: '1px solid var(--border)', marginBottom: '4px' }}>
-                          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}>
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <b
-                                style={{
-                                  fontSize: '13.5px',
-                                  fontWeight: '700',
-                                  color: 'var(--text-main)',
-                                  display: 'block',
-                                  lineHeight: '1.35',
-                                  wordBreak: 'break-word'
+                        {/* Profile summary card */}
+                        <div className="profile-menu-hero">
+                          <div className="profile-menu-hero-avatar">
+                            {headerAvatar ? (
+                              <img
+                                src={headerAvatar}
+                                alt={displayName}
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none';
                                 }}
-                                title={displayName}
-                              >
-                                {displayName}
-                              </b>
-                              <span style={{ fontSize: '11.5px', color: 'var(--text-muted)', display: 'block', marginTop: '2px' }}>
-                                {userPhone || '+91 XXXXX XXXXX'}
-                              </span>
-                            </div>
-                            <span style={{ fontSize: '10px', background: '#dcfce7', color: '#15803d', fontWeight: '700', padding: '2px 6px', borderRadius: '10px', flexShrink: 0, marginTop: '1px' }}>
-                              Active
+                              />
+                            ) : null}
+                            {displayInitial}
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <b className="profile-menu-hero-name" title={displayName}>{displayName}</b>
+                            <span className="profile-menu-hero-phone">
+                              <Phone size={11} /> {userPhone || '+91 XXXXX XXXXX'}
                             </span>
                           </div>
+                          <span className="profile-menu-hero-badge">
+                            <span className="profile-menu-hero-badge-dot" /> Active
+                          </span>
                         </div>
 
                         {/* Switch Account (Single Button that switches view inside this menu) */}
                         {otherProfiles.length > 0 && (
-                          <div
-                            onClick={() => setProfileMenuTab("switch")}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'space-between',
-                              padding: '10px 16px',
-                              cursor: 'pointer',
-                              borderBottom: '1px solid var(--border)',
-                              background: 'rgba(27, 107, 114, 0.04)',
-                              transition: 'background 0.2s ease',
-                            }}
-                            onMouseOver={(e) => (e.currentTarget.style.background = 'rgba(27, 107, 114, 0.08)')}
-                            onMouseOut={(e) => (e.currentTarget.style.background = 'rgba(27, 107, 114, 0.04)')}
-                          >
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                              <div
-                                style={{
-                                  width: '26px',
-                                  height: '26px',
-                                  borderRadius: '50%',
-                                  background: '#1b6b72',
-                                  color: '#ffffff',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                }}
-                              >
-                                <Users size={14} />
-                              </div>
-                              <span style={{ fontSize: '13.5px', fontWeight: '700', color: 'var(--text-main)' }}>
-                                Switch Account
-                              </span>
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              <span
-                                style={{
-                                  fontSize: '10.5px',
-                                  fontWeight: '700',
-                                  background: '#1b6b72',
-                                  color: '#ffffff',
-                                  padding: '1px 7px',
-                                  borderRadius: '10px',
-                                }}
-                              >
-                                {otherProfiles.length}
-                              </span>
-                              <ChevronRight size={14} style={{ color: 'var(--text-muted)' }} />
-                            </div>
+                          <div className="profile-menu-switch" onClick={() => setProfileMenuTab("switch")}>
+                            <span className="profile-menu-icon">
+                              <Users size={16} />
+                            </span>
+                            <span className="profile-menu-label">Switch Account</span>
+                            <span className="profile-menu-count">{otherProfiles.length}</span>
+                            <ChevronRight size={15} className="profile-menu-arrow" />
                           </div>
                         )}
 
-                        <div
-                          className="flex items-center gap-3 cursor-pointer"
-                          onClick={() => { setIsProfileMenuOpen(false); go("/profile"); }}
-                          style={{ padding: '10px 16px', fontSize: '14px', color: 'var(--text-main)', transition: 'background 0.2s' }}
-                          onMouseOver={e => e.currentTarget.style.background = 'var(--bg-app)'}
-                          onMouseOut={e => e.currentTarget.style.background = 'transparent'}
-                        >
-                          <User size={16} className="text-muted" /> Patient Profile
+                        <div className="profile-menu-list">
+                          {[
+                            { label: 'Patient Profile', icon: User, path: '/profile' },
+                            { label: 'Notifications', icon: Bell, path: '/notifications' },
+                            { label: 'My Appointments', icon: CalendarCheck, path: '/my-appointments' },
+                            { label: 'My Orders', icon: ShoppingBag, path: '/orders' },
+                          ].map(({ label, icon: Icon, path }) => (
+                            <div
+                              key={path}
+                              className="profile-menu-item"
+                              onClick={() => { setIsProfileMenuOpen(false); go(path); }}
+                            >
+                              <span className="profile-menu-icon">
+                                <Icon size={16} />
+                              </span>
+                              <span className="profile-menu-label">{label}</span>
+                              <ChevronRight size={15} className="profile-menu-arrow" />
+                            </div>
+                          ))}
                         </div>
 
-                        <div
-                          className="flex items-center gap-3 cursor-pointer"
-                          onClick={() => { setIsProfileMenuOpen(false); go("/notifications"); }}
-                          style={{ padding: '10px 16px', fontSize: '14px', color: 'var(--text-main)', transition: 'background 0.2s' }}
-                          onMouseOver={e => e.currentTarget.style.background = 'var(--bg-app)'}
-                          onMouseOut={e => e.currentTarget.style.background = 'transparent'}
-                        >
-                          <Bell size={16} className="text-muted" /> Notifications
-                        </div>
-
-                        <div
-                          className="flex items-center gap-3 cursor-pointer"
-                          onClick={() => { setIsProfileMenuOpen(false); go("/my-appointments"); }}
-                          style={{ padding: '10px 16px', fontSize: '14px', color: 'var(--text-main)', transition: 'background 0.2s' }}
-                          onMouseOver={e => e.currentTarget.style.background = 'var(--bg-app)'}
-                          onMouseOut={e => e.currentTarget.style.background = 'transparent'}
-                        >
-                          <User size={16} className="text-muted" /> My Appointments
-                        </div>
-
-                        {/* <div
-                      className="flex items-center gap-3 cursor-pointer"
-                      onClick={() => { setIsProfileMenuOpen(false); go("/prescriptions"); }}
-                      style={{ padding: '10px 16px', fontSize: '14px', color: 'var(--text-main)', transition: 'background 0.2s' }}
-                      onMouseOver={e => e.currentTarget.style.background = 'var(--bg-app)'}
-                      onMouseOut={e => e.currentTarget.style.background = 'transparent'}
-                    >
-                      <User size={16} className="text-muted" /> My Prescriptions
-                    </div> */}
-
-                        <div
-                          className="flex items-center gap-3 cursor-pointer"
-                          onClick={() => { setIsProfileMenuOpen(false); go("/orders"); }}
-                          style={{ padding: '10px 16px', fontSize: '14px', color: 'var(--text-main)', transition: 'background 0.2s' }}
-                          onMouseOver={e => e.currentTarget.style.background = 'var(--bg-app)'}
-                          onMouseOut={e => e.currentTarget.style.background = 'transparent'}
-                        >
-                          <User size={16} className="text-muted" /> My Orders
-                        </div>
-
-                        {/* <div
-                      className="flex items-center gap-3 cursor-pointer"
-                      onClick={() => { setIsProfileMenuOpen(false); go("/payments"); }}
-                      style={{ padding: '10px 16px', fontSize: '14px', color: 'var(--text-main)', transition: 'background 0.2s' }}
-                      onMouseOver={e => e.currentTarget.style.background = 'var(--bg-app)'}
-                      onMouseOut={e => e.currentTarget.style.background = 'transparent'}
-                    >
-                      <User size={16} className="text-muted" /> Payments & Invoices
-                    </div> */}
-
-                        {/* <div
-                      className="flex items-center gap-3 cursor-pointer"
-                      onClick={() => { setIsProfileMenuOpen(false); go("/settings"); }}
-                      style={{ padding: '10px 16px', fontSize: '14px', color: 'var(--text-main)', transition: 'background 0.2s' }}
-                      onMouseOver={e => e.currentTarget.style.background = 'var(--bg-app)'}
-                      onMouseOut={e => e.currentTarget.style.background = 'transparent'}
-                    >
-                      <Settings size={16} className="text-muted" /> App Settings
-                    </div> */}
-
-                        <div
-                          className="flex items-center gap-3 cursor-pointer"
-                          onClick={() => {
-                            setIsProfileMenuOpen(false);
-                            logout();
-                            go("/");
-                          }}
-                          style={{ padding: '10px 16px', fontSize: '14px', color: 'var(--error, #e53e3e)', transition: 'background 0.2s' }}
-                          onMouseOver={e => e.currentTarget.style.background = 'var(--bg-app)'}
-                          onMouseOut={e => e.currentTarget.style.background = 'transparent'}
-                        >
-                          <LogOut size={16} /> Logout
+                        <div className="profile-menu-footer">
+                          <div
+                            className="profile-menu-item profile-menu-logout"
+                            onClick={() => {
+                              setIsProfileMenuOpen(false);
+                              logout();
+                              go("/");
+                            }}
+                          >
+                            <span className="profile-menu-icon">
+                              <LogOut size={16} />
+                            </span>
+                            <span className="profile-menu-label">Logout</span>
+                          </div>
                         </div>
                       </>
                     )}
@@ -2091,7 +1993,7 @@ export default function Header() {
             max-width: 100% !important;
           }
           .header-user-chevron {
-            display: block !important;
+            display: flex !important;
           }
         }
         @media (max-width: 520px) {
@@ -2182,7 +2084,7 @@ export default function Header() {
             display: none !important;
           }
           .header-user-chevron {
-            display: block !important;
+            display: flex !important;
             width: 13px !important;
             height: 13px !important;
             margin-left: 1px !important;
