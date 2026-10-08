@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback } from "rea
 import * as authService from "../services/authService";
 import { getPatients } from "../services/dataService";
 import Toast from "../components/common/Toast";
+import { removeFcmToken } from "../services/firebase";
 
 function setCookie(name, value, days = 365) {
   if (typeof document === "undefined" || !value) return;
@@ -55,8 +56,9 @@ export function AuthProvider({ children }) {
   });
 
 
-  const showToast = useCallback((message, type = "success") => {
-    setToast({ isOpen: true, message, type });
+  // options: { title, duration } - title renders bold above the message
+  const showToast = useCallback((message, type = "success", options = {}) => {
+    setToast({ id: Date.now(), isOpen: true, message, type, title: options.title, duration: options.duration });
   }, []);
 
   async function fetchUserProfile(currentUser) {
@@ -240,6 +242,7 @@ export function AuthProvider({ children }) {
     } catch (e) {
       console.error("Logout API error:", e);
     } finally {
+      removeFcmToken();
       localStorage.removeItem("token");
       localStorage.removeItem("arvaya_token");
       localStorage.removeItem("arvaya_user");
@@ -319,8 +322,11 @@ export function AuthProvider({ children }) {
     }}>
       {children}
       <Toast
+        key={toast.id}
         isOpen={toast.isOpen}
+        title={toast.title}
         message={toast.message}
+        duration={toast.duration}
         type={toast.type}
         onClose={() => setToast((prev) => ({ ...prev, isOpen: false }))}
       />

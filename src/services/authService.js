@@ -1,5 +1,6 @@
 import { api } from "./api";
 import { checkOtpResponse } from "./abhaService";
+import { ensureFcmToken, getStoredFcmToken } from "./firebase";
 
 const USE_MOCK = false; // Set to false for real API calls
 
@@ -29,8 +30,9 @@ export function getCookie(name) {
   return "";
 }
 
+// cloud_id carries the Firebase Cloud Messaging token used for push notifications
 export function getCloudId() {
-  return getCookie("cloudID") || getCookie("CLOUD_ID") || getCookie("cloud_id") || "";
+  return getStoredFcmToken() || getCookie("cloudID") || getCookie("CLOUD_ID") || getCookie("cloud_id") || "";
 }
 
 export function getDeviceId() {
@@ -103,6 +105,7 @@ export async function verifyOtp(otp, mobile, options = {}) {
     };
   }
   const clientId = typeof options === "string" ? options : options?.clientId;
+  await ensureFcmToken();
   const cloudId = options?.cloudId || options?.cloud_id || getCloudId();
   const referredByCode = options?.referredByCode || options?.referred_by_code || getReferredByCode();
 

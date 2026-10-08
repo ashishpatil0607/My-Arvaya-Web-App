@@ -312,9 +312,137 @@ export default function AllLabTests() {
       {/* Styles */}
       <style>{`
         .all-tests-hero {
+          position: relative;
+          overflow: hidden;
+          background: linear-gradient(90deg, #effaf7 0%, #e3f7f2 50%, #ccf4eb 100%);
+          border-bottom: 1px solid rgba(20, 184, 166, 0.16);
+          padding: 16px 0 18px 0;
+        }
+        .all-tests-hero-wave {
+          position: absolute;
+          right: 0;
+          top: 0;
+          width: 55%;
+          height: 100%;
+          pointer-events: none;
+        }
+        .all-tests-hero-inner {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 24px;
+        }
+        .all-tests-hero-content {
+          max-width: 680px;
+          min-width: 0;
+        }
+        .all-tests-hero-breadcrumb {
+          display: flex;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 8px;
+          font-size: 12.5px;
+          font-weight: 500;
+          color: #55738d;
+          margin-bottom: 4px;
+        }
+        .all-tests-breadcrumb-link {
+          color: #55738d;
+          text-decoration: none;
+          transition: color 0.2s ease;
+        }
+        .all-tests-breadcrumb-link:hover {
+          color: #0b2545;
+        }
+        .all-tests-breadcrumb-sep {
+          color: #7a94a9;
+          flex-shrink: 0;
+        }
+        .all-tests-hero-title-row {
+          display: flex;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 10px;
+        }
+        .all-tests-hero-title {
+          font-size: 22px;
+          font-weight: 800;
+          color: #0b2545;
+          margin: 0;
+          letter-spacing: -0.02em;
+          line-height: 1.2;
+        }
+        .all-tests-hero-chip {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 3px 10px;
+          border-radius: 999px;
+          background: rgba(255, 255, 255, 0.75);
+          border: 1px solid rgba(13, 148, 136, 0.2);
+          color: #0d9488;
+          font-size: 12.5px;
+          font-weight: 700;
+        }
+        .all-tests-hero-desc {
+          font-size: 13.5px;
+          color: #55738d;
+          margin: 2px 0 0 0;
+          line-height: 1.5;
+        }
+        .all-tests-hero-side {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          flex-shrink: 0;
+        }
+        .all-tests-back-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 6px 14px;
+          border-radius: 999px;
+          background: rgba(255, 255, 255, 0.8);
+          border: 1px solid rgba(13, 148, 136, 0.25);
+          color: #0d9488;
+          font-size: 12.5px;
+          font-weight: 700;
+          cursor: pointer;
+          transition: background 0.2s ease, border-color 0.2s ease;
+        }
+        .all-tests-back-btn:hover {
           background: #ffffff;
-          border-bottom: 1px solid var(--border);
-          padding: 24px 0 28px 0;
+          border-color: rgba(13, 148, 136, 0.45);
+        }
+        .all-tests-hero-graphic {
+          display: flex;
+        }
+        .all-tests-hero-svg {
+          width: 64px;
+          height: 64px;
+          filter: drop-shadow(0 6px 14px rgba(13, 148, 136, 0.12));
+        }
+        @media (max-width: 640px) {
+          .all-tests-hero-title {
+            font-size: 19px;
+          }
+          .all-tests-hero-desc {
+            font-size: 12.5px;
+          }
+          .all-tests-hero-svg {
+            width: 52px;
+            height: 52px;
+          }
+          .all-tests-hero-graphic {
+            display: none;
+          }
+        }
+        @media (max-width: 520px) {
+          .all-tests-hero-inner {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 10px;
+          }
         }
 
         .all-tests-card {
@@ -640,7 +768,7 @@ export default function AllLabTests() {
 
         @media (max-width: 768px) {
           .all-tests-hero {
-            padding: 16px 0 20px 0;
+            padding: 12px 0 14px 0;
           }
           .all-tests-grid {
             grid-template-columns: repeat(2, 1fr);
@@ -700,42 +828,67 @@ export default function AllLabTests() {
 
       {/* Hero / Header Section */}
       <div className="all-tests-hero">
-        <div className="container">
-          
-          {/* Top Breadcrumb & Back */}
-          <div className="flex items-center justify-between mb-4" style={{ flexWrap: 'wrap', gap: '12px' }}>
-            <div className="app-breadcrumbs">
-              <Link to="/">Home</Link> 
-              <ChevronRight size={12} /> 
-              <Link to="/labs">Lab Tests</Link> 
-              <ChevronRight size={12} /> 
-              <span>All Lab Tests</span>
+        <svg className="all-tests-hero-wave" viewBox="0 0 500 150" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M0,40 C150,90 320,10 500,45 L500,0 L0,0 Z" fill="rgba(255, 255, 255, 0.42)" />
+        </svg>
+
+        <div className="container" style={{ position: 'relative', zIndex: 1 }}>
+          <div className="all-tests-hero-inner">
+            <div className="all-tests-hero-content">
+              <nav aria-label="Breadcrumb" className="all-tests-hero-breadcrumb">
+                <Link to="/" className="all-tests-breadcrumb-link">Home</Link>
+                <ChevronRight size={13} className="all-tests-breadcrumb-sep" />
+                <Link to="/labs" className="all-tests-breadcrumb-link">Lab Tests</Link>
+                <ChevronRight size={13} className="all-tests-breadcrumb-sep" />
+                <span>All Lab Tests</span>
+              </nav>
+
+              <div className="all-tests-hero-title-row">
+                <h1 className="all-tests-hero-title">All Diagnostic Lab Tests</h1>
+                {!loading && filteredTests.length > 0 && (
+                  <span className="all-tests-hero-chip">
+                    <FlaskConical size={13} /> {filteredTests.length} {filteredTests.length === 1 ? "test" : "tests"}
+                  </span>
+                )}
+              </div>
+              <p className="all-tests-hero-desc">
+                NABL & ISO certified diagnostic lab tests with doorstep phlebotomist collection.
+              </p>
             </div>
 
-            <button 
-              onClick={() => go('/labs')}
-              className="btn btn-secondary flex items-center gap-2"
-              style={{ fontSize: '13px', fontWeight: '700', padding: '6px 14px', borderRadius: '20px' }}
-            >
-              <ArrowLeft size={15} /> Back to Lab Tests
-            </button>
+            <div className="all-tests-hero-side">
+              <button
+                onClick={() => go('/labs')}
+                className="all-tests-back-btn"
+              >
+                <ArrowLeft size={14} /> Back to Lab Tests
+              </button>
+              <div className="all-tests-hero-graphic" aria-hidden="true">
+                <svg className="all-tests-hero-svg" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  {/* Sparkles */}
+                  <path d="M107 19C107 23.2 109.8 26 114 26C109.8 26 107 28.8 107 33C107 28.8 104.2 26 100 26C104.2 26 107 23.2 107 19Z" fill="#14b8a6" />
+                  <path d="M13 46C13 49.5 15.5 52 19 52C15.5 52 13 54.5 13 58C13 54.5 10.5 52 7 52C10.5 52 13 49.5 13 46Z" fill="#14b8a6" />
+                  <circle cx="16" cy="74" r="2" fill="#2dd4bf" />
+                  <circle cx="112" cy="45" r="1.5" fill="#2dd4bf" />
+
+                  {/* Test tubes */}
+                  <g transform="rotate(-12 44 64)">
+                    <rect x="34" y="26" width="20" height="70" rx="10" fill="#ffffff" stroke="#0d9488" strokeWidth="3.2" />
+                    <path d="M37 62H51V86C51 90 48 93 44 93C40 93 37 90 37 86V62Z" fill="#99f6e4" />
+                    <path d="M29 26H59" stroke="#0d9488" strokeWidth="3.2" strokeLinecap="round" />
+                  </g>
+                  <g transform="rotate(14 78 68)">
+                    <rect x="68" y="30" width="20" height="70" rx="10" fill="#ffffff" stroke="#0d9488" strokeWidth="3.2" />
+                    <path d="M71 58H85V90C85 94 82 97 78 97C74 97 71 94 71 90V58Z" fill="#2dd4bf" />
+                    <path d="M63 30H93" stroke="#0d9488" strokeWidth="3.2" strokeLinecap="round" />
+                  </g>
+                </svg>
+              </div>
+            </div>
           </div>
 
-          <h1 style={{ 
-            fontFamily: "'Plus Jakarta Sans', var(--font-sans)", 
-            fontWeight: 800, 
-            fontSize: '24px', 
-            color: '#12333A', 
-            margin: '0 0 6px 0' 
-          }}>
-            All Diagnostic Lab Tests
-          </h1>
-          <p style={{ fontSize: '14px', color: 'var(--text-muted)', margin: '0 0 20px 0' }}>
-            Showing NABL & ISO certified individual diagnostic lab tests with doorstep phlebotomist collection.
-          </p>
-
           {/* Search Bar & Profile Filters */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginTop: '14px' }}>
             <div style={{ 
               background: '#ffffff', 
               border: '1.5px solid var(--border)', 

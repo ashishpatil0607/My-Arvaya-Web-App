@@ -120,10 +120,133 @@ export default function AllHealthPackages() {
       
       {/* Styles */}
       <style>{`
-        .all-pkg-hero {
+        .pkg-hero-banner {
+          position: relative;
+          overflow: hidden;
+          background: linear-gradient(90deg, #effaf7 0%, #e3f7f2 50%, #ccf4eb 100%);
+          border-bottom: 1px solid rgba(20, 184, 166, 0.16);
+          padding: 16px 0;
+        }
+        .pkg-hero-wave {
+          position: absolute;
+          right: 0;
+          top: 0;
+          width: 55%;
+          height: 100%;
+          pointer-events: none;
+        }
+        .pkg-hero-inner {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 24px;
+          position: relative;
+          z-index: 1;
+        }
+        .pkg-hero-content {
+          max-width: 760px;
+        }
+        .pkg-hero-breadcrumb {
+          display: flex;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 8px;
+          font-size: 12.5px;
+          font-weight: 500;
+          color: #55738d;
+          margin-bottom: 4px;
+        }
+        .pkg-breadcrumb-link {
+          color: #55738d;
+          text-decoration: none;
+          transition: color 0.2s ease;
+        }
+        .pkg-breadcrumb-link:hover {
+          color: #0b2545;
+        }
+        .pkg-breadcrumb-sep {
+          color: #7a94a9;
+          flex-shrink: 0;
+        }
+        .pkg-hero-title-row {
+          display: flex;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 10px;
+        }
+        .pkg-hero-title {
+          font-size: 22px;
+          font-weight: 800;
+          color: #0b2545;
+          margin: 0;
+          letter-spacing: -0.02em;
+          line-height: 1.2;
+        }
+        .pkg-hero-chip {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 3px 10px;
+          border-radius: 999px;
+          background: rgba(255, 255, 255, 0.75);
+          border: 1px solid rgba(13, 148, 136, 0.2);
+          color: #0d9488;
+          font-size: 12.5px;
+          font-weight: 700;
+        }
+        .pkg-hero-desc {
+          font-size: 13.5px;
+          color: #55738d;
+          margin: 2px 0 0 0;
+          line-height: 1.5;
+        }
+        .pkg-hero-side {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          flex-shrink: 0;
+        }
+        .pkg-back-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 6px 14px;
+          border-radius: 999px;
+          background: rgba(255, 255, 255, 0.8);
+          border: 1px solid rgba(13, 148, 136, 0.25);
+          color: #0d9488;
+          font-size: 12.5px;
+          font-weight: 700;
+          cursor: pointer;
+          transition: background 0.2s ease, border-color 0.2s ease;
+        }
+        .pkg-back-btn:hover {
           background: #ffffff;
-          border-bottom: 1px solid var(--border);
-          padding: 24px 0 28px 0;
+          border-color: rgba(13, 148, 136, 0.45);
+        }
+        .pkg-hero-graphic {
+          display: flex;
+        }
+        .pkg-hero-svg {
+          width: 64px;
+          height: 64px;
+          filter: drop-shadow(0 6px 14px rgba(13, 148, 136, 0.12));
+        }
+        @media (max-width: 768px) {
+          .pkg-hero-banner { padding: 12px 0 14px 0; }
+        }
+        @media (max-width: 640px) {
+          .pkg-hero-title { font-size: 19px; }
+          .pkg-hero-desc { font-size: 12.5px; }
+          .pkg-hero-svg { width: 52px; height: 52px; }
+          .pkg-hero-graphic { display: none; }
+        }
+        @media (max-width: 520px) {
+          .pkg-hero-inner {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 10px;
+          }
         }
 
         .all-pkg-grid {
@@ -331,43 +454,11 @@ export default function AllHealthPackages() {
           transform: translateX(3px);
         }
 
-        /* Price beside "View Details" (same as Home / Labs) */
-        .all-pkg-card-footer {
-          gap: 10px;
-        }
-
-        .all-pkg-card-starting {
-          display: flex;
-          flex: 1;
-          flex-direction: column;
-          gap: 2px;
-          margin-right: auto;
-          min-width: 0;
-          line-height: 1.1;
-          text-align: left;
-        }
-
-        .all-pkg-card-starting small {
-          color: var(--text-muted);
-          font-size: 10px;
-          font-weight: 600;
-          letter-spacing: 0.04em;
-          text-transform: uppercase;
-        }
-
-        .all-pkg-card-starting strong {
-          color: #12333a;
-          font-family: var(--font-display);
-          font-size: 17px;
-          font-weight: 800;
-          letter-spacing: -0.02em;
-          white-space: nowrap;
-        }
-
+        /* No price shown — "View Details" spans the full card width */
         .all-pkg-card-footer .all-pkg-card-btn {
-          width: auto;
-          flex-shrink: 0;
-          padding: 9px 14px;
+          width: 100%;
+          padding: 11px 14px;
+          font-size: 13px;
         }
 
         @media (prefers-reduced-motion: reduce) {
@@ -405,102 +496,120 @@ export default function AllHealthPackages() {
         }
       `}</style>
 
-      {/* Hero Header */}
-      <div className="all-pkg-hero">
-        <div className="container">
-          
-          {/* Top Breadcrumb & Back */}
-          <div className="flex items-center justify-between mb-4" style={{ flexWrap: 'wrap', gap: '12px' }}>
-            <div className="app-breadcrumbs">
-              <Link to="/">Home</Link> 
-              <ChevronRight size={12} /> 
-              <Link to="/labs">Lab Tests</Link> 
-              <ChevronRight size={12} /> 
-              <span>All Health Packages</span>
+      {/* ── Internal Hero Banner ── */}
+      <div className="pkg-hero-banner">
+        <svg className="pkg-hero-wave" viewBox="0 0 500 150" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M0,40 C150,90 320,10 500,45 L500,0 L0,0 Z" fill="rgba(255, 255, 255, 0.42)" />
+        </svg>
+
+        <div className="container" style={{ position: 'relative', zIndex: 1 }}>
+          <div className="pkg-hero-inner">
+            <div className="pkg-hero-content">
+              <nav aria-label="Breadcrumb" className="pkg-hero-breadcrumb">
+                <Link to="/" className="pkg-breadcrumb-link">Home</Link>
+                <ChevronRight size={13} className="pkg-breadcrumb-sep" />
+                <Link to="/labs" className="pkg-breadcrumb-link">Lab Tests</Link>
+                <ChevronRight size={13} className="pkg-breadcrumb-sep" />
+                <span>All Health Packages</span>
+              </nav>
+
+              <div className="pkg-hero-title-row">
+                <h1 className="pkg-hero-title">All Health Checkup Packages</h1>
+                {!loading && packages.length > 0 && (
+                  <span className="pkg-hero-chip">
+                    <FlaskConical size={13} /> {packages.length} {packages.length === 1 ? "package" : "packages"}
+                  </span>
+                )}
+              </div>
+              <p className="pkg-hero-desc">Book full body health screening & specialized diagnostic checkups with doctor consultation.</p>
             </div>
 
-            <button 
-              onClick={() => go('/labs')}
-              className="btn btn-secondary flex items-center gap-2"
-              style={{ fontSize: '13px', fontWeight: '700', padding: '6px 14px', borderRadius: '20px' }}
-            >
-              <ArrowLeft size={15} /> Back to Lab Tests
-            </button>
-          </div>
-
-          <h1 style={{ 
-            fontFamily: "'Plus Jakarta Sans', var(--font-sans)", 
-            fontWeight: 800, 
-            fontSize: '24px', 
-            color: '#12333A', 
-            margin: '0 0 6px 0' 
-          }}>
-            All Health Checkup Packages
-          </h1>
-          <p style={{ fontSize: '14px', color: 'var(--text-muted)', margin: '0 0 20px 0' }}>
-            Book full body health screening & specialized diagnostic checkups with doctor consultation.
-          </p>
-
-          {/* Search Bar & Category Filters */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <div style={{ 
-              background: '#ffffff', 
-              border: '1.5px solid var(--border)', 
-              borderRadius: '16px', 
-              padding: '6px 16px', 
-              display: 'flex', 
-              alignItems: 'center', 
-              boxShadow: '0 2px 10px rgba(0,0,0,0.03)'
-            }}>
-              <Search size={20} color="var(--text-muted)" style={{ marginRight: '12px', flexShrink: 0 }} />
-              <form 
-                onSubmit={(e) => { 
-                  e.preventDefault(); 
-                  fetchPackagesFromApi(q.trim()); 
-                }} 
-                style={{ flex: 1, display: 'flex', alignItems: 'center' }}
+            <div className="pkg-hero-side">
+              <button
+                onClick={() => go('/labs')}
+                className="pkg-back-btn"
               >
-                <input
-                  placeholder="Search health packages (e.g. Ortho, Diabetes, Cardiac, Senior)..."
-                  value={q}
-                  onChange={(e) => setQ(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      fetchPackagesFromApi(q.trim());
-                    }
-                  }}
-                  style={{ 
-                    border: 'none', 
-                    background: 'transparent', 
-                    outline: 'none', 
-                    width: '100%', 
-                    fontSize: '14.5px', 
-                    color: 'var(--text-main)', 
-                    padding: '10px 0',
-                    fontWeight: '500'
-                  }}
-                />
-              </form>
-              {q && (
-                <button 
-                  onClick={() => {
-                    setQ("");
-                    fetchPackagesFromApi("");
-                  }} 
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
-                >
-                  <X size={18} />
-                </button>
-              )}
+                <ArrowLeft size={14} /> Back to Lab Tests
+              </button>
+              <div className="pkg-hero-graphic" aria-hidden="true">
+                <svg className="pkg-hero-svg" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  {/* Sparkles */}
+                  <path d="M107 19C107 23.2 109.8 26 114 26C109.8 26 107 28.8 107 33C107 28.8 104.2 26 100 26C104.2 26 107 23.2 107 19Z" fill="#14b8a6" />
+                  <path d="M13 46C13 49.5 15.5 52 19 52C15.5 52 13 54.5 13 58C13 54.5 10.5 52 7 52C10.5 52 13 49.5 13 46Z" fill="#14b8a6" />
+                  <circle cx="16" cy="74" r="2" fill="#2dd4bf" />
+                  <circle cx="112" cy="45" r="1.5" fill="#2dd4bf" />
+
+                  {/* Shield with medical cross */}
+                  <path d="M60 16L92 28V56C92 77 78 94 60 102C42 94 28 77 28 56V28L60 16Z" fill="#ffffff" stroke="#0d9488" strokeWidth="3.2" strokeLinejoin="round" />
+                  <path d="M60 26L84 35V56C84 72 74 85 60 92" stroke="#99f6e4" strokeWidth="3" strokeLinecap="round" />
+                  <rect x="54" y="42" width="12" height="32" rx="3" fill="#2dd4bf" />
+                  <rect x="44" y="52" width="32" height="12" rx="3" fill="#2dd4bf" />
+
+                  {/* Pulse line */}
+                  <path d="M8 96H34L40 86L48 104L54 96H66" stroke="#0d9488" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
             </div>
           </div>
 
+          {/* Search Bar */}
+          <div style={{
+            background: '#ffffff',
+            border: '1.5px solid var(--border)',
+            borderRadius: '16px',
+            padding: '6px 16px',
+            display: 'flex',
+            alignItems: 'center',
+            boxShadow: '0 2px 10px rgba(0,0,0,0.03)',
+            marginTop: '14px'
+          }}>
+            <Search size={20} color="var(--text-muted)" style={{ marginRight: '12px', flexShrink: 0 }} />
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                fetchPackagesFromApi(q.trim());
+              }}
+              style={{ flex: 1, display: 'flex', alignItems: 'center' }}
+            >
+              <input
+                placeholder="Search health packages (e.g. Ortho, Diabetes, Cardiac, Senior)..."
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    fetchPackagesFromApi(q.trim());
+                  }
+                }}
+                style={{
+                  border: 'none',
+                  background: 'transparent',
+                  outline: 'none',
+                  width: '100%',
+                  fontSize: '14.5px',
+                  color: 'var(--text-main)',
+                  padding: '10px 0',
+                  fontWeight: '500'
+                }}
+              />
+            </form>
+            {q && (
+              <button
+                onClick={() => {
+                  setQ("");
+                  fetchPackagesFromApi("");
+                }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
+              >
+                <X size={18} />
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Main Grid Content */}
-      <div className="container" style={{ padding: '32px 16px 64px 16px' }}>
+      <div className="container" style={{ padding: '24px 16px 64px 16px' }}>
 
         {/* Results Bar */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
@@ -541,10 +650,6 @@ export default function AllHealthPackages() {
                     <ShieldCheck size={12} /> {pkg.tests}
                   </div>
                   <div className="all-pkg-card-footer">
-                    <div className="all-pkg-card-starting">
-                      <small>Starting at</small>
-                      <strong>₹{Number(pkg.price).toLocaleString('en-IN')}</strong>
-                    </div>
                     <button className="all-pkg-card-btn" onClick={() => go(`/labs/package-details/${encodeURIComponent(pkg.id)}`, { state: { package: pkg } })}>
                       View Details <ArrowRight size={14} />
                     </button>
