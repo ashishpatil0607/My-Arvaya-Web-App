@@ -254,13 +254,6 @@ export default function Confirmed() {
             Your {bookingType === 'lab' ? (isCenterVisit ? "diagnostic center visit" : "sample collection") : "appointment"} has<br /><span className="cf-hl">been confirmed!</span>
           </h1>
 
-          <div className="cf-ticket">
-            <span className="cf-ticket-label">Booking ID</span>
-            <b className="cf-ticket-code">
-              {bookingId || "APMNT12345678"}
-            </b>
-          </div>
-
           <div className="cf-details">
             <div style={{ display: "flex", gap: "16px", marginBottom: "14px", paddingBottom: "14px", borderBottom: "1px dashed var(--border)" }}>
               {bookingType === 'lab' && labPackage ? (

@@ -16,6 +16,27 @@ function formatGender(g) {
   return g;
 }
 
+const TITLES = ["Mr", "Mrs", "Ms", "Miss", "Baby", "Dr"];
+const TITLE_PREFIX_RE = new RegExp(`^(${TITLES.join("|")})\\.?\\s+`, "i");
+
+// Remove a leading title (e.g. "Mr Snehal" -> "Snehal") so it isn't shown or saved twice
+function stripTitle(name) {
+  return String(name || "").trim().replace(TITLE_PREFIX_RE, "");
+}
+
+// API sometimes sends title inside name ("Miss Shraddha") with title: "" — split it out
+function splitTitle(name, title) {
+  const raw = String(name || "").trim();
+  const match = raw.match(TITLE_PREFIX_RE);
+  const detected = match ? TITLES.find(t => t.toLowerCase() === match[1].toLowerCase()) : "";
+  return { title: title || detected || "", name: raw.replace(TITLE_PREFIX_RE, "") };
+}
+
+function withTitle(title, name) {
+  const bare = stripTitle(name);
+  return title ? `${title} ${bare}` : bare;
+}
+
 function getLocationLabel(loc) {
   if (!loc) return "Select Location";
   return [loc.alt_name, loc.area, loc.street, loc.landmark, loc.zip, loc.city, loc.state]
@@ -159,8 +180,9 @@ export default function Profile() {
     height: "",
     profileImage: "",
     imageFile: null,
-     abhaNumber: "",
-    app_user_id:"",
+    abhaNumber: "",
+    app_user_id: "",
+    primary_account_id: "",
     entitylocation: "",
     title: ""
   });
@@ -168,27 +190,27 @@ export default function Profile() {
   const [locations, setLocations] = useState([]);
   const [locationDropdownOpen, setLocationDropdownOpen] = useState(false);
   const locationDropdownRef = useRef(null);
-  
+
   const [profile, setProfile] = useState(() => ({
-    name: (user?.name || user?.full_name || user?.fullName || "").replace(/\.\./g, "."),
+    ...splitTitle((user?.name || user?.full_name || user?.fullName || "").replace(/\.\./g, "."), user?.title),
     phone: user?.phone || user?.mobile_number || user?.mobile || "",
     email: (user?.email && user.email !== "john.doe@example.com") ? user.email : "",
     dob: user?.date_of_birth || user?.dob || "",
     gender: formatGender(user?.gender),
     patientId: user?.patientId || user?.user_id || user?.id || `ARV-${Math.floor(1000 + Math.random() * 9000)}`,
     uhid: user?.external_id || "",
-    
+
     bloodGroup: user?.blood_group || user?.bloodGroup || "O+",
     height: (user?.height && String(user.height) !== "175") ? String(user.height) : "",
     weight: (user?.weight && String(user.weight) !== "72") ? String(user.weight) : "",
     allergies: user?.allergies || "",
     chronicDiseases: user?.chronicDiseases || "",
     medications: user?.medications || "",
-    
+
     insuranceProvider: user?.insuranceProvider || "",
     policyNumber: user?.policyNumber || "",
     validity: user?.validity || "",
-    
+
     emergencyName: user?.emergencyName || "",
     emergencyRelation: user?.emergencyRelation || "",
     emergencyPhone: user?.emergencyPhone || ""
@@ -255,6 +277,7 @@ export default function Profile() {
       imageFile: null,
       abhaNumber: member.abhaNumber || "",
       app_user_id: member.app_user_id || "",
+      primary_account_id: member.primary_account_id || "",
       entitylocation: member.entitylocation || member.entity_location || "",
       title: member.title || ""
     });
@@ -275,7 +298,7 @@ export default function Profile() {
       };
 
       const res = await getFamilyDetails(payload);
-      
+
       let list = Array.isArray(res) ? res : res?.data || res?.list || res?.familyDetails || res?.result || [];
       if (Array.isArray(list)) {
         const mapped = list.map((item, idx) => {
@@ -292,10 +315,11 @@ export default function Profile() {
               ? rawImg
               : getImageUrl(rawImg, 'familyProfileImage');
           }
+          const { title, name } = splitTitle(item.name, item.title);
           return {
             id: item.id || item.family_detail_id || idx + 1,
             family_detail_id: item.family_detail_id || item.id,
-            name: item.name || "",
+            name,
             relation: item.relation || "",
             dob: item.dob || "",
             bloodGroup: item.blood_group || item.bloodGroup || "",
@@ -309,8 +333,9 @@ export default function Profile() {
             age: age !== undefined && age !== "" ? age : 25,
             isPrimary: !!item.isPrimary,
             app_user_id: item.app_user_id,
+            primary_account_id: item.primary_account_id ?? (item.isPrimary ? item.app_user_id : ""),
             entitylocation: item.entitylocation || item.entity_location || item.location_key || "",
-            title: item.title || ""
+            title
           };
         });
         setFamilyMembers(mapped);
@@ -383,8 +408,8 @@ export default function Profile() {
       if (editingMemberId) {
         const payload = {
           app_user_id: memberForm.app_user_id ?? appUserId,
-          primaryAccountId: memberForm.app_user_id ?? appUserId,
-          name: memberForm.name.trim(),
+          primaryAccountId: Number(memberForm.primary_account_id || memberForm.app_user_id || appUserId),
+          name: withTitle(memberForm.title, memberForm.name),
           relation: memberForm.relation,
           dob: memberForm.dob,
           blood_group: memberForm.bloodGroup,
@@ -460,7 +485,7 @@ export default function Profile() {
         try {
           const parsed = JSON.parse(storedUser);
           storedUserId = parsed?.id || parsed?.user_id || parsed?.app_user_id;
-        } catch (e) {}
+        } catch (e) { }
       }
 
       const mobile = user?.phone || user?.mobile_number || user?.mobile;
@@ -472,8 +497,8 @@ export default function Profile() {
 
       let patientData = null;
       if (Array.isArray(res) && res.length > 0) {
-        patientData = res.find(p => String(p.id || p.user_id || p.app_user_id) === String(storedUserId)) 
-          || res.find(p => (p.mobile_number || p.phone || p.mobile) === mobile) 
+        patientData = res.find(p => String(p.id || p.user_id || p.app_user_id) === String(storedUserId))
+          || res.find(p => (p.mobile_number || p.phone || p.mobile) === mobile)
           || res[0];
       } else if (res && typeof res === "object" && !Array.isArray(res) && (res.name || res.full_name || res.first_name || res.mobile_number || res.phone || res.id || res.user_id)) {
         patientData = res;
@@ -505,7 +530,7 @@ export default function Profile() {
         setProfile(prev => ({
           ...prev,
           ...patientData,
-          name: (fullName || "").replace(/\.\./g, "."),
+          ...splitTitle((fullName || "").replace(/\.\./g, "."), patientData.title || prev.title),
           phone: patientData.mobile_number || patientData.phone || patientData.mobile || patientData.mobile_no || prev.phone,
           email: cleanEmail,
           dob: patientData.date_of_birth || patientData.dob || prev.dob,
@@ -539,7 +564,7 @@ export default function Profile() {
           try {
             const parsed = JSON.parse(saved);
             defaultLoc = parsed?.entitylocation || parsed?.location_key || "";
-          } catch {}
+          } catch { }
         }
         const res = await getLocations(1, 100);
         const allLocs = res?.list || [];
@@ -623,7 +648,7 @@ export default function Profile() {
         try {
           const parsed = JSON.parse(storedUser);
           appUserId = parsed?.id || parsed?.user_id || parsed?.app_user_id;
-        } catch (err) {}
+        } catch (err) { }
       }
 
       let genderCode = profile.gender || "M";
@@ -635,7 +660,8 @@ export default function Profile() {
       const payload = {
         id: appUserId,
         app_user_id: appUserId,
-        name: profile.name,
+        title: profile.title || "",
+        name: withTitle(profile.title, profile.name),
         email: profile.email,
         mobile_number: profile.phone,
         date_of_birth: profile.dob,
@@ -664,7 +690,7 @@ export default function Profile() {
             profile_image: filenameToSend
           };
           localStorage.setItem("arvaya_user", JSON.stringify(updatedUser));
-        } catch (err) {}
+        } catch (err) { }
       }
 
       window.dispatchEvent(new Event("arvaya_profile_updated"));
@@ -684,7 +710,7 @@ export default function Profile() {
         try {
           const parsed = JSON.parse(storedUser);
           appUserId = parsed?.id || parsed?.user_id || parsed?.app_user_id;
-        } catch (e) {}
+        } catch (e) { }
       }
 
       let genderCode = profile.gender || "M";
@@ -696,7 +722,8 @@ export default function Profile() {
       const payload = {
         id: appUserId,
         app_user_id: appUserId,
-        name: profile.name,
+        title: profile.title || "",
+        name: withTitle(profile.title, profile.name),
         email: profile.email,
         mobile_number: profile.phone,
         date_of_birth: profile.dob,
@@ -720,7 +747,8 @@ export default function Profile() {
           const parsed = JSON.parse(storedUser);
           const updatedUser = {
             ...parsed,
-            name: profile.name,
+            title: profile.title || "",
+            name: withTitle(profile.title, profile.name),
             email: profile.email,
             phone: profile.phone,
             mobile_number: profile.phone,
@@ -731,7 +759,7 @@ export default function Profile() {
             profile_image: profile.profile_image || ""
           };
           localStorage.setItem("arvaya_user", JSON.stringify(updatedUser));
-        } catch (e) {}
+        } catch (e) { }
       }
 
       window.dispatchEvent(new Event("arvaya_profile_updated"));
@@ -747,7 +775,7 @@ export default function Profile() {
 
   return (
     <main id="profile-page-main" className="page animate-fade-in-up" style={{ padding: 0, background: 'var(--bg-app)' }}>
-      
+
       {/* ── Internal Hero ── */}
       <div className="profile-hero-banner">
         <svg className="profile-hero-wave" viewBox="0 0 500 150" preserveAspectRatio="none" aria-hidden="true">
@@ -796,7 +824,7 @@ export default function Profile() {
 
       <div className="container" style={{ paddingTop: '32px', paddingBottom: '60px' }}>
         <div className="profile-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 320px) 1fr', gap: '32px', alignItems: 'start' }}>
-          
+
           {/* Left Sticky Profile Card */}
           <aside className="profile-sidebar" style={{ position: 'sticky', top: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <div className="card-elevated profile-header-card" style={{ padding: '32px 24px', textAlign: 'center', borderRadius: '16px' }}>
@@ -806,17 +834,17 @@ export default function Profile() {
                 </svg>
               </div>
               <div className="profile-avatar-wrap" style={{ position: 'relative', display: 'inline-block', marginBottom: '16px' }}>
-                <div 
-                  className="animate-scale-in profile-avatar-circle" 
+                <div
+                  className="animate-scale-in profile-avatar-circle"
                   style={{ width: '100px', height: '100px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--primary), var(--primary-dark))', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '36px', fontWeight: '700', boxShadow: '0 8px 24px rgba(46,102,110,0.2)', margin: '0 auto', overflow: 'hidden', position: 'relative', cursor: 'pointer' }}
                   onClick={() => userImageInputRef.current?.click()}
                   title="Click to upload profile photo"
                 >
                   {userDisplayImage || profile.profile_image ? (
-                    <img 
-                      src={userDisplayImage || getImageUrl(profile.profile_image, 'patientProfileImage')} 
-                      alt={profile.name} 
-                      style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', top: 0, left: 0, zIndex: 1 }} 
+                    <img
+                      src={userDisplayImage || getImageUrl(profile.profile_image, 'patientProfileImage')}
+                      alt={profile.name}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', top: 0, left: 0, zIndex: 1 }}
                       onError={(e) => {
                         e.currentTarget.style.display = 'none';
                       }}
@@ -824,20 +852,20 @@ export default function Profile() {
                   ) : null}
                   {profile.name.charAt(0).toUpperCase()}
                 </div>
-                <button 
+                <button
                   onClick={() => userImageInputRef.current?.click()}
-                  className="hover-glow profile-camera-btn" 
-                  style={{ position: 'absolute', bottom: '0', right: '0', width: '36px', height: '36px', borderRadius: '50%', background: 'white', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--text-main)', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', zIndex: 2 }} 
+                  className="hover-glow profile-camera-btn"
+                  style={{ position: 'absolute', bottom: '0', right: '0', width: '36px', height: '36px', borderRadius: '50%', background: 'white', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--text-main)', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', zIndex: 2 }}
                   title="Upload Profile Image"
                 >
                   {uploadingUserImage ? <Loader2 size={16} className="animate-spin text-primary" /> : <Camera size={16} />}
                 </button>
-                <input 
-                  type="file" 
-                  ref={userImageInputRef} 
-                  accept="image/*" 
-                  onChange={handleUserProfileImageUpload} 
-                  style={{ display: 'none' }} 
+                <input
+                  type="file"
+                  ref={userImageInputRef}
+                  accept="image/*"
+                  onChange={handleUserProfileImageUpload}
+                  style={{ display: 'none' }}
                 />
               </div>
               <h2 className="profile-patient-name" style={{ fontSize: '20px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '6px' }}>{profile.name}</h2>
@@ -873,11 +901,11 @@ export default function Profile() {
                   <span className="profile-stat-icon"><Ruler size={14} /></span>
                   <div className="profile-stat-label">Height / Weight</div>
                   <div className="profile-stat-value" style={{ fontSize: '13px', whiteSpace: 'nowrap' }}>
-                    {profile.height && profile.weight 
+                    {profile.height && profile.weight
                       ? `${parseFloat(profile.height)}cm / ${parseFloat(profile.weight)}kg`
-                      : profile.height 
+                      : profile.height
                         ? `${parseFloat(profile.height)}cm`
-                        : profile.weight 
+                        : profile.weight
                           ? `${parseFloat(profile.weight)}kg`
                           : 'NA'}
                   </div>
@@ -888,7 +916,7 @@ export default function Profile() {
 
           {/* Right Main Content */}
           <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: '24px' }}>
-            
+
             {/* Horizontal Tabs */}
             <div className="card-elevated styled-scrollbar profile-tabs-bar" style={{ padding: '8px', borderRadius: '16px', display: 'flex', gap: '8px', overflowX: 'auto', whiteSpace: 'nowrap' }}>
               {[
@@ -898,7 +926,7 @@ export default function Profile() {
                 const Icon = tab.icon;
                 const isActive = activeTab === tab.id;
                 return (
-                  <button 
+                  <button
                     key={tab.id}
                     className={`profile-tab-btn${isActive ? ' profile-tab-btn--active' : ''}`}
                     onClick={() => {
@@ -917,8 +945,8 @@ export default function Profile() {
                       border: 'none', cursor: 'pointer', transition: 'all 0.2s',
                       flex: '1', justifyContent: 'center'
                     }}
-                    onMouseOver={e => { if(!isActive) e.currentTarget.style.background = 'var(--bg-app)'; }}
-                    onMouseOut={e => { if(!isActive) e.currentTarget.style.background = 'transparent'; }}
+                    onMouseOver={e => { if (!isActive) e.currentTarget.style.background = 'var(--bg-app)'; }}
+                    onMouseOut={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
                   >
                     <Icon size={16} className={isActive ? '' : 'text-muted'} />
                     <span>{tab.label}</span>
@@ -953,11 +981,24 @@ export default function Profile() {
                     </button>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                    {/* Row 1: Full Name & Email Address */}
+                    {/* Row 1: Title + Full Name & Email Address */}
                     <div className="profile-form-row-2col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                      <div className="flex flex-col gap-2">
-                        <label className="text-muted" style={{ fontSize: '13px', fontWeight: '600' }}>Full Name</label>
-                        <input name="name" value={profile.name} onChange={handleChange} readOnly={!isEditing} className="input-field" style={inputStyle} />
+                      <div style={{ display: 'grid', gridTemplateColumns: '110px 1fr', gap: '12px' }}>
+                        <div className="flex flex-col gap-2">
+                          <label className="text-muted" style={{ fontSize: '13px', fontWeight: '600' }}>Title</label>
+                          <ProfileSelect
+                            name="title"
+                            value={profile.title || ""}
+                            onChange={handleChange}
+                            disabled={!isEditing}
+                            style={inputStyle}
+                            options={[{ value: "", label: "None" }, ...TITLES.map(v => ({ value: v, label: v }))]}
+                          />
+                        </div>
+                        <div className="flex flex-col gap-2">
+                          <label className="text-muted" style={{ fontSize: '13px', fontWeight: '600' }}>Full Name</label>
+                          <input name="name" value={profile.name} onChange={handleChange} readOnly={!isEditing} className="input-field" style={inputStyle} />
+                        </div>
                       </div>
                       <div className="flex flex-col gap-2">
                         <label className="text-muted" style={{ fontSize: '13px', fontWeight: '600' }}>Email Address</label>
@@ -1035,7 +1076,7 @@ export default function Profile() {
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '24px' }}>
                     <div className="flex flex-col gap-2">
                       <label className="text-muted" style={{ fontSize: '13px', fontWeight: '600' }}>Blood Group</label>
-                      <select name="bloodGroup" value={profile.bloodGroup} onChange={handleChange} disabled={true} className="input-field" style={{...inputStyle, appearance: 'none'}}>
+                      <select name="bloodGroup" value={profile.bloodGroup} onChange={handleChange} disabled={true} className="input-field" style={{ ...inputStyle, appearance: 'none' }}>
                         <option value="A+">A+</option><option value="A-">A-</option>
                         <option value="B+">B+</option><option value="B-">B-</option>
                         <option value="O+">O+</option><option value="O-">O-</option>
@@ -1157,7 +1198,7 @@ export default function Profile() {
                             </div>
                             <div style={{ minWidth: 0 }}>
                               <div className="family-card-name-row">
-                                <h4 className="family-card-name">{member.name}</h4>
+                                <h4 className="family-card-name">{withTitle(member.title, member.name)}</h4>
                                 {member.relation && <span className="family-relation-chip">{member.relation}</span>}
                               </div>
                               <div className="family-card-meta">
@@ -1237,7 +1278,7 @@ export default function Profile() {
 
             {/* Modal Form */}
             <form onSubmit={handleSaveMember} data-select-boundary style={{ padding: '18px 20px', overflowY: 'auto', minHeight: 0 }}>
-              
+
               {/* Profile Image Field */}
               <div className="family-modal-photo">
                 <div className="family-modal-avatar">
@@ -1260,7 +1301,7 @@ export default function Profile() {
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                
+
                 {/* Row 1: Title, Name, Relation */}
                 <div className="modal-form-3col" style={{ display: 'grid', gridTemplateColumns: '1fr 2fr 2fr', gap: '12px' }}>
                   <div className="flex flex-col family-modal-field">
@@ -1270,7 +1311,7 @@ export default function Profile() {
                       name="title"
                       value={memberForm.title}
                       onChange={handleMemberFormChange}
-                      options={[{ value: "", label: "None" }, ...["Mr", "Mrs", "Ms", "Miss", "Baby", "Dr"].map(v => ({ value: v, label: v }))]}
+                      options={[{ value: "", label: "None" }, ...TITLES.map(v => ({ value: v, label: v }))]}
                     />
                   </div>
 
@@ -1319,66 +1360,66 @@ export default function Profile() {
                       options={[{ value: "", label: "None" }, ...["B+", "A+", "O+", "AB+", "A-", "B-", "O-", "AB-"].map(v => ({ value: v, label: v }))]}
                     />
                   </div>
-                 </div>
+                </div>
 
-                  {/* Row 5: Entity Location */}
-                  <div className="flex flex-col family-modal-field">
-                    <label className="family-modal-label">Entity Location *</label>
-                    <div ref={locationDropdownRef} style={{ position: 'relative' }}>
-                      <div
-                        onClick={() => setLocationDropdownOpen(!locationDropdownOpen)}
-                        className={`family-modal-location${locationDropdownOpen ? ' is-open' : ''}`}
-                      >
-                        <MapPin size={15} className="family-modal-location-pin" />
-                        <div style={{
-                          flex: 1, fontSize: '13px', fontWeight: '600',
-                          color: memberForm.entitylocation ? 'var(--text-main)' : '#9ca3af',
-                          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
-                        }}>
-                          {memberForm.entitylocation
-                            ? (getLocationLabel(locations.find(l => l.entitylocation === memberForm.entitylocation || String(l.id) === String(memberForm.entitylocation) || String(l.location_key) === String(memberForm.entitylocation))) || memberForm.entitylocation)
-                            : "Select Location"}
-                        </div>
-                        <ChevronDown size={15} color="#0d9488" style={{ flexShrink: 0, transition: 'transform 0.2s', transform: locationDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)' }} />
+                {/* Row 5: Entity Location */}
+                <div className="flex flex-col family-modal-field">
+                  <label className="family-modal-label">Entity Location *</label>
+                  <div ref={locationDropdownRef} style={{ position: 'relative' }}>
+                    <div
+                      onClick={() => setLocationDropdownOpen(!locationDropdownOpen)}
+                      className={`family-modal-location${locationDropdownOpen ? ' is-open' : ''}`}
+                    >
+                      <MapPin size={15} className="family-modal-location-pin" />
+                      <div style={{
+                        flex: 1, fontSize: '13px', fontWeight: '600',
+                        color: memberForm.entitylocation ? 'var(--text-main)' : '#9ca3af',
+                        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
+                      }}>
+                        {memberForm.entitylocation
+                          ? (getLocationLabel(locations.find(l => l.entitylocation === memberForm.entitylocation || String(l.id) === String(memberForm.entitylocation) || String(l.location_key) === String(memberForm.entitylocation))) || memberForm.entitylocation)
+                          : "Select Location"}
                       </div>
-
-                      {locationDropdownOpen && (
-                        <div className="family-modal-location-menu">
-                          {locations.length === 0 ? (
-                            <div style={{ padding: '12px', textAlign: 'center', fontSize: '13px', color: 'var(--text-muted)' }}>Loading locations...</div>
-                          ) : (
-                            locations.map(loc => {
-                              const isSelected = memberForm.entitylocation === loc.entitylocation;
-                              return (
-                                <button
-                                  key={loc.id}
-                                  type="button"
-                                  onClick={() => {
-                                    setMemberForm(prev => ({ ...prev, entitylocation: loc.entitylocation || "" }));
-                                    setLocationDropdownOpen(false);
-                                  }}
-                                  className={`family-modal-location-option${isSelected ? ' is-selected' : ''}`}
-                                >
-                                  <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div style={{
-                                      fontSize: '13px', fontWeight: isSelected ? '700' : '600',
-                                      color: isSelected ? '#0f766e' : 'inherit',
-                                      lineHeight: '1.4', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
-                                    }}>
-                                      {getLocationLabel(loc) || loc.entitylocation || "Location"}
-                                    </div>
-                                  </div>
-                                  {isSelected && <Check size={16} color="#0d9488" style={{ flexShrink: 0, marginTop: '2px' }} />}
-                                </button>
-                              );
-                            })
-                          )}
-                        </div>
-                      )}
+                      <ChevronDown size={15} color="#0d9488" style={{ flexShrink: 0, transition: 'transform 0.2s', transform: locationDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)' }} />
                     </div>
-                  </div>
 
-               </div>
+                    {locationDropdownOpen && (
+                      <div className="family-modal-location-menu">
+                        {locations.length === 0 ? (
+                          <div style={{ padding: '12px', textAlign: 'center', fontSize: '13px', color: 'var(--text-muted)' }}>Loading locations...</div>
+                        ) : (
+                          locations.map(loc => {
+                            const isSelected = memberForm.entitylocation === loc.entitylocation;
+                            return (
+                              <button
+                                key={loc.id}
+                                type="button"
+                                onClick={() => {
+                                  setMemberForm(prev => ({ ...prev, entitylocation: loc.entitylocation || "" }));
+                                  setLocationDropdownOpen(false);
+                                }}
+                                className={`family-modal-location-option${isSelected ? ' is-selected' : ''}`}
+                              >
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div style={{
+                                    fontSize: '13px', fontWeight: isSelected ? '700' : '600',
+                                    color: isSelected ? '#0f766e' : 'inherit',
+                                    lineHeight: '1.4', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
+                                  }}>
+                                    {getLocationLabel(loc) || loc.entitylocation || "Location"}
+                                  </div>
+                                </div>
+                                {isSelected && <Check size={16} color="#0d9488" style={{ flexShrink: 0, marginTop: '2px' }} />}
+                              </button>
+                            );
+                          })
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+              </div>
 
               {/* Form Footer Actions */}
               <div className="family-modal-footer">
@@ -1396,7 +1437,8 @@ export default function Profile() {
         document.body
       )}
 
-      <style dangerouslySetInnerHTML={{__html: `
+      <style dangerouslySetInnerHTML={{
+        __html: `
         .profile-edit-btn {
           display: inline-flex;
           align-items: center;
@@ -1960,6 +2002,8 @@ export default function Profile() {
           text-align: left;
           cursor: pointer;
           font: inherit;
+          font-size: 14px;
+          line-height: normal;
         }
         .profile-select-trigger:disabled {
           cursor: default;
@@ -2511,11 +2555,11 @@ export default function Profile() {
           }
         }
       `}} />
-      <Toast 
-        isOpen={toast.isOpen} 
-        message={toast.message} 
-        type={toast.type} 
-        onClose={() => setToast({ ...toast, isOpen: false })} 
+      <Toast
+        isOpen={toast.isOpen}
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast({ ...toast, isOpen: false })}
       />
     </main>
   );
