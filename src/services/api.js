@@ -16,7 +16,7 @@ function getToken() {
   );
 }
 
-async function request(method, path, body, customHeaders = {}) {
+async function request(method, path, body, customHeaders = {}, fetchOptions = {}) {
   const isFormData = typeof FormData !== "undefined" && body instanceof FormData;
 
   const headers = {
@@ -47,6 +47,7 @@ async function request(method, path, body, customHeaders = {}) {
   const url = isAbsolute ? path : `${cleanBase}/${cleanPath}`;
 
   const res = await fetch(url, {
+    ...fetchOptions,
     method,
     headers,
     body: isFormData ? body : (body ? (typeof body === "string" ? body : JSON.stringify(body)) : undefined),
@@ -107,7 +108,7 @@ async function request(method, path, body, customHeaders = {}) {
 
 export const api = {
   get: (path, customHeaders = {}) => request("GET", path, null, customHeaders),
-  post: (path, body, customHeaders = {}) => request("POST", path, body, customHeaders),
+  post: (path, body, customHeaders = {}, fetchOptions = {}) => request("POST", path, body, customHeaders, fetchOptions),
   put: (path, body, customHeaders = {}) => request("PUT", path, body, customHeaders),
   delete: (path, customHeaders = {}) => request("DELETE", path, null, customHeaders),
 };

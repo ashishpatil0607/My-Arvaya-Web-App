@@ -170,6 +170,11 @@ export default function ScheduleSelection() {
       return;
     }
 
+    // Start the 5-minute slot hold; BookingReview reads this expiry to show the countdown
+    try {
+      sessionStorage.setItem("arvaya_slot_hold_expiry", String(Date.now() + 5 * 60 * 1000));
+    } catch (e) {}
+
     if (!user) {
       openLoginModal("/doctors/review");
     } else {

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { 
   CheckCircle2, 
   User, 
@@ -14,14 +14,35 @@ import {
   ShieldCheck, 
   CreditCard, 
   ChevronLeft, 
-  Check 
+  Check,
+  Timer
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useBooking } from "../../context/BookingContext";
 import { useAuth } from "../../context/AuthContext";
-import { bookAppointment, getWalletAmount, checkVisitType, verifyPayment } from "../../services/dataService";
+import { bookAppointment, getWalletAmount, checkVisitType, verifyPayment, releaseSlot } from "../../services/dataService";
 import BookingLayout from "../../components/layout/BookingLayout";
 import Toast from "../../components/common/Toast";
+
+const SLOT_HOLD_KEY = "arvaya_slot_hold_expiry";
+const SLOT_HOLD_MS = 5 * 60 * 1000;
+
+function getHoldExpiry() {
+  try {
+    const saved = parseInt(sessionStorage.getItem(SLOT_HOLD_KEY), 10);
+    if (saved) return saved;
+    // No hold started (e.g. direct navigation) — start a fresh one
+    const expiry = Date.now() + SLOT_HOLD_MS;
+    sessionStorage.setItem(SLOT_HOLD_KEY, String(expiry));
+    return expiry;
+  } catch (e) {
+    return Date.now() + SLOT_HOLD_MS;
+  }
+}
+
+function clearHoldExpiry() {
+  try { sessionStorage.removeItem(SLOT_HOLD_KEY); } catch (e) {}
+}
 
 export default function BookingReview() {
   const { doctor, date, slot, setBookingId, bookingHospital, bookingSpecialty, bookingVisitType } = useBooking();
@@ -38,6 +59,11 @@ export default function BookingReview() {
   
   const [applyWallet, setApplyWallet] = useState(false);
   const [walletAppliedAmount, setWalletAppliedAmount] = useState(0);
+
+  const [holdExpiry] = useState(getHoldExpiry);
+  const [secondsLeft, setSecondsLeft] = useState(() => Math.max(0, Math.ceil((holdExpiry - Date.now()) / 1000)));
+  const holdReleasedRef = useRef(false);
+  const razorpayRef = useRef(null);
 
   useEffect(() => {
     async function loadData() {
@@ -101,6 +127,9 @@ export default function BookingReview() {
               message: "This slot is currently being booked by another user. Please try again in a few minutes or select another slot.",
               type: "error"
             });
+            // Slot is held by someone else — nothing of ours to release
+            holdReleasedRef.current = true;
+            clearHoldExpiry();
             setSlotConflict(true);
           } else {
             console.error("checkVisitType error:", err);
@@ -124,6 +153,97 @@ export default function BookingReview() {
       return () => clearTimeout(timer);
     }
   }, [slotConflict, navigate]);
+
+  // Tick the slot-hold countdown
+  useEffect(() => {
+    const id = setInterval(() => {
+      setSecondsLeft(Math.max(0, Math.ceil((holdExpiry - Date.now()) / 1000)));
+    }, 1000);
+    return () => clearInterval(id);
+  }, [holdExpiry]);
+
+  const buildReleasePayload = () => {
+    if (!user || !doctor || !date || !slot) return null;
+    const dStr = date instanceof Date
+      ? `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+      : String(date);
+    const start = (slot.includes('-') ? slot.split('-')[0] : slot).trim().replace(/\s*(AM|PM|am|pm)\s*$/i, '');
+    return {
+      patient_id: user?.id || user?.user_id || user?.patient_id,
+      drkey: doctor.id || doctor.drkey,
+      date: dStr,
+      entitylocation: doctor.locations?.[0]?.location_key || "",
+      start
+    };
+  };
+
+  // Releases the held slot once (on expiry, Back, or leaving the page)
+  const releaseHeldSlot = () => {
+    if (holdReleasedRef.current) return;
+    holdReleasedRef.current = true;
+    clearHoldExpiry();
+
+    const payload = buildReleasePayload();
+    if (payload) {
+      releaseSlot(payload).catch(err => console.error("releaseSlot error:", err));
+    }
+  };
+
+  // Always call the latest release function from effect cleanups / window listeners
+  const releaseHeldSlotRef = useRef(releaseHeldSlot);
+  releaseHeldSlotRef.current = releaseHeldSlot;
+  const buildReleasePayloadRef = useRef(buildReleasePayload);
+  buildReleasePayloadRef.current = buildReleasePayload;
+
+  // Leaving the Review page any other way (browser back, header links, etc.) releases the slot.
+  // A successful booking sets holdReleasedRef first, so going to the confirmation page does not.
+  // The deferred release ignores StrictMode's dev-only unmount/remount.
+  const pendingUnmountReleaseRef = useRef(null);
+  useEffect(() => {
+    clearTimeout(pendingUnmountReleaseRef.current);
+    return () => {
+      pendingUnmountReleaseRef.current = setTimeout(() => releaseHeldSlotRef.current(), 0);
+    };
+  }, []);
+
+  // Tab close / refresh: send the release with keepalive so it survives the page unloading.
+  // The timer is kept, so a refresh resumes the same countdown and re-holds the slot on load.
+  useEffect(() => {
+    const onPageHide = () => {
+      if (holdReleasedRef.current) return;
+      const payload = buildReleasePayloadRef.current();
+      if (payload) releaseSlot(payload, { keepalive: true }).catch(() => {});
+    };
+    window.addEventListener("pagehide", onPageHide);
+    return () => window.removeEventListener("pagehide", onPageHide);
+  }, []);
+
+  const handleBack = () => {
+    releaseHeldSlot();
+    navigate(-1);
+  };
+
+  // Hold expired: close any open payment window, release the slot and send the user back to Date & Time
+  useEffect(() => {
+    if (secondsLeft > 0 || holdReleasedRef.current) return;
+
+    if (razorpayRef.current) {
+      try { razorpayRef.current.close(); } catch (e) {}
+      razorpayRef.current = null;
+    }
+    setSubmitting(false);
+    releaseHeldSlot();
+
+    setToast({
+      isOpen: true,
+      message: "Your slot hold has expired. Please select a time slot again.",
+      type: "error"
+    });
+    const t = setTimeout(() => navigate("/doctors/schedule"), 1500);
+    return () => clearTimeout(t);
+  }, [secondsLeft, navigate]);
+
+  const holdTimeLabel = `${String(Math.floor(secondsLeft / 60)).padStart(2, '0')}:${String(secondsLeft % 60).padStart(2, '0')}`;
 
   const maxWalletApplicable = Math.min(walletBalance, consultationFee);
   
@@ -219,6 +339,8 @@ export default function BookingReview() {
         );
         setBookingId(orderRef);
         try { sessionStorage.setItem("arvaya_booking_id", orderRef); } catch(e) {}
+        holdReleasedRef.current = true;
+        clearHoldExpiry();
         navigate("/doctors/confirmed");
         return;
       }
@@ -238,6 +360,10 @@ export default function BookingReview() {
         description: "Doctor Consultation",
         order_id: result.razorpay_order_id,
         handler: async function (response) {
+          // Payment captured — stop the hold timer so a paid slot is never released
+          holdReleasedRef.current = true;
+          razorpayRef.current = null;
+          clearHoldExpiry();
           try {
             await verifyPayment({
               razorpay_order_id: response.razorpay_order_id,
@@ -257,6 +383,7 @@ export default function BookingReview() {
             );
             setBookingId(orderRef);
             try { sessionStorage.setItem("arvaya_booking_id", orderRef); } catch(e) {}
+            clearHoldExpiry();
             navigate("/doctors/confirmed");
           } catch (err) {
             console.error("Payment verification failed", err);
@@ -279,6 +406,7 @@ export default function BookingReview() {
       };
 
       const paymentObject = new window.Razorpay(options);
+      razorpayRef.current = paymentObject;
       paymentObject.open();
 
     } catch (err) {
@@ -355,6 +483,19 @@ export default function BookingReview() {
         subtitle="Please review your appointment details before confirming."
       >
         <div className="booking-review-container">
+          <div
+            role="timer"
+            style={{
+              display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px',
+              padding: '10px 14px', borderRadius: '10px', fontSize: '13px', fontWeight: '600',
+              background: secondsLeft <= 60 ? 'rgba(220, 38, 38, 0.08)' : 'rgba(46, 102, 110, 0.08)',
+              color: secondsLeft <= 60 ? '#b91c1c' : 'var(--primary)',
+              border: `1px solid ${secondsLeft <= 60 ? 'rgba(220, 38, 38, 0.25)' : 'rgba(46, 102, 110, 0.2)'}`
+            }}
+          >
+            <Timer size={16} />
+            <span>Your slot is reserved for <strong style={{ fontVariantNumeric: 'tabular-nums' }}>{holdTimeLabel}</strong>. Complete the booking before the timer runs out.</span>
+          </div>
           <div className="booking-review-scroll styled-scrollbar">
             {loadingData ? (
               <div style={{ padding: '60px 0', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '14px' }}>
@@ -591,7 +732,7 @@ export default function BookingReview() {
                       <div className="review-actions-row">
                         <button 
                           type="button"
-                          onClick={() => navigate(-1)}
+                          onClick={handleBack}
                           className="btn-review-back"
                         >
                           <ChevronLeft size={16} /> Back

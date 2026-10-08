@@ -721,6 +721,12 @@ export async function checkVisitType(payload) {
   return res?.data || res || {};
 }
 
+// keepalive lets the request finish even if the tab is closing
+export async function releaseSlot(payload, { keepalive = false } = {}) {
+  const res = await api.post("/api/appointments/release-slot", payload, {}, { keepalive });
+  return res?.data || res || {};
+}
+
 /* ─── Reports ─── */
 export async function getPatientPaymentsReport(filters = {}) {
   if (USE_MOCK) {
