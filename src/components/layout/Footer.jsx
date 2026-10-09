@@ -345,8 +345,8 @@ export default function Footer() {
             &copy; {new Date().getFullYear()} Arvaya Healthcare. All rights reserved.
           </p>
           <div className="bottom-links">
-            {["Terms & Conditions"].map(label => (
-              <Link key={label} to="/" className="bottom-link">{label}</Link>
+            {[["Terms & Conditions", "/terms-and-conditions"]].map(([label, path]) => (
+              <Link key={label} to={path} className="bottom-link">{label}</Link>
             ))}
           </div>
         </div>
