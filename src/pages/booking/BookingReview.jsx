@@ -24,6 +24,7 @@ import { useAuth } from "../../context/AuthContext";
 import { bookAppointment, getWalletAmount, checkVisitType, verifyPayment, releaseSlot } from "../../services/dataService";
 import BookingLayout from "../../components/layout/BookingLayout";
 import Toast from "../../components/common/Toast";
+import { toDisplayTime } from "../../utils/formatTime";
 
 const SLOT_HOLD_KEY = "arvaya_slot_hold_expiry";
 const SLOT_HOLD_MS = 5 * 60 * 1000;
@@ -537,7 +538,6 @@ export default function BookingReview() {
   const hospitalName = bookingHospital?.name || doctor?.locations?.[0]?.name || doctor?.hospital || "Arvaya Healthcare Center";
   const hospitalAddress = bookingHospital?.address || bookingHospital?.address_line_1 || bookingHospital?.address1 || doctor?.locations?.[0]?.address || bookingHospital?.city || "";
 
-  const patient_id = user?.id || user?.user_id || user?.patient_id || 20546;
   const patientName = user?.name || "Guest Patient";
   const patientPhone = user?.mobile || user?.phone || "N/A";
   const patientEmail = user?.email || "";
@@ -653,7 +653,7 @@ export default function BookingReview() {
                         <span className="review-info-label">
                           <Clock size={11} /> Time Slot
                         </span>
-                        <span className="review-info-value review-slot-pill" style={{ whiteSpace: 'normal', wordBreak: 'break-word', overflow: 'visible' }} title={slot}>{slot}</span>
+                        <span className="review-info-value review-slot-pill" style={{ whiteSpace: 'nowrap', overflow: 'visible' }} title={toDisplayTime(slot)}>{toDisplayTime(slot)}</span>
                       </div>
 
                       <div className="review-info-item">
@@ -677,7 +677,6 @@ export default function BookingReview() {
                           <p className="review-card-subtitle">Appointment booked for</p>
                         </div>
                       </div>
-                      <span className="review-uhid-badge">ID: #{patient_id}</span>
                     </div>
 
                     <div className="review-patient-grid">
@@ -798,11 +797,6 @@ export default function BookingReview() {
                           <span className="payment-line-value">- ₹{walletAppliedAmount}</span>
                         </div>
                       )}
-
-                      <div className="payment-line-item">
-                        <span>Convenience Fee</span>
-                        <span className="payment-free-badge">FREE</span>
-                      </div>
                     </div>
 
                     <div style={{ marginTop: 'auto' }}>

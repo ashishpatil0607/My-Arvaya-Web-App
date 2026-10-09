@@ -19,6 +19,7 @@ import Calendar from "../../components/common/Calendar";
 import { getDoctorSlots } from "../../services/dataService";
 import { useAuth } from "../../context/AuthContext";
 import Toast from "../../components/common/Toast";
+import { toDisplayTime } from "../../utils/formatTime";
 
 /**
  * Sanitizes search input to prevent SQL Injection attempts and malicious payload evaluation.
@@ -37,8 +38,8 @@ export function sanitizeSearchQuery(input = "") {
   clean = clean.replace(sqlKeywords, "");
   // Strip SQL boolean bypass tautologies (e.g. OR 1=1, AND '1'='1')
   clean = clean.replace(/\b(OR|AND)\s+['"\w\d]+\s*=\s*['"\w\d]+/gi, "");
-  // Only allow valid search characters: alphanumeric, spaces, hyphens, commas, ampersands, slashes, periods
-  clean = clean.replace(/[^a-zA-Z0-9\s,\-&/.]/g, "");
+  // Only allow valid search characters: alphanumeric, spaces and colons (for times like 1:00 PM)
+  clean = clean.replace(/[^a-zA-Z0-9\s:]/g, "");
   return clean;
 }
 
@@ -119,6 +120,7 @@ export default function ScheduleSelection() {
     return str;
   };
 
+
   const handleSearchChange = (e) => {
     const sanitized = sanitizeSearchQuery(e.target.value);
     setSearchQ(sanitized);
@@ -133,8 +135,8 @@ export default function ScheduleSelection() {
     if (!q) return availableSlots;
 
     const filterArr = (arr) => arr.filter(s => {
-      const str = formatSlot(s).toLowerCase();
-      return str.includes(q);
+      const str = formatSlot(s);
+      return str.toLowerCase().includes(q) || toDisplayTime(str).toLowerCase().includes(q);
     });
 
     return {
@@ -334,7 +336,7 @@ export default function ScheduleSelection() {
                   <input
                     type="text"
                     className="hospital-search-input"
-                    placeholder="Search time..."
+                    placeholder="Search time, e.g. 1:00 PM"
                     value={searchQ}
                     onChange={handleSearchChange}
                     maxLength={30}
@@ -397,7 +399,7 @@ export default function ScheduleSelection() {
                           {filteredSlots.morning.length} slots
                         </span>
                       </div>
-                      <div className="time-slots-grid">
+                      <div className="time-slots-grid schedule-time-grid">
                         {filteredSlots.morning.map(s => {
                           const slotStr = formatSlot(s);
                           const isSel = slot === slotStr;
@@ -410,7 +412,7 @@ export default function ScheduleSelection() {
                               aria-selected={isSel}
                             >
                               <Clock size={11} className="slot-clock-icon" />
-                              <span>{slotStr}</span>
+                              <span>{toDisplayTime(slotStr)}</span>
                               {isSel && <Check size={11} strokeWidth={3} />}
                             </button>
                           );
@@ -429,7 +431,7 @@ export default function ScheduleSelection() {
                           {filteredSlots.afternoon.length} slots
                         </span>
                       </div>
-                      <div className="time-slots-grid">
+                      <div className="time-slots-grid schedule-time-grid">
                         {filteredSlots.afternoon.map(s => {
                           const slotStr = formatSlot(s);
                           const isSel = slot === slotStr;
@@ -442,7 +444,7 @@ export default function ScheduleSelection() {
                               aria-selected={isSel}
                             >
                               <Clock size={11} className="slot-clock-icon" />
-                              <span>{slotStr}</span>
+                              <span>{toDisplayTime(slotStr)}</span>
                               {isSel && <Check size={11} strokeWidth={3} />}
                             </button>
                           );
@@ -461,7 +463,7 @@ export default function ScheduleSelection() {
                           {filteredSlots.evening.length} slots
                         </span>
                       </div>
-                      <div className="time-slots-grid">
+                      <div className="time-slots-grid schedule-time-grid">
                         {filteredSlots.evening.map(s => {
                           const slotStr = formatSlot(s);
                           const isSel = slot === slotStr;
@@ -474,7 +476,7 @@ export default function ScheduleSelection() {
                               aria-selected={isSel}
                             >
                               <Clock size={11} className="slot-clock-icon" />
-                              <span>{slotStr}</span>
+                              <span>{toDisplayTime(slotStr)}</span>
                               {isSel && <Check size={11} strokeWidth={3} />}
                             </button>
                           );
@@ -495,7 +497,7 @@ export default function ScheduleSelection() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--text-main)', minWidth: 0 }}>
                 <CheckCircle2 size={17} color="var(--primary)" style={{ flexShrink: 0 }} />
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', minWidth: 0 }}>
-                  <span>Selected: <strong style={{ color: 'var(--primary-dark)', fontWeight: '750' }}>{slot}</strong> on <strong style={{ color: 'var(--primary-dark)', fontWeight: '750' }}>{date?.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</strong></span>
+                  <span>Selected: <strong style={{ color: 'var(--primary-dark)', fontWeight: '750' }}>{toDisplayTime(slot)}</strong> on <strong style={{ color: 'var(--primary-dark)', fontWeight: '750' }}>{date?.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</strong></span>
                   {doctor?.name && (
                     <span style={{ color: 'var(--text-muted)', fontSize: '11px', background: 'rgba(0,0,0,0.04)', padding: '1.5px 6px', borderRadius: '6px', whiteSpace: 'nowrap' }}>
                       Dr. {doctor.name}

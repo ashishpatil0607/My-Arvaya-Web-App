@@ -12335,6 +12335,15 @@ schedule-calendar-card {
 
 }
 
+/* Schedule page: wider columns to fit 12-hr labels like "12:30 PM - 1:00 PM" */
+.time-slots-grid.schedule-time-grid {
+
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+
+  gap: 8px;
+
+}
+
 
 
 .slot-chip:hover:not(.selected) {
@@ -12859,7 +12868,8 @@ schedule-calendar-card {
 
   display: grid;
 
-  grid-template-columns: repeat(3, 1fr);
+  /* Middle (time slot) column sizes to its single-line 12-hr label */
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
 
   gap: 10px;
 
