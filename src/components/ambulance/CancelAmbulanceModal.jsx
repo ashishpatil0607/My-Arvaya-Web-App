@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import ReactDOM from "react-dom";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { updateAmbulanceStatus } from "../../services/ambulanceService";
@@ -13,6 +13,16 @@ export default function CancelAmbulanceModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [touched, setTouched] = useState(false);
+
+  // Reset form state each time the modal is opened
+  useEffect(() => {
+    if (isOpen) {
+      setReason("");
+      setError(null);
+      setTouched(false);
+      setIsSubmitting(false);
+    }
+  }, [isOpen, requestId]);
 
   if (!isOpen) return null;
 
