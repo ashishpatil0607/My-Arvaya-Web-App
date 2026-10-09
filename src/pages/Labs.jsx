@@ -2769,7 +2769,6 @@ function toTitleCase(str) {
                 <div className={`pkg-card lab-theme-${(index + 2) % 6}`} key={pkg.id} style={{ width: '100%' }}>
                   <div className="pkg-card-img-container">
                     <img src={pkg.img} alt={pkg.title} className="pkg-card-img" />
-                    {pkg.badge && <div className="pkg-card-badge">{pkg.badge}</div>}
                   </div>
                   <div className="pkg-card-body">
                     <div className="pkg-card-title">{pkg.title}</div>
@@ -2796,7 +2795,6 @@ function toTitleCase(str) {
                   <div className={`pkg-card lab-theme-${(index + 2) % 6}`} key={pkg.id}>
                     <div className="pkg-card-img-container">
                       <img src={pkg.img} alt={pkg.title} className="pkg-card-img" />
-                      {pkg.badge && <div className="pkg-card-badge">{pkg.badge}</div>}
                     </div>
                     <div className="pkg-card-body">
                       <div className="pkg-card-title">{pkg.title}</div>

@@ -642,7 +642,6 @@ export default function AllHealthPackages() {
               <div className="all-pkg-card" key={pkg.id}>
                 <div className="all-pkg-card-img-container">
                   <img src={pkg.img} alt={pkg.title} className="all-pkg-card-img" />
-                  {pkg.badge && <div className="all-pkg-card-badge">{pkg.badge}</div>}
                 </div>
                 <div className="all-pkg-card-body">
                   <div className="all-pkg-card-title">{pkg.title}</div>

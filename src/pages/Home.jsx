@@ -794,7 +794,7 @@ export default function Home() {
           <div className="mb-8 w-full">
             <div className="flex flex-col items-center text-center">
               <span className="home-how-eyebrow">
-                <TestTube size={14} /> Lab Tests at Home
+                <ShieldCheck size={14} /> Health Packages
               </span>
               <h2 className="text-h2">
                 Featured Health <span className="home-how-highlight">Packages</span>
@@ -821,9 +821,6 @@ export default function Home() {
                 >
                   <div className="home-pkg-media">
                     <img src={pkg.img} alt={pkg.title} />
-                    <span className="home-pkg-chip">
-                      <TestTube size={12} /> Home sample
-                    </span>
                   </div>
                   <div className="home-pkg-body">
                     <h3 className="home-pkg-title">{pkg.title}</h3>

@@ -11,7 +11,6 @@ import {
   Mail, 
   Building2, 
   MapPin, 
-  ShieldCheck, 
   CreditCard, 
   ChevronLeft, 
   Check,
@@ -832,9 +831,6 @@ export default function BookingReview() {
                         </button>
                       </div>
 
-                      <div className="review-trust-note">
-                        <ShieldCheck size={13} /> 256-Bit SSL Encrypted & Secure Checkout
-                      </div>
                       <p className="review-terms-note">
                         By confirming, you agree to our booking terms & cancellation policy.
                       </p>
