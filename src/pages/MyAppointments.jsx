@@ -419,11 +419,45 @@ export default function MyAppointments() {
             </div>
           ))
         ) : filteredAppointments.length === 0 ? (
-          <div style={{ padding: '64px 20px', textAlign: 'center', background: 'var(--bg-surface)', border: '1px dashed var(--border)', borderRadius: '16px' }}>
-            <CalendarIcon size={48} color="var(--border)" style={{ margin: '0 auto 16px auto' }} />
-            <h3 style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text-main)', marginBottom: '8px' }}>No appointments</h3>
-            <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>You don't have any appointments at the moment.</p>
-          </div>
+          <section className="appt-empty">
+            <span className="appt-empty-blob appt-empty-blob--a" aria-hidden="true" />
+            <span className="appt-empty-blob appt-empty-blob--b" aria-hidden="true" />
+
+            <div className="appt-empty-art" aria-hidden="true">
+              <svg viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M102 10C102 14.2 104.8 17 109 17C104.8 17 102 19.8 102 24C102 19.8 99.2 17 95 17C99.2 17 102 14.2 102 10Z" fill="#ffffff" fillOpacity="0.9" />
+                <circle cx="14" cy="90" r="2.5" fill="#ffffff" fillOpacity="0.6" />
+
+                <rect x="18" y="26" width="76" height="70" rx="12" fill="#ffffff" />
+                <path d="M18 38C18 31.4 23.4 26 30 26H82C88.6 26 94 31.4 94 38V44H18V38Z" fill="#99f6e4" />
+                <rect x="34" y="17" width="7" height="18" rx="3.5" fill="#ffffff" stroke="#5eead4" strokeWidth="2" />
+                <rect x="71" y="17" width="7" height="18" rx="3.5" fill="#ffffff" stroke="#5eead4" strokeWidth="2" />
+
+                <rect x="29" y="53" width="10" height="9" rx="2.5" fill="#ccfbf1" />
+                <rect x="45" y="53" width="10" height="9" rx="2.5" fill="#ccfbf1" />
+                <rect x="61" y="53" width="10" height="9" rx="2.5" fill="#5eead4" />
+                <rect x="77" y="53" width="10" height="9" rx="2.5" fill="#ccfbf1" />
+                <rect x="29" y="70" width="10" height="9" rx="2.5" fill="#ccfbf1" />
+                <rect x="45" y="70" width="10" height="9" rx="2.5" fill="#ccfbf1" />
+                <rect x="61" y="70" width="10" height="9" rx="2.5" fill="#ccfbf1" />
+
+                <circle cx="88" cy="86" r="17" fill="#14b8a6" stroke="#ffffff" strokeWidth="4" />
+                <path d="M88 78V94M80 86H96" stroke="#ffffff" strokeWidth="4" strokeLinecap="round" />
+              </svg>
+            </div>
+
+            <div className="appt-empty-body">
+              <span className="appt-empty-eyebrow">Get started</span>
+              <h2 className="appt-empty-title">No appointments yet</h2>
+              <p className="appt-empty-desc">Book a consultation with a specialist in a few taps. Your upcoming and past visits will show up here.</p>
+
+              <div className="appt-empty-actions">
+                <Link to="/doctors" className="appt-empty-btn appt-empty-btn--primary">
+                  <Stethoscope size={15} /> Book a Doctor <ChevronRight size={15} />
+                </Link>
+              </div>
+            </div>
+          </section>
         ) : (
           filteredAppointments.map(apt => {
             const isPast = isPastDate(apt.date);
@@ -796,6 +830,145 @@ export default function MyAppointments() {
       <Toast isOpen={toast.isOpen} message={toast.message} type={toast.type} onClose={() => setToast({ ...toast, isOpen: false })} />
 
       <style>{`
+        /* ── Empty State ── */
+        .appt-empty {
+          position: relative;
+          overflow: hidden;
+          display: flex;
+          align-items: center;
+          gap: 28px;
+          max-width: 760px;
+          margin: 12px auto 0;
+          padding: 24px 28px;
+          background: linear-gradient(120deg, #ffffff 0%, #f0fdfa 55%, #ccfbf1 100%);
+          border: 1px solid rgba(13, 148, 136, 0.16);
+          border-radius: 20px;
+          box-shadow: 0 10px 30px rgba(13, 148, 136, 0.08);
+        }
+        .appt-empty-blob {
+          position: absolute;
+          border-radius: 50%;
+          pointer-events: none;
+        }
+        .appt-empty-blob--a {
+          width: 220px;
+          height: 220px;
+          right: -70px;
+          top: -90px;
+          background: radial-gradient(circle, rgba(45, 212, 191, 0.28), transparent 70%);
+        }
+        .appt-empty-blob--b {
+          width: 140px;
+          height: 140px;
+          right: 120px;
+          bottom: -80px;
+          background: radial-gradient(circle, rgba(20, 184, 166, 0.16), transparent 70%);
+        }
+        .appt-empty-art {
+          position: relative;
+          flex-shrink: 0;
+          width: 124px;
+          height: 124px;
+          border-radius: 28px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: linear-gradient(145deg, #2dd4bf 0%, #0d9488 100%);
+          box-shadow: 0 14px 28px rgba(13, 148, 136, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+          transform: rotate(-4deg);
+        }
+        .appt-empty-art svg {
+          width: 96px;
+          height: 96px;
+          transform: rotate(4deg);
+          animation: appt-empty-float 3.6s ease-in-out infinite;
+          filter: drop-shadow(0 6px 10px rgba(4, 80, 74, 0.25));
+        }
+        @keyframes appt-empty-float {
+          0%, 100% { translate: 0 0; }
+          50% { translate: 0 -5px; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .appt-empty-art svg { animation: none; }
+        }
+        .appt-empty-body {
+          position: relative;
+          min-width: 0;
+        }
+        .appt-empty-eyebrow {
+          display: inline-block;
+          padding: 3px 10px;
+          margin-bottom: 8px;
+          border-radius: 999px;
+          background: rgba(13, 148, 136, 0.1);
+          color: var(--primary, #0d9488);
+          font-size: 11.5px;
+          font-weight: 700;
+          letter-spacing: 0.04em;
+          text-transform: uppercase;
+        }
+        .appt-empty-title {
+          font-size: 21px;
+          font-weight: 800;
+          color: var(--text-main, #0b2545);
+          margin: 0 0 4px;
+          letter-spacing: -0.02em;
+        }
+        .appt-empty-desc {
+          font-size: 13.5px;
+          line-height: 1.55;
+          color: var(--text-muted);
+          margin: 0 0 16px;
+          max-width: 440px;
+        }
+        .appt-empty-actions {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+        .appt-empty-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 9px 16px;
+          border-radius: 10px;
+          font-size: 13.5px;
+          font-weight: 700;
+          text-decoration: none;
+          transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+        }
+        .appt-empty-btn--primary {
+          background: var(--primary, #0d9488);
+          color: #ffffff;
+          box-shadow: 0 6px 14px rgba(13, 148, 136, 0.25);
+        }
+        .appt-empty-btn--primary:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 10px 20px rgba(13, 148, 136, 0.3);
+        }
+        @media (max-width: 600px) {
+          .appt-empty {
+            flex-direction: column;
+            text-align: center;
+            gap: 18px;
+            padding: 24px 18px;
+          }
+          .appt-empty-art {
+            width: 104px;
+            height: 104px;
+          }
+          .appt-empty-art svg {
+            width: 80px;
+            height: 80px;
+          }
+          .appt-empty-desc {
+            margin-left: auto;
+            margin-right: auto;
+          }
+          .appt-empty-actions {
+            justify-content: center;
+          }
+        }
         /* ── Appointments Hero Banner ── */
         .appointments-hero-banner {
           position: relative;

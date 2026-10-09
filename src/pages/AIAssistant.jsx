@@ -23,19 +23,55 @@ export default function AIAssistant() {
 
   return (
     <main className="page animate-fade-in-up" style={{ padding: 0, background: 'var(--bg-app)' }}>
-      {/* ── Internal Hero ── */}
-      <div style={{ background: 'linear-gradient(135deg, var(--bg-surface) 0%, rgba(46, 102, 110, 0.05) 100%)', padding: '24px 0', borderBottom: '1px solid var(--border)' }}>
+      {/* ── Internal Hero Banner with Gradient & AI Graphic ── */}
+      <div className="ai-hero-banner">
+        <svg className="ai-hero-wave" viewBox="0 0 500 150" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M0,40 C150,90 320,10 500,45 L500,0 L0,0 Z" fill="rgba(255, 255, 255, 0.42)" />
+        </svg>
+
         <div className="container">
-          <div className="flex items-center gap-2 text-muted mb-2" style={{ fontSize: '12px', fontWeight: '500' }}>
-            <Link to="/" style={{ transition: 'color 0.2s' }} onMouseOver={e => e.currentTarget.style.color='var(--primary)'} onMouseOut={e => e.currentTarget.style.color=''}>Home</Link> <ChevronRight size={12} /> <span>Arvaya AI</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'var(--primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 16px rgba(46, 102, 110, 0.3)' }}>
-              <Brain size={24} />
+          <div className="ai-hero-inner">
+            <div className="ai-hero-content">
+              <nav aria-label="Breadcrumb" className="ai-hero-breadcrumb">
+                <Link to="/" className="ai-breadcrumb-link">Home</Link>
+                <ChevronRight size={13} className="ai-breadcrumb-sep" />
+                <span className="ai-breadcrumb-current">Arvaya AI</span>
+              </nav>
+
+              <h1 className="ai-hero-title">Arvaya AI Intelligence</h1>
+              <p className="ai-hero-desc">Predictive health scores and AI-powered symptom checking.</p>
             </div>
-            <div>
-              <h1 className="text-h2" style={{ fontSize: '24px' }}>Arvaya AI Intelligence</h1>
-              <p className="text-muted mt-2" style={{ fontSize: '14px' }}>Predictive health scores and AI-powered symptom checking.</p>
+
+            <div className="ai-hero-graphic" aria-hidden="true">
+              <svg className="ai-hero-svg" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                {/* Sparkles */}
+                <path d="M107 19C107 23.2 109.8 26 114 26C109.8 26 107 28.8 107 33C107 28.8 104.2 26 100 26C104.2 26 107 23.2 107 19Z" fill="#14b8a6" />
+                <path d="M13 46C13 49.5 15.5 52 19 52C15.5 52 13 54.5 13 58C13 54.5 10.5 52 7 52C10.5 52 13 49.5 13 46Z" fill="#14b8a6" />
+                <circle cx="16" cy="74" r="2" fill="#2dd4bf" />
+                <circle cx="112" cy="45" r="1.5" fill="#2dd4bf" />
+
+                {/* Chat Bubble */}
+                <path
+                  d="M38 28H82C88.6 28 94 33.4 94 40V68C94 74.6 88.6 80 82 80H56L42 92V80H38C31.4 80 26 74.6 26 68V40C26 33.4 31.4 28 38 28Z"
+                  fill="#ffffff"
+                  stroke="#0d9488"
+                  strokeWidth="3.2"
+                  strokeLinejoin="round"
+                />
+
+                {/* Heartbeat Line */}
+                <path
+                  d="M36 55H48L53 44L60 66L66 50L70 55H84"
+                  stroke="#0d9488"
+                  strokeWidth="3.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+
+                {/* AI Sparkle Badge */}
+                <circle cx="88" cy="86" r="15" fill="#0d9488" />
+                <path d="M88 77C88 82.5 90.5 85 96 86C90.5 87 88 89.5 88 95C88 89.5 85.5 87 80 86C85.5 85 88 82.5 88 77Z" fill="#ffffff" />
+              </svg>
             </div>
           </div>
         </div>
@@ -109,7 +145,7 @@ export default function AIAssistant() {
               value={symptom}
               onChange={(e) => setSymptom(e.target.value)}
               placeholder="E.g., I have been experiencing a mild headache and low-grade fever since yesterday morning..."
-              style={{ width: '100%', height: '120px', padding: '16px', borderRadius: '12px', border: '1px solid var(--border)', background: 'var(--bg-app)', color: 'var(--text-main)', fontSize: '14px', outline: 'none', resize: 'none', marginBottom: '16px' }}
+              style={{ width: '100%', height: '120px', padding: '16px', borderRadius: '12px', border: '1px solid var(--border)', background: 'var(--bg-app)', color: 'var(--text-main)', fontSize: '14px', lineHeight: 1.6, outline: 'none', resize: 'none', marginBottom: '16px' }}
             ></textarea>
 
             <button 
@@ -147,6 +183,92 @@ export default function AIAssistant() {
         </div>
       </div>
       <style dangerouslySetInnerHTML={{__html: `
+        .ai-hero-banner {
+          position: relative;
+          overflow: hidden;
+          background: linear-gradient(90deg, #effaf7 0%, #e3f7f2 50%, #ccf4eb 100%);
+          border-bottom: 1px solid rgba(20, 184, 166, 0.16);
+          padding: 16px 0;
+        }
+        .ai-hero-wave {
+          position: absolute;
+          right: 0;
+          top: 0;
+          bottom: 0;
+          width: 55%;
+          height: 100%;
+          pointer-events: none;
+        }
+        .ai-hero-inner {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 24px;
+          position: relative;
+          z-index: 1;
+        }
+        .ai-hero-content {
+          max-width: 680px;
+        }
+        .ai-hero-breadcrumb {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 12.5px;
+          font-weight: 500;
+          color: #55738d;
+          margin-bottom: 4px;
+        }
+        .ai-breadcrumb-link {
+          color: #55738d;
+          text-decoration: none;
+          transition: color 0.2s ease;
+        }
+        .ai-breadcrumb-link:hover {
+          color: #0b2545;
+        }
+        .ai-breadcrumb-sep {
+          color: #7a94a9;
+          flex-shrink: 0;
+        }
+        .ai-breadcrumb-current {
+          color: #55738d;
+        }
+        .ai-hero-title {
+          font-size: 22px;
+          font-weight: 800;
+          color: #0b2545;
+          margin: 0;
+          letter-spacing: -0.02em;
+          line-height: 1.2;
+        }
+        .ai-hero-desc {
+          font-size: 13.5px;
+          color: #55738d;
+          margin: 2px 0 0 0;
+          line-height: 1.5;
+        }
+        .ai-hero-graphic {
+          flex-shrink: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .ai-hero-svg {
+          width: 64px;
+          height: 64px;
+          filter: drop-shadow(0 6px 14px rgba(13, 148, 136, 0.12));
+        }
+        @media (max-width: 640px) {
+          .ai-hero-banner { padding: 12px 0; }
+          .ai-hero-title { font-size: 19px; }
+          .ai-hero-desc { font-size: 12.5px; }
+          .ai-hero-svg { width: 52px; height: 52px; }
+        }
+        @media (max-width: 440px) {
+          .ai-hero-inner { gap: 12px; }
+          .ai-hero-graphic { display: none; }
+        }
         @media (max-width: 1024px) {
           .ai-grid { grid-template-columns: 1fr !important; }
           .ai-grid > div > .card-elevated { position: relative !important; top: 0 !important; }
