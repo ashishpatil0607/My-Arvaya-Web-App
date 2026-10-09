@@ -1,41 +1,36 @@
 import {
-  Fingerprint,
+  Users,
+  CalendarCheck,
   FileText,
   FlaskConical,
+  CreditCard,
+  Wallet,
   BellRing,
   Watch,
-  Languages,
-  ShieldCheck,
-  Users,
-  Stethoscope,
-  Microscope,
-  Pill,
-  Building2,
+  Bot,
+  Gift,
+  HeartHandshake,
   Target,
   Mail,
   ArrowRight,
   HeartPulse,
+  Sparkles,
 } from "lucide-react";
 
 const whatOffers = [
-  { icon: Fingerprint, title: "ABHA-Integrated Profiles", desc: "Securely store and access health records." },
-  { icon: FileText, title: "Health Record Management", desc: "Upload & auto-organize documents." },
-  { icon: FlaskConical, title: "Lab Test Booking", desc: "Schedule and track pathology & radiology tests." },
-  { icon: BellRing, title: "Reminders & Alerts", desc: "Stay on top of medications & follow-ups." },
-  { icon: Watch, title: "Wearable Integration", desc: "Track vitals like heart rate and sleep." },
-  { icon: Languages, title: "Multilingual Support", desc: "Use in your preferred language." },
-  { icon: ShieldCheck, title: "Secure & Compliant", desc: "Aligned with ABDM and FHIR standards." },
+  { icon: Users, title: "Patient & Family Profile Management", desc: "Securely manage patient profiles and link family members for convenient healthcare access." },
+  { icon: CalendarCheck, title: "Online Appointment Booking", desc: "Select hospital locations and book appointments with ease." },
+  { icon: FileText, title: "Previous Health Records", desc: "Access and manage available medical records, reports, and health documents in one convenient place." },
+  { icon: FlaskConical, title: "Lab Test Booking", desc: "Explore and book laboratory tests through a simplified digital process." },
+  { icon: CreditCard, title: "Secure Payments", desc: "Make payments conveniently through integrated payment gateways." },
+  { icon: Wallet, title: "Digital Wallet & Rewards", desc: "Enjoy wallet services, loyalty points, rewards, and cashback benefits." },
+  { icon: BellRing, title: "Smart Notifications & Reminders", desc: "Receive appointment updates, important notifications, and timely healthcare reminders." },
+  { icon: Watch, title: "Wearable Integration", desc: "Connect compatible wearable devices to track health metrics such as heart rate, sleep, and other available wellness indicators." },
+  { icon: Bot, title: "SecureAnt AI Chat", desc: "Get AI-powered assistance to help navigate healthcare services and find relevant health information through an intelligent chat experience." },
+  { icon: Gift, title: "Refer a Friend", desc: "Share ARVAYA with friends and family to help them discover a more convenient healthcare experience." },
 ];
 
-const whoCanUse = [
-  { icon: Users, title: "Patients & Families", desc: "Manage profiles, history, and reminders." },
-  { icon: Stethoscope, title: "Doctors & Nurses", desc: "View records and manage OPD/IPD notes." },
-  { icon: Microscope, title: "Lab Technicians", desc: "Handle tests and sample collections." },
-  { icon: Pill, title: "Pharmacy & Billing", desc: "Track prescriptions and medications." },
-  { icon: Building2, title: "Admins & Hospitals", desc: "Manage workflows and health data sharing." },
-];
-
-const highlights = ["ABDM aligned", "FHIR standards", "One smart ecosystem"];
+const highlights = ["Connected", "Convenient", "Personalized"];
 
 export default function About() {
   return (
@@ -53,17 +48,23 @@ export default function About() {
           <h1 className="about-title">
             Empowering Health. <span>Enhancing Lives.</span>
           </h1>
+          <p className="about-tagline">
+            ARVAYA is your digital gateway to connected, convenient, and
+            personalized healthcare.
+          </p>
           <p className="about-lead">
-            ARVAYA is a comprehensive digital health platform designed to make
-            healthcare more accessible, efficient, and personalized. Whether you
-            are a patient, doctor, lab technician, pharmacist, or hospital
-            administrator, ARVAYA simplifies your daily healthcare interactions
-            through a single, smart ecosystem.
+            ARVAYA is a patient-centric digital health platform designed to
+            simplify healthcare access and enhance the overall patient
+            experience. By bringing essential healthcare services together in
+            one place, ARVAYA enables individuals and families to manage health
+            profiles, book hospital appointments, access previous health
+            records, and stay connected with healthcare services through a
+            seamless digital experience.
           </p>
           <div className="about-chips">
             {highlights.map((h) => (
               <span key={h} className="about-chip">
-                <ShieldCheck size={13} /> {h}
+                <Sparkles size={13} /> {h}
               </span>
             ))}
           </div>
@@ -90,22 +91,20 @@ export default function About() {
           </div>
         </section>
 
-        {/* Who Can Use ARVAYA */}
-        <section className="about-section">
-          <header className="about-section-head">
-            <span className="about-kicker">For everyone in care</span>
-            <h2>Who Can Use ARVAYA?</h2>
-          </header>
-          <div className="about-roles">
-            {whoCanUse.map(({ icon: Icon, title, desc }) => (
-              <div key={title} className="about-role">
-                <div className="about-role-icon">
-                  <Icon size={22} />
-                </div>
-                <h3>{title}</h3>
-                <p>{desc}</p>
-              </div>
-            ))}
+        {/* Our Commitment */}
+        <section className="about-commitment">
+          <div className="about-commitment-icon">
+            <HeartHandshake size={24} />
+          </div>
+          <div>
+            <span className="about-kicker">Our Commitment</span>
+            <p>
+              At ARVAYA, we believe healthcare should be accessible, convenient,
+              and centered around people. We combine digital innovation with
+              patient-focused services to simplify everyday healthcare
+              interactions, improve engagement, and help individuals stay
+              informed about their health journey.
+            </p>
           </div>
         </section>
 
@@ -117,12 +116,17 @@ export default function About() {
           <div>
             <span className="about-kicker about-kicker-light">Our Vision</span>
             <p>
-              To build a connected, transparent, and inclusive healthcare
-              ecosystem that improves health outcomes for every individual,
-              especially in under-served areas.
+              To build a connected, inclusive, and patient-centric healthcare
+              ecosystem that brings patients, families, and healthcare
+              providers closer through smart, secure, and accessible digital
+              solutions.
             </p>
           </div>
         </section>
+
+        <p className="about-closing">
+          ARVAYA — <span>Bringing Healthcare Closer to You.</span>
+        </p>
 
         {/* Contact & Support */}
         <section className="about-contact">
