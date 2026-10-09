@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Calendar as CalendarIcon, Clock, MapPin, Video, User, CheckCircle, CheckCircle2, XCircle, AlertCircle, ChevronRight, ChevronLeft, Sunrise, Sun, Stethoscope, FileText } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, MapPin, Video, User, CheckCircle, XCircle, AlertCircle, ChevronRight, ChevronLeft, Sunrise, Sun, Stethoscope, FileText } from "lucide-react";
 import { Link } from "react-router-dom";
 import { getAppointments, cancelAppointment, rescheduleAppointment, getStoredUserId, getDoctorSlots } from "../services/dataService";
 import Modal from "../components/common/Modal";
@@ -245,11 +245,6 @@ export default function MyAppointments() {
 
   const getStatusBadge = (status) => {
     switch(status) {
-      case 'upcoming': return (
-        <span style={{ background: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0', padding: '3px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '600', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-          <CheckCircle2 size={12} /> Upcoming
-        </span>
-      );
       case 'completed': return (
         <span style={{ background: 'var(--success-light, #d1fae5)', color: 'var(--success, #059669)', padding: '3px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '600', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
           <CheckCircle size={12} /> Completed
@@ -632,7 +627,7 @@ export default function MyAppointments() {
             maxLength={250}
             rows={4}
             placeholder="Please tell us why you are cancelling..."
-            style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg-app)', color: 'var(--text-main)', outline: 'none', resize: 'vertical' }}
+            style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg-app)', color: 'var(--text-main)', outline: 'none', resize: 'vertical', fontFamily: 'inherit', fontSize: '14px', lineHeight: 1.5 }}
           />
           <div style={{ textAlign: 'right', fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>
             {cancelReason.length}/250

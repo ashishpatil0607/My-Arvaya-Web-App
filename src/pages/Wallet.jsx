@@ -442,6 +442,20 @@ export default function Wallet() {
     showToast(`Added +${pts} Reward Points!`);
   };
 
+  const txSummary = transactions.reduce((acc, tx) => {
+    const value = Math.abs(parseFloat(String(tx.amount).replace(/[^\d.]/g, "")) || 0);
+    if (tx.type === "credit") acc.earned += value;
+    else acc.redeemed += value;
+    return acc;
+  }, { earned: 0, redeemed: 0 });
+
+  const txGroups = transactions.reduce((groups, tx) => {
+    const last = groups[groups.length - 1];
+    if (last && last.date === tx.date) last.items.push(tx);
+    else groups.push({ date: tx.date, items: [tx] });
+    return groups;
+  }, []);
+
   return (
     <main className="page wallet-page">
       {toastMessage && typeof document !== "undefined" && createPortal(
@@ -596,9 +610,6 @@ export default function Wallet() {
                       </span>
                       <span className="wallet-offer-divider" aria-hidden="true" />
                       <span className="wallet-offer-meta">
-                        <span className="wallet-validity">
-                          <Clock size={12} /> Valid {offer.validityDays ?? 30} days
-                        </span>
                         <span className="wallet-points-chip">
                           <Sparkles size={12} /> {offer.category}
                         </span>
@@ -640,31 +651,56 @@ export default function Wallet() {
                 <p>Your wallet activity will appear here.</p>
               </div>
             ) : (
-              <>
-                <div className="wallet-transaction-table">
-                  <div className="wallet-transaction-row wallet-transaction-head">
-                    <span>Date</span>
-                    <span>Description</span>
-                    <span>Amount</span>
-                    <span>Type</span>
-                    <span>Status</span>
-                  </div>
-                  {transactions.map(tx => (
-                    <div className="wallet-transaction-row" key={tx.id}>
-                      <span className="wallet-transaction-date">
-                        <span className={`wallet-transaction-icon ${tx.type}`}>
-                          {tx.type === "credit" ? <ArrowDownLeft size={15} /> : <ArrowUpRight size={15} />}
-                        </span>
-                        {tx.date}
-                      </span>
-                      <span className="wallet-transaction-desc">{tx.title}</span>
-                      <span className={`wallet-transaction-points ${tx.type}`}>{tx.amount}</span>
-                      <span><span className={`wallet-transaction-badge ${tx.type}`}>{tx.type === "credit" ? "Earned" : "Redeemed"}</span></span>
-                      <span><span className="wallet-transaction-badge is-status">Completed</span></span>
+              <div className="wallet-tx">
+                <div className="wallet-tx-summary">
+                  <div className="wallet-tx-stat credit">
+                    <span className="wallet-tx-stat-icon"><ArrowDownLeft size={16} /></span>
+                    <div>
+                      <small>Total Earned</small>
+                      <strong>+₹{txSummary.earned.toLocaleString("en-IN")}</strong>
                     </div>
-                  ))}
+                  </div>
+                  <div className="wallet-tx-stat debit">
+                    <span className="wallet-tx-stat-icon"><ArrowUpRight size={16} /></span>
+                    <div>
+                      <small>Total Redeemed</small>
+                      <strong>-₹{txSummary.redeemed.toLocaleString("en-IN")}</strong>
+                    </div>
+                  </div>
+                  <div className="wallet-tx-stat neutral">
+                    <span className="wallet-tx-stat-icon"><History size={16} /></span>
+                    <div>
+                      <small>Transactions</small>
+                      <strong>{transactions.length}</strong>
+                    </div>
+                  </div>
                 </div>
-              </>
+
+                {txGroups.map(group => (
+                  <div className="wallet-tx-group" key={group.date}>
+                    <div className="wallet-tx-group-date">
+                      <span>{group.date}</span>
+                    </div>
+                    <ul className="wallet-tx-list">
+                      {group.items.map(tx => (
+                        <li className={`wallet-tx-item ${tx.type}`} key={tx.id}>
+                          <span className="wallet-tx-icon">
+                            {tx.type === "credit" ? <ArrowDownLeft size={17} /> : <ArrowUpRight size={17} />}
+                          </span>
+                          <div className="wallet-tx-body">
+                            <strong title={tx.title}>{tx.title}</strong>
+                            <div className="wallet-tx-meta">
+                              <span className="wallet-tx-type">{tx.type === "credit" ? "Earned" : "Redeemed"}</span>
+                              <span className="wallet-tx-status"><CheckCircle2 size={12} /> Completed</span>
+                            </div>
+                          </div>
+                          <span className="wallet-tx-amount">{tx.amount}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
             )}
           </section>
         </div>
