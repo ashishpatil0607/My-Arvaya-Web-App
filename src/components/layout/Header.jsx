@@ -1,4 +1,4 @@
-import { Search, MapPin, ChevronDown, ChevronRight, ChevronLeft, Users, User, LogOut, Smartphone, HelpCircle, Menu, X, ArrowRight, Check, Stethoscope, FlaskConical, Building2, Settings, Bell, Gift, Send, Mail, Copy, Share2, Shield, Home, Wallet, Truck, Phone, Siren, CalendarCheck, ShoppingBag } from "lucide-react";
+import { Search, MapPin, ChevronDown, ChevronRight, ChevronLeft, Users, User, LogOut, Smartphone, HelpCircle, Menu, X, ArrowRight, Check, Stethoscope, FlaskConical, Building2, Settings, Bell, Gift, Send, Mail, Copy, Share2, Shield, Home, Wallet, Truck, Phone, Siren, CalendarCheck, ShoppingBag, Info, MessageSquare } from "lucide-react";
 import { Link, NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useState, useRef, useEffect, useMemo } from "react";
@@ -503,38 +503,26 @@ export default function Header() {
             {/* Location Picker */}
             <div ref={locationPickerRef} className="header-location-wrapper" style={{ position: 'relative', height: '40px', zIndex: 10 }}>
               <div
-                className="header-location-picker flex items-center gap-1.5"
+                className={`header-location-picker flex items-center gap-1.5${isLocationOpen ? ' is-open' : ''}`}
                 onClick={() => setIsLocationOpen(!isLocationOpen)}
                 style={{
                   padding: '0 7px 0 14px',
                   width: '150px',
-                  border: '1px solid var(--border)',
                   borderRadius: '30px',
                   color: 'var(--text-main)',
                   fontSize: '13px',
                   fontWeight: '600',
                   cursor: 'pointer',
-                  background: 'var(--bg-surface)',
                   height: '100%',
-                  transition: 'all 0.2s ease',
                   userSelect: 'none',
                   display: 'flex',
-                  alignItems: 'center',
-                  boxShadow: '0 2px 6px rgba(0,0,0,0.03)'
-                }}
-                onMouseOver={e => {
-                  e.currentTarget.style.borderColor = 'var(--primary)';
-                  e.currentTarget.style.background = 'var(--bg-app)';
-                }}
-                onMouseOut={e => {
-                  e.currentTarget.style.borderColor = 'var(--border)';
-                  e.currentTarget.style.background = 'var(--bg-surface)';
+                  alignItems: 'center'
                 }}
               >
                 <MapPin size={15} style={{ color: 'var(--primary)' }} />
                 <span className="header-location-city" title={selectedCity}>{selectedCity}</span>
                 <span className={`header-location-chevron${isLocationOpen ? ' is-open' : ''}`}>
-                  <ChevronDown size={13} strokeWidth={2.5} />
+                  <ChevronDown size={14} />
                 </span>
               </div>
 
@@ -925,11 +913,18 @@ export default function Header() {
                             { label: 'Notifications', icon: Bell, path: '/notifications' },
                             { label: 'My Appointments', icon: CalendarCheck, path: '/my-appointments' },
                             { label: 'My Orders', icon: ShoppingBag, path: '/orders' },
-                          ].map(({ label, icon: Icon, path }) => (
+                            { label: 'Feedback', icon: MessageSquare, path: '#feedback', action: () => window.dispatchEvent(new Event("arvaya_open_feedback")) },
+                            { label: 'About', icon: Info, path: '/about' },
+                          ].map(({ label, icon: Icon, path, action }) => (
                             <div
                               key={path}
                               className="profile-menu-item"
-                              onClick={() => { setIsProfileMenuOpen(false); go(path); }}
+                              onClick={() => {
+                                setIsProfileMenuOpen(false);
+                                setProfileMenuTab("main");
+                                if (action) action();
+                                else go(path);
+                              }}
                             >
                               <span className="profile-menu-icon">
                                 <Icon size={16} />

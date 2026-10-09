@@ -406,9 +406,28 @@ export default function AmbulancePage() {
     );
   };
 
+  const parseReqDate = (val) => {
+    if (!val) return 0;
+    if (typeof val === "number") return val;
+    if (val instanceof Date) return val.getTime();
+    try {
+      const normalized =
+        typeof val === "string" && val.includes(" ")
+          ? val.replace(" ", "T")
+          : val;
+      const d = new Date(normalized);
+      if (!isNaN(d.getTime())) return d.getTime();
+      const d2 = new Date(val);
+      if (!isNaN(d2.getTime())) return d2.getTime();
+    } catch { }
+    return 0;
+  };
+
   // Sort descending: latest requests first (top of queue)
   const sortedRequests = [...requests].sort(
-    (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0),
+    (a, b) =>
+      parseReqDate(b.createdAt || b.created_at || b.created_date) -
+      parseReqDate(a.createdAt || a.created_at || a.created_date),
   );
 
   const activeRequests = sortedRequests.filter((r) => {
@@ -433,13 +452,13 @@ export default function AmbulancePage() {
     return idx === 4 || idx === -1;
   });
 
-  const queueRequests = activeRequests;
+  const queueRequests = activeRequests.slice(0, 5);
   const currentSelectedId =
     selectedRequestId != null
       ? selectedRequestId
       : queueRequests[0]?.id || queueRequests[0]?.requestId;
   const selectedRequest =
-    queueRequests.find((r) => isRequestMatch(r, currentSelectedId)) ||
+    activeRequests.find((r) => isRequestMatch(r, currentSelectedId)) ||
     queueRequests[0] ||
     null;
 
@@ -1059,7 +1078,7 @@ export default function AmbulancePage() {
                                   whiteSpace: "nowrap",
                                 }}
                               >
-                                {shortName} · {formatTimeShort(req.createdAt)}
+                                {shortName} · {formatTime(req.createdAt || req.created_at)}
                               </span>
                               <div style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0 }}>
                                 <span

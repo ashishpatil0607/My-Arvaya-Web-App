@@ -977,3 +977,13 @@ export async function getDocumentTypes(filtersParam = {}) {
   }
 }
 
+export async function upsertPatientReview(data) {
+  const payload = {
+    patient_id: data.patient_id,
+    ratings: data.ratings,
+    review: data.review,
+    is_active: data.is_active ?? 1,
+  };
+  const res = await api.post("/api/patientReview/upsert", payload);
+  return res.data || res;
+}
