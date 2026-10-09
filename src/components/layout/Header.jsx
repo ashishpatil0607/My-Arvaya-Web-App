@@ -823,7 +823,8 @@ export default function Header() {
                                 onClick={async () => {
                                   setIsProfileMenuOpen(false);
                                   setProfileMenuTab("main");
-                                  await switchProfile(p);
+                                  const switched = await switchProfile(p);
+                                  if (switched) go("/");
                                 }}
                                 style={{
                                   display: 'flex',
@@ -1119,7 +1120,8 @@ export default function Header() {
                             onClick={async () => {
                               setMobileDrawerOpen(false);
                               setMobileDrawerTab("main");
-                              await switchProfile(p);
+                              const switched = await switchProfile(p);
+                              if (switched) go("/");
                             }}
                             style={{
                               display: 'flex',

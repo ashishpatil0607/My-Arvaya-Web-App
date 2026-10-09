@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { ChevronRight, ChevronLeft, CalendarCheck, Clock, FlaskConical } from "lucide-react";
+import { ChevronRight, ChevronLeft, CalendarCheck, Clock, FlaskConical, Package } from "lucide-react";
 import { Link } from "react-router-dom";
 import { getLabOrderHistory } from "../services/dataService";
 import LabItemIcon from "../components/labs/LabItemIcon";
@@ -206,7 +206,47 @@ export default function Orders() {
             ))}
           </div>
         ) : orders.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-muted)' }}>No orders found.</div>
+          <section className="orders-empty">
+            <span className="orders-empty-blob orders-empty-blob--a" aria-hidden="true" />
+            <span className="orders-empty-blob orders-empty-blob--b" aria-hidden="true" />
+
+            <div className="orders-empty-art" aria-hidden="true">
+              <svg viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M100 12C100 16.2 102.8 19 107 19C102.8 19 100 21.8 100 26C100 21.8 97.2 19 93 19C97.2 19 100 16.2 100 12Z" fill="#ffffff" fillOpacity="0.9" />
+                <circle cx="16" cy="88" r="2.5" fill="#ffffff" fillOpacity="0.6" />
+
+                <rect x="26" y="22" width="56" height="74" rx="11" fill="#ffffff" />
+                <rect x="40" y="15" width="28" height="13" rx="5" fill="#99f6e4" stroke="#ffffff" strokeWidth="3" />
+                <circle cx="40" cy="48" r="3.5" fill="#5eead4" />
+                <path d="M49 48H70" stroke="#ccfbf1" strokeWidth="4" strokeLinecap="round" />
+                <circle cx="40" cy="62" r="3.5" fill="#5eead4" />
+                <path d="M49 62H66" stroke="#ccfbf1" strokeWidth="4" strokeLinecap="round" />
+                <circle cx="40" cy="76" r="3.5" fill="#5eead4" />
+                <path d="M49 76H62" stroke="#ccfbf1" strokeWidth="4" strokeLinecap="round" />
+
+                <g transform="rotate(20 90 74)">
+                  <rect x="82" y="50" width="16" height="46" rx="8" fill="#ffffff" />
+                  <path d="M85 74H95V88C95 90.8 92.8 93 90 93C87.2 93 85 90.8 85 88V74Z" fill="#14b8a6" />
+                  <path d="M78 50H102" stroke="#ffffff" strokeWidth="3.5" strokeLinecap="round" />
+                </g>
+              </svg>
+            </div>
+
+            <div className="orders-empty-body">
+              <span className="orders-empty-eyebrow">Get started</span>
+              <h2 className="orders-empty-title">No orders yet</h2>
+              <p className="orders-empty-desc">Book your first lab test or health package. Your orders, status and reports will show up here.</p>
+
+              <div className="orders-empty-actions">
+                <Link to="/labs/all-tests" className="orders-empty-btn orders-empty-btn--primary">
+                  <FlaskConical size={15} /> Book a Lab Test <ChevronRight size={15} />
+                </Link>
+                <Link to="/labs/all-packages" className="orders-empty-btn orders-empty-btn--ghost">
+                  <Package size={15} /> View Packages
+                </Link>
+              </div>
+            </div>
+          </section>
         ) : (
           <div className="orders-grid">
             {orders.map(order => {
@@ -411,6 +451,153 @@ export default function Orders() {
         @media (max-width: 400px) {
           .orders-grid {
             grid-template-columns: 1fr;
+          }
+        }
+        .orders-empty {
+          position: relative;
+          overflow: hidden;
+          display: flex;
+          align-items: center;
+          gap: 28px;
+          max-width: 760px;
+          margin: 12px auto 0;
+          padding: 24px 28px;
+          background: linear-gradient(120deg, #ffffff 0%, #f0fdfa 55%, #ccfbf1 100%);
+          border: 1px solid rgba(13, 148, 136, 0.16);
+          border-radius: 20px;
+          box-shadow: 0 10px 30px rgba(13, 148, 136, 0.08);
+        }
+        .orders-empty-blob {
+          position: absolute;
+          border-radius: 50%;
+          pointer-events: none;
+        }
+        .orders-empty-blob--a {
+          width: 220px;
+          height: 220px;
+          right: -70px;
+          top: -90px;
+          background: radial-gradient(circle, rgba(45, 212, 191, 0.28), transparent 70%);
+        }
+        .orders-empty-blob--b {
+          width: 140px;
+          height: 140px;
+          right: 120px;
+          bottom: -80px;
+          background: radial-gradient(circle, rgba(20, 184, 166, 0.16), transparent 70%);
+        }
+        .orders-empty-art {
+          position: relative;
+          flex-shrink: 0;
+          width: 124px;
+          height: 124px;
+          border-radius: 28px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: linear-gradient(145deg, #2dd4bf 0%, #0d9488 100%);
+          box-shadow: 0 14px 28px rgba(13, 148, 136, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+          transform: rotate(-4deg);
+        }
+        .orders-empty-art svg {
+          width: 96px;
+          height: 96px;
+          transform: rotate(4deg);
+          animation: orders-empty-float 3.6s ease-in-out infinite;
+          filter: drop-shadow(0 6px 10px rgba(4, 80, 74, 0.25));
+        }
+        @keyframes orders-empty-float {
+          0%, 100% { translate: 0 0; }
+          50% { translate: 0 -5px; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .orders-empty-art svg { animation: none; }
+        }
+        .orders-empty-body {
+          position: relative;
+          min-width: 0;
+        }
+        .orders-empty-eyebrow {
+          display: inline-block;
+          padding: 3px 10px;
+          margin-bottom: 8px;
+          border-radius: 999px;
+          background: rgba(13, 148, 136, 0.1);
+          color: var(--primary, #0d9488);
+          font-size: 11.5px;
+          font-weight: 700;
+          letter-spacing: 0.04em;
+          text-transform: uppercase;
+        }
+        .orders-empty-title {
+          font-size: 21px;
+          font-weight: 800;
+          color: var(--text-main, #0b2545);
+          margin: 0 0 4px;
+          letter-spacing: -0.02em;
+        }
+        .orders-empty-desc {
+          font-size: 13.5px;
+          line-height: 1.55;
+          color: var(--text-muted);
+          margin: 0 0 16px;
+          max-width: 440px;
+        }
+        .orders-empty-actions {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+        .orders-empty-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 9px 16px;
+          border-radius: 10px;
+          font-size: 13.5px;
+          font-weight: 700;
+          text-decoration: none;
+          transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+        }
+        .orders-empty-btn--primary {
+          background: var(--primary, #0d9488);
+          color: #ffffff;
+          box-shadow: 0 6px 14px rgba(13, 148, 136, 0.25);
+        }
+        .orders-empty-btn--primary:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 10px 20px rgba(13, 148, 136, 0.3);
+        }
+        .orders-empty-btn--ghost {
+          background: #ffffff;
+          color: var(--primary, #0d9488);
+          border: 1px solid rgba(13, 148, 136, 0.25);
+        }
+        .orders-empty-btn--ghost:hover {
+          transform: translateY(-1px);
+          background: #f0fdfa;
+        }
+        @media (max-width: 600px) {
+          .orders-empty {
+            flex-direction: column;
+            text-align: center;
+            gap: 18px;
+            padding: 24px 18px;
+          }
+          .orders-empty-art {
+            width: 104px;
+            height: 104px;
+          }
+          .orders-empty-art svg {
+            width: 80px;
+            height: 80px;
+          }
+          .orders-empty-desc {
+            margin-left: auto;
+            margin-right: auto;
+          }
+          .orders-empty-actions {
+            justify-content: center;
           }
         }
         .orders-hero-banner {

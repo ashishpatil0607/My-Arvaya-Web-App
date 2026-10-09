@@ -1126,8 +1126,13 @@ function toTitleCase(str) {
 
         .lab-appointments-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+          grid-template-columns: repeat(4, minmax(0, 1fr));
           gap: 16px;
+        }
+        @media (max-width: 1100px) {
+          .lab-appointments-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
         }
 
         /* ── MEDIA QUERIES FOR FULL RESPONSIVENESS ── */
@@ -2231,6 +2236,145 @@ function toTitleCase(str) {
           box-shadow: 0 11px 28px rgba(5, 73, 78, 0.07) !important;
         }
 
+        .lab-order-empty {
+          position: relative;
+          overflow: hidden;
+          display: flex;
+          align-items: center;
+          gap: 24px;
+          padding: 22px 28px;
+          background: linear-gradient(110deg, #ffffff 0%, #f0fdfa 55%, #ccfbf1 100%);
+        }
+        .lab-empty-glow {
+          position: absolute;
+          border-radius: 50%;
+          pointer-events: none;
+        }
+        .lab-empty-glow--a {
+          width: 260px;
+          height: 260px;
+          right: -80px;
+          top: -120px;
+          background: radial-gradient(circle, rgba(45, 212, 191, 0.26), transparent 70%);
+        }
+        .lab-empty-glow--b {
+          width: 160px;
+          height: 160px;
+          left: 38%;
+          bottom: -100px;
+          background: radial-gradient(circle, rgba(20, 184, 166, 0.14), transparent 70%);
+        }
+        .lab-empty-art {
+          position: relative;
+          flex-shrink: 0;
+          width: 104px;
+          height: 104px;
+          border-radius: 26px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: linear-gradient(145deg, #2dd4bf 0%, #0d9488 100%);
+          box-shadow: 0 12px 24px rgba(13, 148, 136, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+          transform: rotate(-4deg);
+        }
+        .lab-empty-art svg {
+          width: 80px;
+          height: 80px;
+          transform: rotate(4deg);
+          animation: lab-empty-float 3.6s ease-in-out infinite;
+          filter: drop-shadow(0 6px 10px rgba(4, 80, 74, 0.25));
+        }
+        @keyframes lab-empty-float {
+          0%, 100% { translate: 0 0; }
+          50% { translate: 0 -5px; }
+        }
+        .lab-empty-body {
+          position: relative;
+          flex: 1;
+          min-width: 0;
+        }
+        .lab-empty-eyebrow {
+          display: inline-block;
+          padding: 3px 10px;
+          margin-bottom: 6px;
+          border-radius: 999px;
+          background: rgba(13, 148, 136, 0.1);
+          color: var(--primary);
+          font-size: 11px;
+          font-weight: 700;
+          letter-spacing: 0.05em;
+          text-transform: uppercase;
+        }
+        .lab-empty-title {
+          font-size: 19px;
+          font-weight: 800;
+          color: var(--text-main);
+          margin: 0 0 4px;
+          letter-spacing: -0.02em;
+        }
+        .lab-empty-desc {
+          font-size: 13.5px;
+          line-height: 1.55;
+          color: var(--text-muted);
+          margin: 0;
+          max-width: 520px;
+        }
+        .lab-empty-actions {
+          position: relative;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          flex-shrink: 0;
+        }
+        .lab-empty-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 10px 16px;
+          border-radius: 10px;
+          font-size: 13.5px;
+          font-weight: 700;
+          font-family: inherit;
+          cursor: pointer;
+          transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+        }
+        .lab-empty-btn--primary {
+          border: none;
+          background: var(--primary);
+          color: #ffffff;
+          box-shadow: 0 6px 14px rgba(13, 148, 136, 0.25);
+        }
+        .lab-empty-btn--primary:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 10px 20px rgba(13, 148, 136, 0.3);
+        }
+        .lab-empty-btn--ghost {
+          background: #ffffff;
+          color: var(--primary);
+          border: 1px solid rgba(13, 148, 136, 0.25);
+        }
+        .lab-empty-btn--ghost:hover {
+          transform: translateY(-1px);
+          background: #f0fdfa;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .lab-empty-art svg { animation: none; }
+        }
+        @media (max-width: 760px) {
+          .lab-order-empty {
+            flex-direction: column;
+            text-align: center;
+            gap: 16px;
+            padding: 24px 18px;
+          }
+          .lab-empty-desc {
+            margin: 0 auto;
+          }
+          .lab-empty-actions {
+            justify-content: center;
+          }
+        }
+
         .lab-order-card {
           --oc-color: var(--primary);
           --oc-bg: var(--primary-light);
@@ -2726,28 +2870,40 @@ function toTitleCase(str) {
               })}
             </div>
           ) : (
-            <div className="lab-order-empty" style={{
-              background: '#ffffff',
-              borderRadius: '16px',
-              border: '1px solid var(--border)',
-              padding: '32px 24px',
-              textAlign: 'center'
-            }}>
-              <div style={{ width: '124px', height: '124px', borderRadius: '50%', background: 'var(--primary-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-                <svg width="76" height="76" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                  <ellipse cx="60" cy="102" rx="34" ry="5" fill="var(--primary)" opacity="0.1" />
-                  <path d="M34 20 H86 V88 L80 94 L74 88 L68 94 L62 88 L56 94 L50 88 L44 94 L38 88 L34 94 Z"
-                        fill="#ffffff" stroke="var(--primary)" strokeWidth="3" strokeLinejoin="round" />
-                  <rect x="43" y="33" width="34" height="4" rx="2" fill="var(--primary-light)" />
-                  <rect x="43" y="43" width="26" height="4" rx="2" fill="var(--primary-light)" />
-                  <rect x="43" y="53" width="30" height="4" rx="2" fill="var(--primary-light)" />
-                  <rect x="43" y="65" width="18" height="6" rx="3" fill="var(--primary)" opacity="0.85" />
-                  <circle cx="84" cy="78" r="16" fill="var(--accent)" stroke="#ffffff" strokeWidth="3" />
-                  <path d="M77.5 78 L82 82.5 L91 72.5" fill="none" stroke="#ffffff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+            <div className="lab-order-empty">
+              <span className="lab-empty-glow lab-empty-glow--a" aria-hidden="true" />
+              <span className="lab-empty-glow lab-empty-glow--b" aria-hidden="true" />
+
+              <div className="lab-empty-art" aria-hidden="true">
+                <svg viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M100 12C100 16.2 102.8 19 107 19C102.8 19 100 21.8 100 26C100 21.8 97.2 19 93 19C97.2 19 100 16.2 100 12Z" fill="#ffffff" fillOpacity="0.9" />
+                  <circle cx="16" cy="90" r="2.5" fill="#ffffff" fillOpacity="0.6" />
+                  <path d="M30 18 H82 V90 L76 96 L70 90 L64 96 L58 90 L52 96 L46 90 L40 96 L34 90 L30 96 Z" fill="#ffffff" />
+                  <circle cx="42" cy="36" r="3.5" fill="#5eead4" />
+                  <path d="M51 36H72" stroke="#ccfbf1" strokeWidth="4" strokeLinecap="round" />
+                  <circle cx="42" cy="50" r="3.5" fill="#5eead4" />
+                  <path d="M51 50H68" stroke="#ccfbf1" strokeWidth="4" strokeLinecap="round" />
+                  <circle cx="42" cy="64" r="3.5" fill="#5eead4" />
+                  <path d="M51 64H64" stroke="#ccfbf1" strokeWidth="4" strokeLinecap="round" />
+                  <circle cx="84" cy="80" r="15" fill="var(--accent, #f97316)" stroke="#ffffff" strokeWidth="3.5" />
+                  <path d="M77.5 80 L82 84.5 L91 74.5" stroke="#ffffff" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </div>
-              <h3 style={{ fontSize: '16px', color: 'var(--text-main)', marginBottom: '6px', fontWeight: '700' }}>No Orders Found</h3>
-              <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Your lab test orders will show up here once you book one.</p>
+
+              <div className="lab-empty-body">
+                <span className="lab-empty-eyebrow">No orders yet</span>
+                <h3 className="lab-empty-title">Your health journey starts here</h3>
+                <p className="lab-empty-desc">Book a lab test or health package. Your orders, sample status and reports will show up here.</p>
+              </div>
+
+              <div className="lab-empty-actions">
+                <button type="button" className="lab-empty-btn lab-empty-btn--primary" onClick={() => go('/labs/all-tests')}>
+                  <FlaskConical size={15} /> Book a Test <ChevronRight size={15} />
+                </button>
+                <button type="button" className="lab-empty-btn lab-empty-btn--ghost" onClick={() => go('/labs/all-packages')}>
+                  <Sparkles size={15} /> View Packages
+                </button>
+              </div>
             </div>
           )}
         </section>
