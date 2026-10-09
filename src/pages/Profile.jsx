@@ -2158,6 +2158,14 @@ export default function Profile() {
         .profile-form-card .input-field {
           border-radius: 12px;
           transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+          font-family: inherit;
+        }
+        .profile-form-card input[type="date"].input-field,
+        .profile-form-card input[type="date"].input-field::-webkit-datetime-edit {
+          font-family: inherit;
+          font-size: 14px;
+          letter-spacing: normal;
+          color: var(--text-main);
         }
         .profile-form-card .input-field:not([readonly]):not(:disabled):hover {
           border-color: rgba(20, 184, 166, 0.45);

@@ -17,6 +17,7 @@ import {
   Check,
   Timer
 } from "lucide-react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { useBooking } from "../../context/BookingContext";
 import { useAuth } from "../../context/AuthContext";
@@ -44,6 +45,85 @@ function clearHoldExpiry() {
   try { sessionStorage.removeItem(SLOT_HOLD_KEY); } catch (e) {}
 }
 
+// Razorpay locks page scroll by setting overflow/contain on both <html> and <body>.
+// Snapshot them before opening checkout so they can be restored if we tear it down ourselves.
+function getScrollLockStyles() {
+  const html = document.documentElement.style;
+  const body = document.body.style;
+  return {
+    htmlOverflow: html.overflow, htmlContain: html.contain,
+    bodyOverflow: body.overflow, bodyContain: body.contain
+  };
+}
+
+// rzp.close() is unreliable once checkout is open, so also remove Razorpay's overlay from the DOM
+// and undo the scroll lock it applied.
+function forceCloseRazorpay(rzp, savedStyles) {
+  if (rzp) {
+    try { rzp.close(); } catch (e) {}
+  }
+  document.querySelectorAll('.razorpay-container, .razorpay-backdrop').forEach(el => el.remove());
+
+  const s = savedStyles || { htmlOverflow: '', htmlContain: '', bodyOverflow: '', bodyContain: '' };
+  const html = document.documentElement.style;
+  const body = document.body.style;
+  html.overflow = s.htmlOverflow;
+  html.contain = s.htmlContain;
+  body.overflow = s.bodyOverflow;
+  body.contain = s.bodyContain;
+}
+
+// Slot-hold countdown with a progress bar that drains as time runs out.
+// `floating` renders it as a solid card for use over the Razorpay overlay.
+function HoldTimerBanner({ secondsLeft, floating = false }) {
+  const urgent = secondsLeft <= 60;
+  const label = `${String(Math.floor(secondsLeft / 60)).padStart(2, '0')}:${String(secondsLeft % 60).padStart(2, '0')}`;
+  const percent = Math.min(100, (secondsLeft / (SLOT_HOLD_MS / 1000)) * 100);
+
+  return (
+    <div
+      role="timer"
+      style={{
+        position: 'relative', overflow: 'hidden',
+        display: 'flex', alignItems: 'center', gap: '8px',
+        padding: '10px 14px 13px', borderRadius: '10px', fontSize: '13px', fontWeight: '600',
+        color: urgent ? '#b91c1c' : 'var(--primary)',
+        border: `1px solid ${urgent ? 'rgba(220, 38, 38, 0.25)' : 'rgba(46, 102, 110, 0.2)'}`,
+        ...(floating
+          ? { background: urgent ? '#fef2f2' : '#f0f7f7', boxShadow: '0 8px 24px rgba(0, 0, 0, 0.25)' }
+          : { background: urgent ? 'rgba(220, 38, 38, 0.08)' : 'rgba(46, 102, 110, 0.08)', marginBottom: '14px' })
+      }}
+    >
+      <Timer size={16} style={{ flexShrink: 0 }} />
+      <span>
+        Your slot is reserved for <strong style={{ fontVariantNumeric: 'tabular-nums' }}>{label}</strong>.{' '}
+        {floating ? 'Complete the payment before the timer runs out.' : 'Complete the booking before the timer runs out.'}
+      </span>
+      <div
+        role="progressbar"
+        aria-label="Time remaining to complete booking"
+        aria-valuemin={0}
+        aria-valuemax={SLOT_HOLD_MS / 1000}
+        aria-valuenow={secondsLeft}
+        style={{
+          position: 'absolute', left: 0, right: 0, bottom: 0, height: '4px',
+          background: urgent ? 'rgba(220, 38, 38, 0.12)' : 'rgba(46, 102, 110, 0.12)'
+        }}
+      >
+        <div
+          style={{
+            height: '100%',
+            width: `${percent}%`,
+            background: urgent ? '#dc2626' : 'var(--primary)',
+            borderRadius: '0 2px 2px 0',
+            transition: 'width 1s linear, background-color 0.3s ease'
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
 export default function BookingReview() {
   const { doctor, date, slot, setBookingId, bookingHospital, bookingSpecialty, bookingVisitType } = useBooking();
   const navigate = useNavigate();
@@ -64,6 +144,8 @@ export default function BookingReview() {
   const [secondsLeft, setSecondsLeft] = useState(() => Math.max(0, Math.ceil((holdExpiry - Date.now()) / 1000)));
   const holdReleasedRef = useRef(false);
   const razorpayRef = useRef(null);
+  const scrollStylesRef = useRef(null);
+  const [paymentOpen, setPaymentOpen] = useState(false);
 
   useEffect(() => {
     async function loadData() {
@@ -202,6 +284,11 @@ export default function BookingReview() {
   useEffect(() => {
     clearTimeout(pendingUnmountReleaseRef.current);
     return () => {
+      // Never leave an open checkout behind on another page
+      if (razorpayRef.current) {
+        forceCloseRazorpay(razorpayRef.current, scrollStylesRef.current);
+        razorpayRef.current = null;
+      }
       pendingUnmountReleaseRef.current = setTimeout(() => releaseHeldSlotRef.current(), 0);
     };
   }, []);
@@ -228,9 +315,10 @@ export default function BookingReview() {
     if (secondsLeft > 0 || holdReleasedRef.current) return;
 
     if (razorpayRef.current) {
-      try { razorpayRef.current.close(); } catch (e) {}
+      forceCloseRazorpay(razorpayRef.current, scrollStylesRef.current);
       razorpayRef.current = null;
     }
+    setPaymentOpen(false);
     setSubmitting(false);
     releaseHeldSlot();
 
@@ -243,7 +331,6 @@ export default function BookingReview() {
     return () => clearTimeout(t);
   }, [secondsLeft, navigate]);
 
-  const holdTimeLabel = `${String(Math.floor(secondsLeft / 60)).padStart(2, '0')}:${String(secondsLeft % 60).padStart(2, '0')}`;
 
   const maxWalletApplicable = Math.min(walletBalance, consultationFee);
   
@@ -359,10 +446,13 @@ export default function BookingReview() {
         name: "Arvaya Healthcare",
         description: "Doctor Consultation",
         order_id: result.razorpay_order_id,
+        // Razorpay's own expiry: checkout stops accepting payment when the slot hold runs out
+        timeout: Math.max(1, Math.floor((holdExpiry - Date.now()) / 1000)),
         handler: async function (response) {
           // Payment captured — stop the hold timer so a paid slot is never released
           holdReleasedRef.current = true;
           razorpayRef.current = null;
+          setPaymentOpen(false);
           clearHoldExpiry();
           try {
             await verifyPayment({
@@ -400,14 +490,18 @@ export default function BookingReview() {
         },
         modal: {
           ondismiss: function() {
+            razorpayRef.current = null;
+            setPaymentOpen(false);
             setSubmitting(false);
           }
         }
       };
 
+      scrollStylesRef.current = getScrollLockStyles();
       const paymentObject = new window.Razorpay(options);
       razorpayRef.current = paymentObject;
       paymentObject.open();
+      setPaymentOpen(true);
 
     } catch (err) {
       console.error(err);
@@ -483,19 +577,7 @@ export default function BookingReview() {
         subtitle="Please review your appointment details before confirming."
       >
         <div className="booking-review-container">
-          <div
-            role="timer"
-            style={{
-              display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px',
-              padding: '10px 14px', borderRadius: '10px', fontSize: '13px', fontWeight: '600',
-              background: secondsLeft <= 60 ? 'rgba(220, 38, 38, 0.08)' : 'rgba(46, 102, 110, 0.08)',
-              color: secondsLeft <= 60 ? '#b91c1c' : 'var(--primary)',
-              border: `1px solid ${secondsLeft <= 60 ? 'rgba(220, 38, 38, 0.25)' : 'rgba(46, 102, 110, 0.2)'}`
-            }}
-          >
-            <Timer size={16} />
-            <span>Your slot is reserved for <strong style={{ fontVariantNumeric: 'tabular-nums' }}>{holdTimeLabel}</strong>. Complete the booking before the timer runs out.</span>
-          </div>
+          <HoldTimerBanner secondsLeft={secondsLeft} />
           <div className="booking-review-scroll styled-scrollbar">
             {loadingData ? (
               <div style={{ padding: '60px 0', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '14px' }}>
@@ -778,6 +860,21 @@ export default function BookingReview() {
         type={toast.type}
         onClose={() => setToast({ ...toast, isOpen: false })}
       />
+
+      {/* Razorpay checkout is a cross-origin iframe, so the countdown floats above its overlay instead.
+          Portaled to <body> after checkout opens so it stacks over Razorpay's container. */}
+      {paymentOpen && createPortal(
+        <div
+          style={{
+            position: 'fixed', top: '12px', left: '50%', transform: 'translateX(-50%)',
+            width: 'max-content', maxWidth: 'calc(100vw - 32px)',
+            zIndex: 2147483647, pointerEvents: 'none'
+          }}
+        >
+          <HoldTimerBanner secondsLeft={secondsLeft} floating />
+        </div>,
+        document.body
+      )}
     </>
   );
 }
