@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useBooking } from "../context/BookingContext";
 import { useAuth } from "../context/AuthContext";
 import { bookAppointment, verifyPayment } from "../services/dataService";
+import { stripTitle } from "../utils/formatName";
 import Steps from "../components/common/Steps";
 import Avatar from "../components/common/Avatar";
 
@@ -52,7 +53,14 @@ export default function Review() {
         extphid: "",
         fname: user?.name || "Guest",
         phone: user?.mobile || user?.phone || "N/A",
-        wallet_amount_used: 0
+        title: user?.title || "",
+        age: user?.age || "",
+        altphone: user?.altphone || user?.alt_phone || "",
+        email: user?.email || "",
+        amount: parseInt(doctor.fee) || 0,
+        wallet_amount_used: 0,
+        drname: doctor?.name ? (doctor.name.startsWith("Dr") ? doctor.name : `Dr.${doctor.name}`) : "",
+        patient_name: stripTitle(user?.name) || "Guest"
       };
 
       const result = await bookAppointment(payload);
@@ -81,11 +89,13 @@ export default function Review() {
         order_id: result.razorpay_order_id,
         handler: async function (response) {
           try {
+            const { amount, wallet_amount_used, ...verifyPayload } = payload;
             await verifyPayment({
               razorpay_order_id: response.razorpay_order_id,
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_signature: response.razorpay_signature,
-              ...payload
+              token_no: result.token_no || 1,
+              ...verifyPayload
             });
             setBookingId(result.razorpay_order_id || result.bookingId || "APMNT" + Date.now().toString().slice(-8));
             go("/confirmed");

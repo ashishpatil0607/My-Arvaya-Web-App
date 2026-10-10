@@ -3,6 +3,7 @@ import { Calendar as CalendarIcon, Clock, MapPin, Video, User, CheckCircle, XCir
 import { Link } from "react-router-dom";
 import { getAppointments, cancelAppointment, rescheduleAppointment, getStoredUserId, getDoctorSlots } from "../services/dataService";
 import { toDisplayTime } from "../utils/formatTime";
+import { stripTitle } from "../utils/formatName";
 import Modal from "../components/common/Modal";
 import Toast from "../components/common/Toast";
 import Calendar from "../components/common/Calendar";
@@ -13,6 +14,33 @@ const getLocalDateString = (dateObj) => {
   const m = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
+};
+
+// "10:30 - 11:00" / "2:30 PM - 3:00 PM" -> "10:30" / "14:30"
+const toSlotStart24 = (slot) => {
+  const start = String(slot || "").split("-")[0].trim();
+  const match = start.match(/^(\d{1,2}):(\d{2})\s*(am|pm)?/i);
+  if (!match) return start;
+  let hour = parseInt(match[1], 10);
+  const meridiem = (match[3] || "").toLowerCase();
+  if (meridiem === "pm" && hour !== 12) hour += 12;
+  if (meridiem === "am" && hour === 12) hour = 0;
+  return `${String(hour).padStart(2, '0')}:${match[2]}`;
+};
+
+// "11:30" / "11:30 AM" / "11:30:00" -> "11:30:00"
+const toTime24WithSeconds = (time) => {
+  const str = String(time || "").trim();
+  if (/^\d{1,2}:\d{2}:\d{2}$/.test(str)) return str.padStart(8, "0");
+  return `${toSlotStart24(str)}:00`;
+};
+
+// "2026-10-11" / ISO timestamp -> "2026-10-11"
+const toDateOnly = (date) => {
+  const str = String(date || "").trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+  const d = new Date(str);
+  return isNaN(d) ? str : getLocalDateString(d);
 };
 
 const PAGE_SIZE = 5;
@@ -45,6 +73,7 @@ export default function MyAppointments() {
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [appointmentToCancel, setAppointmentToCancel] = useState(null);
   const [cancelReason, setCancelReason] = useState("");
+  const [cancelReasonError, setCancelReasonError] = useState("");
   const [isCancelling, setIsCancelling] = useState(false);
 
   // Reschedule
@@ -52,6 +81,7 @@ export default function MyAppointments() {
   const [appointmentToReschedule, setAppointmentToReschedule] = useState(null);
   const [rescheduleDate, setRescheduleDate] = useState(new Date());
   const [rescheduleSlot, setRescheduleSlot] = useState("");
+  const [rescheduleSlotError, setRescheduleSlotError] = useState(false);
   const [availableSlots, setAvailableSlots] = useState({ morning: [], afternoon: [], evening: [] });
   const [slotsLoading, setSlotsLoading] = useState(false);
   const [isRescheduling, setIsRescheduling] = useState(false);
@@ -101,20 +131,25 @@ export default function MyAppointments() {
   const openCancelModal = (apt) => {
     setAppointmentToCancel(apt);
     setCancelReason("");
+    setCancelReasonError("");
     setCancelModalOpen(true);
   };
 
   const confirmCancel = async () => {
     if (!cancelReason.trim()) {
-      showToast("Please provide a cancellation reason.", "error");
+      setCancelReasonError("Please provide a reason for cancellation.");
       return;
     }
     setIsCancelling(true);
     try {
-      const patientId = getStoredUserId();
+      const raw = appointmentToCancel.raw || {};
       const res = await cancelAppointment({
-        appointment_id: appointmentToCancel.raw?.appointment_id || appointmentToCancel.id,
-        patient_id: patientId,
+        appointment_id: raw.appointment_id || appointmentToCancel.id,
+        appointment_time: toTime24WithSeconds(raw.appointment_time || appointmentToCancel.time),
+        appointment_date: toDateOnly(raw.appointment_date || appointmentToCancel.date),
+        drname: appointmentToCancel.doctor,
+        patient_name: stripTitle(appointmentToCancel.patientName),
+        phone: appointmentToCancel.patientMobile,
         cancellation_reason: cancelReason
       });
       const msg = res?.message || "Appointment cancelled successfully!";
@@ -144,6 +179,7 @@ export default function MyAppointments() {
     }
     
     setRescheduleSlot("");
+    setRescheduleSlotError(false);
     setRescheduleModalOpen(true);
   };
 
@@ -215,22 +251,26 @@ export default function MyAppointments() {
 
   const confirmReschedule = async () => {
     if (!rescheduleSlot) {
-      showToast("Please select a new time slot.", "error");
+      setRescheduleSlotError(true);
       return;
     }
     setIsRescheduling(true);
     try {
-      const patientId = getStoredUserId();
-      const newDateStr = getLocalDateString(rescheduleDate);
-      const newStartStr = typeof rescheduleSlot === 'string' ? rescheduleSlot : (rescheduleSlot.start_time || rescheduleSlot.time);
-      const locationKey = appointmentToReschedule.raw?.entitylocation || appointmentToReschedule.raw?.location_key;
+      const raw = appointmentToReschedule.raw || {};
+      const patientId = raw.patient_id || getStoredUserId();
+      const newDateStr = getLocalDateString(rescheduleDate).replace(/-/g, '');
+      const slotStr = typeof rescheduleSlot === 'string' ? rescheduleSlot : (rescheduleSlot.start_time || rescheduleSlot.time);
+      const locationKey = raw.entitylocation || raw.location_key;
 
       const res = await rescheduleAppointment({
-        appointment_id: appointmentToReschedule.raw?.appointment_id || appointmentToReschedule.id,
+        appointment_id: raw.appointment_id || appointmentToReschedule.id,
         patient_id: patientId,
         new_date: newDateStr,
-        new_start: newStartStr,
-        new_location_key: locationKey
+        new_start: toSlotStart24(slotStr),
+        new_location_key: locationKey,
+        drname: appointmentToReschedule.doctor,
+        patient_name: stripTitle(appointmentToReschedule.patientName),
+        phone: appointmentToReschedule.patientMobile
       });
       const msg = res?.message || "Appointment rescheduled successfully!";
       showToast(msg);
@@ -650,31 +690,66 @@ export default function MyAppointments() {
       </div>
       
       {/* Cancel Modal */}
-      <Modal isOpen={cancelModalOpen} onClose={() => setCancelModalOpen(false)} title="Cancel Appointment">
-        <div style={{ padding: '8px 0 24px 0' }}>
-          <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginBottom: '16px' }}>
-            Are you sure you want to cancel your appointment with <strong>{appointmentToCancel?.doctor}</strong>?
-          </p>
-          <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: 'var(--text-main)', marginBottom: '8px' }}>Reason for cancellation</label>
-          <textarea 
-            value={cancelReason}
-            onChange={(e) => setCancelReason(e.target.value)}
-            maxLength={250}
-            rows={4}
-            placeholder="Please tell us why you are cancelling..."
-            style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg-app)', color: 'var(--text-main)', outline: 'none', resize: 'vertical', fontFamily: 'inherit', fontSize: '14px', lineHeight: 1.5 }}
-          />
-          <div style={{ textAlign: 'right', fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>
-            {cancelReason.length}/250
+      <Modal isOpen={cancelModalOpen} onClose={() => setCancelModalOpen(false)} title="Cancel Appointment" maxWidth="640px">
+        <div className="reschedule-modal">
+          {appointmentToCancel && (
+            <div className="reschedule-current">
+              <div className="reschedule-current-doctor">
+                <div className="appointment-doctor-icon">
+                  <Stethoscope size={18} />
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <div className="reschedule-current-name">{appointmentToCancel.doctor}</div>
+                  {appointmentToCancel.specialty && (
+                    <div className="reschedule-current-meta">{appointmentToCancel.specialty}</div>
+                  )}
+                </div>
+              </div>
+              <div className="reschedule-current-slot">
+                <span className="reschedule-current-label">Current booking</span>
+                <span className="reschedule-current-value">
+                  <CalendarIcon size={13} />
+                  {new Date(appointmentToCancel.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} • {formatTime(appointmentToCancel.time)}
+                </span>
+              </div>
+            </div>
+          )}
+
+          <div>
+            <h4 className="reschedule-step-title">
+              <span className="reschedule-step-num">1</span>
+              Reason for cancellation
+            </h4>
+            <textarea
+              className={`cancel-reason-input ${cancelReasonError ? 'has-error' : ''}`}
+              value={cancelReason}
+              onChange={(e) => {
+                setCancelReason(e.target.value);
+                if (cancelReasonError) setCancelReasonError("");
+              }}
+              maxLength={250}
+              rows={4}
+              placeholder="Please tell us why you are cancelling..."
+              aria-invalid={!!cancelReasonError}
+            />
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', fontSize: '12px', marginTop: '4px' }}>
+              <span className="cancel-reason-error">{cancelReasonError}</span>
+              <span style={{ color: 'var(--text-muted)' }}>{cancelReason.length}/250</span>
+            </div>
           </div>
-          
-          <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '24px' }}>
-            <button className="btn btn-secondary" onClick={() => setCancelModalOpen(false)} disabled={isCancelling}>
-              Keep Appointment
-            </button>
-            <button className="btn" onClick={confirmCancel} disabled={isCancelling} style={{ background: 'var(--danger, #dc2626)', color: 'white', border: 'none' }}>
-              {isCancelling ? "Cancelling..." : "Confirm Cancel"}
-            </button>
+
+          <div className="reschedule-actions">
+            <div className="reschedule-summary">
+              <span className="reschedule-summary-hint" style={{ whiteSpace: 'nowrap' }}>This action cannot be undone</span>
+            </div>
+            <div className="reschedule-buttons">
+              <button className="btn btn-secondary" onClick={() => setCancelModalOpen(false)} disabled={isCancelling}>
+                Keep Appointment
+              </button>
+              <button className="btn" onClick={confirmCancel} disabled={isCancelling} style={{ background: 'var(--danger, #dc2626)', color: 'white', border: 'none' }}>
+                {isCancelling ? "Cancelling..." : "Confirm Cancel"}
+              </button>
+            </div>
           </div>
         </div>
       </Modal>
@@ -755,7 +830,10 @@ export default function MyAppointments() {
                               key={`${key}-${idx}`}
                               type="button"
                               disabled={isCurrent}
-                              onClick={() => setRescheduleSlot(slotItem)}
+                              onClick={() => {
+                                setRescheduleSlot(slotItem);
+                                setRescheduleSlotError(false);
+                              }}
                               className={`slot-chip ${isSel ? 'selected' : ''}`}
                               aria-selected={isSel}
                               title={isCurrent ? 'Your current booking' : undefined}
@@ -793,14 +871,16 @@ export default function MyAppointments() {
                   </span>
                 </>
               ) : (
-                <span className="reschedule-summary-hint">Pick a time slot to continue</span>
+                <span className={rescheduleSlotError ? "cancel-reason-error" : "reschedule-summary-hint"} style={{ fontSize: '13px' }}>
+                  {rescheduleSlotError ? "Please select a time slot to reschedule." : "Pick a time slot to continue"}
+                </span>
               )}
             </div>
             <div className="reschedule-buttons">
               <button className="btn btn-secondary" onClick={() => setRescheduleModalOpen(false)} disabled={isRescheduling}>
                 Cancel
               </button>
-              <button className="btn btn-primary" onClick={confirmReschedule} disabled={isRescheduling || !rescheduleSlot}>
+              <button className="btn btn-primary" onClick={confirmReschedule} disabled={isRescheduling}>
                 {isRescheduling ? "Rescheduling..." : "Confirm Reschedule"}
               </button>
             </div>

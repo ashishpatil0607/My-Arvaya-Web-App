@@ -12538,6 +12538,36 @@ schedule-calendar-card {
   flex-shrink: 0;
 }
 
+.cancel-reason-input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--bg-app);
+  color: var(--text-main);
+  outline: none;
+  resize: vertical;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.cancel-reason-input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-light);
+}
+
+.cancel-reason-input.has-error {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12);
+}
+
+.cancel-reason-error {
+  color: #dc2626;
+  font-weight: 500;
+}
+
 @media (max-width: 768px) {
   .reschedule-grid {
     grid-template-columns: 1fr;

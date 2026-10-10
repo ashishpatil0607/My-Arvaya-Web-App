@@ -21,6 +21,7 @@ import { useNavigate } from "react-router-dom";
 import { useBooking } from "../../context/BookingContext";
 import { useAuth } from "../../context/AuthContext";
 import { bookAppointment, getWalletAmount, checkVisitType, verifyPayment, releaseSlot } from "../../services/dataService";
+import { stripTitle } from "../../utils/formatName";
 import BookingLayout from "../../components/layout/BookingLayout";
 import Toast from "../../components/common/Toast";
 import { toDisplayTime } from "../../utils/formatTime";
@@ -407,9 +408,16 @@ export default function BookingReview() {
         extphid: user?.external_id || "",
         fname: user?.name || "Guest",
         phone: user?.mobile || user?.phone || "N/A",
-        wallet_amount_used: applyWallet ? walletAppliedAmount : 0
+        title: user?.title || "",
+        age: user?.age || "",
+        altphone: user?.altphone || user?.alt_phone || "",
+        email: user?.email || "",
+        amount: consultationFee,
+        wallet_amount_used: applyWallet ? walletAppliedAmount : 0,
+        drname: doctor?.name ? (doctor.name.startsWith("Dr") ? doctor.name : `Dr.${doctor.name}`) : "",
+        patient_name: stripTitle(user?.name) || "Guest"
       };
-      
+
       const result = await bookAppointment(payload);
 
       const amountToPay = consultationFee - (applyWallet ? walletAppliedAmount : 0);
@@ -455,11 +463,13 @@ export default function BookingReview() {
           setPaymentOpen(false);
           clearHoldExpiry();
           try {
+            const { amount, wallet_amount_used, ...verifyPayload } = payload;
             await verifyPayment({
               razorpay_order_id: response.razorpay_order_id,
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_signature: response.razorpay_signature,
-              ...payload
+              token_no: result.token_no || 1,
+              ...verifyPayload
             });
             const orderRef = (
               result.order_id || 
