@@ -2,7 +2,7 @@ import {
   Search, ChevronRight, ChevronLeft, Activity, FlaskConical, Clock, Heart, ShieldCheck, 
   Sparkles, Droplets, Bone, Brain, Baby, Eye, Ribbon, Flame, Wind, Pill, Syringe, 
   Scissors, Apple, Zap, Users, Dumbbell, Beaker, Microscope, TestTube, Stethoscope, 
-  CalendarDays, MapPin, ArrowRight, CheckCircle2, Filter, X, Wallet, Home, Building2
+  CalendarDays, MapPin, ArrowRight, CheckCircle2, Filter, X, Wallet, Home, Building2, User
 } from "lucide-react";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
@@ -438,6 +438,21 @@ function toTitleCase(str) {
     if (val < 0) val = 0;
     setWalletAppliedAmount(val);
   };
+
+  // Close the booking modal while the login modal is open, then reopen it for the same item once logged in
+  const pendingBookItemRef = useRef(null);
+  const handleLoginToBook = () => {
+    pendingBookItemRef.current = selectedItem;
+    setSelectedItem(null);
+    openLoginModal("/labs");
+  };
+
+  useEffect(() => {
+    if (user && pendingBookItemRef.current) {
+      setSelectedItem(pendingBookItemRef.current);
+      pendingBookItemRef.current = null;
+    }
+  }, [user]);
 
   const scrollContainer = (ref, direction) => {
     if (ref.current) {
@@ -3028,6 +3043,137 @@ function toTitleCase(str) {
           </div>
         )}
 
+        {!user ? (
+          <div className="lab-guest">
+            <style>{`
+              .lab-guest {
+                padding: 24px 22px 20px;
+                text-align: center;
+                background: radial-gradient(circle at 50% 0%, rgba(46, 102, 110, 0.12), transparent 65%), #ffffff;
+                border: 1px solid var(--border);
+                border-radius: 18px;
+                box-shadow: 0 8px 24px -14px rgba(5, 73, 78, 0.25);
+              }
+              .lab-guest-art {
+                position: relative;
+                width: 64px;
+                height: 64px;
+                margin: 0 auto 12px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: var(--primary);
+                background: var(--primary-light);
+              }
+              .lab-guest-art::after {
+                content: "";
+                position: absolute;
+                inset: 0;
+                border-radius: 50%;
+                border: 2px solid rgba(46, 102, 110, 0.3);
+                animation: labGuestPulse 2.4s ease-out infinite;
+              }
+              .lab-guest-title {
+                margin: 0 0 6px;
+                font-size: 17px;
+                font-weight: 800;
+                letter-spacing: -0.015em;
+                color: var(--text-main);
+              }
+              .lab-guest-text {
+                margin: 0 auto 16px;
+                max-width: 380px;
+                font-size: 13px;
+                line-height: 1.55;
+                color: var(--text-muted);
+              }
+              .lab-guest-perks {
+                display: flex;
+                justify-content: center;
+                flex-wrap: wrap;
+                gap: 8px;
+                margin: 0 auto 18px;
+              }
+              .lab-guest-perk {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                padding: 6px 11px;
+                border-radius: 999px;
+                font-size: 11.5px;
+                font-weight: 650;
+                color: var(--text-main);
+                background: #f7fbfa;
+                border: 1px solid var(--border);
+              }
+              .lab-guest-perk svg { color: var(--primary); }
+              .lab-guest-btn {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+                padding: 11px 24px;
+                border: none;
+                border-radius: 12px;
+                font-size: 14px;
+                font-weight: 700;
+                color: #fff;
+                cursor: pointer;
+                background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+                box-shadow: 0 6px 16px -6px rgba(46, 102, 110, 0.6);
+                transition: transform 0.2s ease, filter 0.2s ease;
+              }
+              .lab-guest-btn:hover { transform: translateY(-1px); filter: brightness(1.08); }
+              .lab-guest-btn svg:last-child { transition: transform 0.2s ease; }
+              .lab-guest-btn:hover svg:last-child { transform: translateX(3px); }
+              .lab-guest-foot {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 6px;
+                margin-top: 12px;
+                font-size: 11.5px;
+                color: var(--text-muted);
+              }
+              @keyframes labGuestPulse {
+                0% { transform: scale(1); opacity: 0.9; }
+                100% { transform: scale(1.35); opacity: 0; }
+              }
+              @media (max-width: 560px) {
+                .lab-guest { padding: 20px 14px 18px; }
+                .lab-guest-btn { width: 100%; }
+              }
+              @media (prefers-reduced-motion: reduce) {
+                .lab-guest-art::after { animation: none; }
+              }
+            `}</style>
+
+            <div className="lab-guest-art" aria-hidden="true">
+              <FlaskConical size={28} />
+            </div>
+            <h3 className="lab-guest-title">
+              You're one step away from booking this {selectedItem?.tests ? "package" : "test"}
+            </h3>
+            <p className="lab-guest-text">
+              Sign in to pick a convenient slot and get your reports delivered straight to your account.
+            </p>
+
+            <div className="lab-guest-perks">
+              <span className="lab-guest-perk"><Home size={13} /> Home sample collection</span>
+              <span className="lab-guest-perk"><Clock size={13} /> Reports in {selectedItem?.reportTime || "24 Hours"}</span>
+            </div>
+
+            <button type="button" className="lab-guest-btn" onClick={handleLoginToBook}>
+              <User size={16} /> Sign in to Continue <ArrowRight size={16} />
+            </button>
+
+            <div className="lab-guest-foot">
+              <ShieldCheck size={13} color="var(--primary)" /> Takes less than a minute. Your details stay private.
+            </div>
+          </div>
+        ) : (
+        <>
         <div style={{ marginBottom: "0px" }}>
           <label style={{ display: "block", fontSize: "14px", fontWeight: "700", color: "var(--text-main)", marginBottom: "12px" }}>
             Select Collection Preference
@@ -3073,6 +3219,8 @@ function toTitleCase(str) {
         </div>
 
         <SelectSlotUI onConfirm={confirmBooking} type="lab" submitting={submitting} />
+        </>
+        )}
       </Modal>
 
     </main>

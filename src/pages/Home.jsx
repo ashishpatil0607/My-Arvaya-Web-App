@@ -36,6 +36,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
 import { packages } from "../mocks/data";
 import AmbulanceRequestModal from "../components/ambulance/AmbulanceRequestModal";
+import AmbulanceLoginPrompt from "../components/ambulance/AmbulanceLoginPrompt";
 import {
   getBanners,
   getDiagnosticPackages,
@@ -72,6 +73,7 @@ export default function Home() {
   };
   const [currentSlide, setCurrentSlide] = useState(0);
   const [showAmbulanceModal, setShowAmbulanceModal] = useState(false);
+  const [showAmbulanceLoginPrompt, setShowAmbulanceLoginPrompt] = useState(false);
   const [apiPackages, setApiPackages] = useState(packages.slice(0, 4));
   const [reviews, setReviews] = useState([
     {
@@ -315,7 +317,7 @@ export default function Home() {
             <span>Medical Emergency?</span>
           </div>
           <button
-            onClick={() => setShowAmbulanceModal(true)}
+            onClick={() => (user ? setShowAmbulanceModal(true) : setShowAmbulanceLoginPrompt(true))}
             className="btn home-alert-call"
           >
             <PhoneCall size={17} strokeWidth={2.3} aria-hidden="true" />
@@ -1529,6 +1531,10 @@ export default function Home() {
       {showAmbulanceModal && (
         <AmbulanceRequestModal onClose={() => setShowAmbulanceModal(false)} />
       )}
+      <AmbulanceLoginPrompt
+        isOpen={showAmbulanceLoginPrompt}
+        onClose={() => setShowAmbulanceLoginPrompt(false)}
+      />
     </main>
   );
 }

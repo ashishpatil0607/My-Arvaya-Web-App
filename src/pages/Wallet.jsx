@@ -26,7 +26,8 @@ import {
   Heart,
   CreditCard,
   UserPlus,
-  FileText
+  FileText,
+  ArrowRight
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { getWalletAmount, getAppointmentHistory, getPlans } from "../services/dataService";
@@ -503,10 +504,12 @@ export default function Wallet() {
             <div className="wallet-hero-img-col">
               <div className="wallet-hero-img-wrap" aria-hidden="true">
                 <img src="/images/arvaya-wallet.png" alt="" className="wallet-hero-photo" />
-                <div className="wallet-hero-stat-badge">
-                  <CheckCircle2 size={14} />
-                  <span>{loading ? "Loading balance…" : `₹${rewardPoints.toLocaleString()} available`}</span>
-                </div>
+                {isLoggedIn && (
+                  <div className="wallet-hero-stat-badge">
+                    <CheckCircle2 size={14} />
+                    <span>{loading ? "Loading balance…" : `₹${rewardPoints.toLocaleString()} available`}</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -515,6 +518,7 @@ export default function Wallet() {
 
       <div className="container wallet-shell">
         <div className="wallet-layout">
+          {isLoggedIn && (
           <section className="wallet-primary-column">
             <article className="wallet-balance-card">
               <div className="wallet-balance-head">
@@ -539,7 +543,60 @@ export default function Wallet() {
             </article>
 
           </section>
+          )}
 
+          {!isLoggedIn ? (
+          <section className="wallet-panel wallet-guest-panel">
+            <div className="wallet-guest">
+              <div className="wallet-guest-copy">
+                <span className="wallet-guest-eyebrow"><ShieldCheck size={13} /> Arvaya Wallet</span>
+                <h3>Pay smarter with your Arvaya Wallet</h3>
+                <p>Sign in to check your wallet balance, collect cashback on bookings and use it to pay for appointments and lab tests.</p>
+
+                <ul className="wallet-guest-list">
+                  <li>
+                    <span className="wallet-guest-list-icon"><CreditCard size={16} /></span>
+                    <span><strong>Wallet balance</strong><small>See what you can spend</small></span>
+                  </li>
+                  <li>
+                    <span className="wallet-guest-list-icon gift"><Tag size={16} /></span>
+                    <span><strong>Cashback & offers</strong><small>Earned on your bookings</small></span>
+                  </li>
+                  <li>
+                    <span className="wallet-guest-list-icon ticket"><History size={16} /></span>
+                    <span><strong>Transactions</strong><small>Every credit and debit</small></span>
+                  </li>
+                </ul>
+
+                <div className="wallet-guest-actions">
+                  <button type="button" className="wallet-guest-btn" onClick={() => openLoginModal && openLoginModal("/wallet")}>
+                    Log In / Sign Up <ArrowRight size={16} />
+                  </button>
+                  <span className="wallet-guest-note"><ShieldCheck size={14} /> Takes less than a minute</span>
+                </div>
+              </div>
+
+              <div className="wallet-guest-visual" aria-hidden="true">
+                <div className="wallet-guest-card">
+                  <div className="wallet-guest-card-top">
+                    <span>Arvaya Wallet</span>
+                    <Star size={16} />
+                  </div>
+                  <small>Wallet balance</small>
+                  <strong>₹ • • • •</strong>
+                  <div className="wallet-guest-card-bars">
+                    <span /><span />
+                  </div>
+                  <span className="wallet-guest-coin c1">₹</span>
+                  <span className="wallet-guest-coin c2">₹</span>
+                </div>
+                <span className="wallet-guest-lock"><Lock size={20} /></span>
+                <img src="/images/wallet-gift.png" alt="" className="wallet-guest-gift" />
+              </div>
+            </div>
+          </section>
+          ) : (
+          <>
           <section className="wallet-panel wallet-rewards-panel">
             <div className="wallet-panel-heading">
               <div className="wallet-section-title">
@@ -549,23 +606,14 @@ export default function Wallet() {
                   <p>Available offers and vouchers</p>
                 </div>
               </div>
-              {isLoggedIn && filteredOffers.length > 0 && (
+              {filteredOffers.length > 0 && (
                 <div className="wallet-panel-heading-actions">
                   <span className="wallet-count-badge">{filteredOffers.length} offers</span>
                 </div>
               )}
             </div>
 
-            {!isLoggedIn ? (
-              <div className="wallet-empty-state rewards-empty">
-                <span className="wallet-empty-icon"><Gift size={22} /></span>
-                <h3>Log in to view rewards</h3>
-                <p>Access your exclusive healthcare rewards.</p>
-                <button type="button" className="wallet-primary-button" onClick={() => openLoginModal && openLoginModal()}>
-                  Log In / Sign Up
-                </button>
-              </div>
-            ) : filteredOffers.length === 0 ? (
+            {filteredOffers.length === 0 ? (
               <div className="wallet-empty-state compact rewards-empty">
                 <span className="wallet-empty-icon"><Gift size={22} /></span>
                 <h3>No rewards available</h3>
@@ -630,21 +678,12 @@ export default function Wallet() {
                   <p>Your recent wallet activity</p>
                 </div>
               </div>
-              {isLoggedIn && transactions.length > 0 && (
+              {transactions.length > 0 && (
                 <span className="wallet-count-badge">All Transactions</span>
               )}
             </div>
 
-            {!isLoggedIn ? (
-              <div className="wallet-empty-state">
-                <span className="wallet-empty-icon"><Lock size={22} /></span>
-                <h3>Log in to view transaction history</h3>
-                <p>Track every point you earn and redeem.</p>
-                <button type="button" className="wallet-primary-button" onClick={() => openLoginModal && openLoginModal()}>
-                  Log In / Sign Up
-                </button>
-              </div>
-            ) : transactions.length === 0 ? (
+            {transactions.length === 0 ? (
               <div className="wallet-empty-state compact">
                 <span className="wallet-empty-icon"><History size={22} /></span>
                 <h3>No transactions yet</h3>
@@ -703,6 +742,8 @@ export default function Wallet() {
               </div>
             )}
           </section>
+          </>
+          )}
         </div>
       </div>
 

@@ -9,11 +9,16 @@ import {
   Search, 
   X,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Stethoscope,
+  CalendarCheck,
+  User,
+  ShieldCheck
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { getHospitalsForLocation } from "../../services/dataService";
 import { useBooking } from "../../context/BookingContext";
+import { useAuth } from "../../context/AuthContext";
 import BookingLayout from "../../components/layout/BookingLayout";
 import Toast from "../../components/common/Toast";
 
@@ -47,6 +52,7 @@ export default function HospitalSelection() {
   const [toast, setToast] = useState({ isOpen: false, message: "", type: "error" });
   const navigate = useNavigate();
   const { globalLocation, bookingHospital, setBookingHospital } = useBooking();
+  const { user, openLoginModal } = useAuth();
   const ITEMS_PER_PAGE = 5;
 
   // Load hospitals for active location using original API implementation
@@ -140,6 +146,15 @@ export default function HospitalSelection() {
       });
       return;
     }
+    if (!user) {
+      setToast({
+        isOpen: true,
+        message: "Please log in to book a doctor appointment.",
+        type: "error"
+      });
+      openLoginModal("/doctors/specialty");
+      return;
+    }
     navigate("/doctors/specialty");
   };
 
@@ -153,7 +168,140 @@ export default function HospitalSelection() {
       subtitle={`Choose your preferred medical center${activeCity ? ` in ${activeCity}` : ''} to view available specialists and book an appointment.`}
     >
       <div className="hospital-selection-container">
-        
+
+        {!user ? (
+          <div className="hs-guest">
+            <style>{`
+              .hs-guest {
+                max-width: 520px;
+                margin: 28px auto 12px;
+                padding: 30px 28px 26px;
+                text-align: center;
+                background: radial-gradient(circle at 50% 0%, rgba(46, 102, 110, 0.10), transparent 60%), var(--bg-surface, #fff);
+                border: 1px solid var(--border);
+                border-radius: 22px;
+                box-shadow: 0 10px 30px -16px rgba(5, 73, 78, 0.25);
+              }
+              .hs-guest-art {
+                position: relative;
+                width: 76px;
+                height: 76px;
+                margin: 0 auto 14px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: var(--primary);
+                background: var(--primary-light);
+              }
+              .hs-guest-art::after {
+                content: "";
+                position: absolute;
+                inset: 0;
+                border-radius: 50%;
+                border: 2px solid rgba(46, 102, 110, 0.3);
+                animation: hsGuestPulse 2.4s ease-out infinite;
+              }
+              .hs-guest-title {
+                margin: 0 0 6px;
+                font-family: var(--font-display);
+                font-size: 19px;
+                font-weight: 800;
+                letter-spacing: -0.015em;
+                color: var(--text-main);
+              }
+              .hs-guest-text {
+                margin: 0 auto 18px;
+                max-width: 400px;
+                font-size: 13.5px;
+                line-height: 1.55;
+                color: var(--text-muted);
+              }
+              .hs-guest-steps {
+                display: flex;
+                justify-content: center;
+                flex-wrap: wrap;
+                gap: 8px;
+                margin: 0 auto 20px;
+              }
+              .hs-guest-step {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                padding: 6px 11px;
+                border-radius: 999px;
+                font-size: 12px;
+                font-weight: 650;
+                color: var(--text-main);
+                background: var(--bg-app, #f7fbfa);
+                border: 1px solid var(--border);
+              }
+              .hs-guest-step svg { color: var(--primary); }
+              .hs-guest-btn {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+                padding: 11px 24px;
+                border: none;
+                border-radius: 12px;
+                font-size: 14px;
+                font-weight: 700;
+                color: #fff;
+                cursor: pointer;
+                background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+                box-shadow: 0 6px 16px -6px rgba(46, 102, 110, 0.6);
+                transition: transform 0.2s ease, filter 0.2s ease;
+              }
+              .hs-guest-btn:hover { transform: translateY(-1px); filter: brightness(1.08); }
+              .hs-guest-btn svg:last-child { transition: transform 0.2s ease; }
+              .hs-guest-btn:hover svg:last-child { transform: translateX(3px); }
+              .hs-guest-foot {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 6px;
+                margin-top: 12px;
+                font-size: 12px;
+                color: var(--text-muted);
+              }
+              @keyframes hsGuestPulse {
+                0% { transform: scale(1); opacity: 0.9; }
+                100% { transform: scale(1.35); opacity: 0; }
+              }
+              @media (max-width: 560px) {
+                .hs-guest { margin: 16px auto 8px; padding: 24px 16px 22px; }
+                .hs-guest-btn { width: 100%; }
+              }
+              @media (prefers-reduced-motion: reduce) {
+                .hs-guest-art::after { animation: none; }
+              }
+            `}</style>
+
+            <div className="hs-guest-art" aria-hidden="true">
+              <Stethoscope size={32} />
+            </div>
+            <h2 className="hs-guest-title">Your doctor is just a few steps away</h2>
+            <p className="hs-guest-text">
+              Sign in to choose a hospital, find the right specialist and book a time that works for you.
+            </p>
+
+            <div className="hs-guest-steps">
+              <span className="hs-guest-step"><Building2 size={13} /> Pick a hospital</span>
+              <span className="hs-guest-step"><Stethoscope size={13} /> Choose a doctor</span>
+              <span className="hs-guest-step"><CalendarCheck size={13} /> Book a slot</span>
+            </div>
+
+            <button type="button" className="hs-guest-btn" onClick={() => openLoginModal("/doctors")}>
+              <User size={16} /> Sign in to Continue <ArrowRight size={16} />
+            </button>
+
+            <div className="hs-guest-foot">
+              <ShieldCheck size={14} color="var(--primary)" /> Takes less than a minute. Your details stay private.
+            </div>
+          </div>
+        ) : (
+        <>
         {/* Controls: Search Bar & Count */}
         <div className="hospital-controls-bar">
           <div className="hospital-search-box">
@@ -411,6 +559,8 @@ export default function HospitalSelection() {
             Next Step <ArrowRight size={17} />
           </button>
         </div>
+        </>
+        )}
 
       </div>
     </BookingLayout>

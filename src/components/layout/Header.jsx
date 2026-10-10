@@ -7,6 +7,7 @@ import { useBooking } from "../../context/BookingContext";
 import { fetchImageBlob, getImageUrl } from "../../services/uploadService";
 import { getPatients } from "../../services/dataService";
 import AmbulanceRequestModal from "../ambulance/AmbulanceRequestModal";
+import AmbulanceLoginPrompt from "../ambulance/AmbulanceLoginPrompt";
 import { stripTitle } from "../../utils/formatName";
 
 function getNameInitials(name) {
@@ -122,6 +123,7 @@ export default function Header() {
   const [copied, setCopied] = useState(false);
   const [isCustomShareOpen, setIsCustomShareOpen] = useState(false);
   const [showAmbulanceModal, setShowAmbulanceModal] = useState(false);
+  const [showAmbulanceLoginPrompt, setShowAmbulanceLoginPrompt] = useState(false);
 
   const appDownloadUrl = "https://drive.google.com/file/d/136Lb50jdaadDi9_Uigmq-Qsu2zm9jx51/view?usp=sharing";
 
@@ -1007,7 +1009,7 @@ export default function Header() {
               </a>
               <button
                 type="button"
-                onClick={() => setShowAmbulanceModal(true)}
+                onClick={() => (user ? setShowAmbulanceModal(true) : setShowAmbulanceLoginPrompt(true))}
                 className="header-nav-call header-nav-call-emergency"
               >
                 <Siren size={15} strokeWidth={2.2} />
@@ -1022,6 +1024,12 @@ export default function Header() {
       {showAmbulanceModal && (
         <AmbulanceRequestModal onClose={() => setShowAmbulanceModal(false)} />
       )}
+
+      {/* Logged-out users see this instead of the request form */}
+      <AmbulanceLoginPrompt
+        isOpen={showAmbulanceLoginPrompt}
+        onClose={() => setShowAmbulanceLoginPrompt(false)}
+      />
 
       {/* ── Mobile Navigation Drawer ── */}
       {mobileDrawerOpen && (

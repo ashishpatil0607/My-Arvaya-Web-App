@@ -25,6 +25,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import {
   getAmbulanceRequests,
   STATUS_FLOW,
@@ -118,6 +119,7 @@ const ITEMS_PER_PAGE = 5;
 
 export default function AmbulancePage() {
   const go = useNavigate();
+  const { user, openLoginModal } = useAuth();
   const defaultRequests = [];
 
   const [requests, setRequests] = useState(defaultRequests);
@@ -159,6 +161,15 @@ export default function AmbulancePage() {
   useEffect(() => {
     load();
   }, []);
+
+  // Requesting needs a logged-in user; send logged-out users to login and bring them back here
+  const requestAmbulance = () => {
+    if (!user) {
+      openLoginModal("/ambulance");
+      return;
+    }
+    setShowModal(true);
+  };
 
   const handleCancelRequest = (canceledId, reqItem, cancellationReason) => {
     const targetId =
@@ -719,33 +730,121 @@ export default function AmbulancePage() {
           </div>
         ) : requests.length === 0 ? (
           /* ── Empty State ── */
-          <div
-            style={{
-              textAlign: "center",
-              padding: "44px 32px 48px",
-              maxWidth: "580px",
-              margin: "10px auto 40px",
-              background: "var(--bg-surface)",
-              border: "1px solid var(--border)",
-              borderRadius: "24px",
-              boxShadow: "0 8px 30px rgba(5,73,78,0.06)",
-            }}
-          >
-            <div
-              style={{
-                width: "108px",
-                height: "108px",
-                borderRadius: "50%",
-                background: "var(--primary-light)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                margin: "0 auto 20px",
-              }}
-            >
+          <div className={`amb-empty${user ? "" : " amb-empty--guest"}`}>
+            <style>{`
+              .amb-empty {
+                max-width: 520px;
+                margin: 10px auto 32px;
+                padding: 28px 28px 26px;
+                text-align: center;
+                background: radial-gradient(circle at 50% 0%, rgba(46, 102, 110, 0.08), transparent 60%), var(--bg-surface);
+                border: 1px solid var(--border);
+                border-radius: 22px;
+                box-shadow: 0 10px 30px -16px rgba(5, 73, 78, 0.25);
+              }
+              .amb-empty--guest {
+                background: radial-gradient(circle at 50% 0%, rgba(220, 38, 38, 0.06), transparent 60%), var(--bg-surface);
+              }
+              .amb-empty-art {
+                position: relative;
+                width: 76px;
+                height: 76px;
+                margin: 0 auto 14px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: var(--primary-light);
+              }
+              .amb-empty--guest .amb-empty-art { background: #fdecec; }
+              .amb-empty-art::after {
+                content: "";
+                position: absolute;
+                inset: 0;
+                border-radius: 50%;
+                border: 2px solid var(--amb-ring, rgba(46, 102, 110, 0.3));
+                animation: ambEmptyPulse 2.4s ease-out infinite;
+              }
+              .amb-empty--guest .amb-empty-art { --amb-ring: rgba(220, 38, 38, 0.3); }
+              .amb-empty-title {
+                margin: 0 0 6px;
+                font-family: var(--font-display);
+                font-size: 18px;
+                font-weight: 800;
+                letter-spacing: -0.015em;
+                color: var(--text-main);
+              }
+              .amb-empty-text {
+                margin: 0 auto 16px;
+                max-width: 400px;
+                font-size: 13.5px;
+                line-height: 1.55;
+                color: var(--text-muted);
+              }
+              .amb-empty-sos {
+                margin: 0 auto 18px;
+                padding: 12px 16px;
+                max-width: 420px;
+                text-align: left;
+                border-radius: 14px;
+                font-size: 13.5px;
+                line-height: 1.55;
+                color: #991b1b;
+                background: #fef2f2;
+                border: 1px solid #fecaca;
+              }
+              .amb-empty-sos strong { font-weight: 800; }
+              .amb-empty-sos a { color: #dc2626; font-weight: 800; text-decoration: none; }
+              .amb-empty-actions {
+                display: flex;
+                justify-content: center;
+                flex-wrap: wrap;
+                gap: 12px;
+              }
+              .amb-empty-btn { text-decoration: none; }
+              .amb-empty-sos a:hover { text-decoration: underline; }
+              .amb-empty-btn {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+                padding: 11px 22px;
+                border: none;
+                border-radius: 12px;
+                font-size: 14px;
+                font-weight: 700;
+                color: #fff;
+                cursor: pointer;
+                background: #dc2626;
+                box-shadow: 0 6px 16px -6px rgba(220, 38, 38, 0.6);
+                transition: transform 0.2s ease, filter 0.2s ease;
+              }
+              .amb-empty--guest .amb-empty-btn {
+                background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+                box-shadow: 0 6px 16px -6px rgba(46, 102, 110, 0.6);
+              }
+              .amb-empty--guest .amb-empty-btn--call {
+                background: #dc2626;
+                box-shadow: 0 6px 16px -6px rgba(220, 38, 38, 0.6);
+              }
+              .amb-empty-btn:hover { transform: translateY(-1px); filter: brightness(1.08); }
+              @keyframes ambEmptyPulse {
+                0% { transform: scale(1); opacity: 0.9; }
+                100% { transform: scale(1.35); opacity: 0; }
+              }
+              @media (max-width: 560px) {
+                .amb-empty { padding: 24px 16px 22px; margin: 6px auto 24px; }
+                .amb-empty-btn { width: 100%; }
+              }
+              @media (prefers-reduced-motion: reduce) {
+                .amb-empty-art::after { animation: none; }
+              }
+            `}</style>
+
+            <div className="amb-empty-art" aria-hidden="true">
               <svg
-                width="68"
-                height="56"
+                width="50"
+                height="42"
                 viewBox="0 0 120 100"
                 fill="none"
                 xmlns="http://www.w3.org/2000/svg"
@@ -862,55 +961,42 @@ export default function AmbulancePage() {
                 <circle cx="96" cy="70" r="4" fill="#cbd5e1" />
               </svg>
             </div>
-            <h2
-              style={{
-                fontSize: "20px",
-                fontWeight: "800",
-                color: "var(--text-main)",
-                marginBottom: "10px",
-                letterSpacing: "-0.015em",
-                fontFamily: "var(--font-display)",
-              }}
-            >
-              No Ambulance Requests Found
-            </h2>
-            <p
-              style={{
-                fontSize: "13.5px",
-                color: "var(--text-muted)",
-                marginBottom: "20px",
-                maxWidth: "420px",
-                margin: "0 auto 20px",
-                lineHeight: 1.5,
-              }}
-            >
-              You haven't made any ambulance requests yet. In case of a medical
-              emergency, click the button below to request one immediately.
-            </p>
-            <button
-              onClick={() => setShowModal(true)}
-              style={{
-                background: "#dc2626",
-                color: "#fff",
-                border: "none",
-                borderRadius: "10px",
-                padding: "12px 24px",
-                fontSize: "14.5px",
-                fontWeight: "700",
-                cursor: "pointer",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "8px",
-                transition: "all 0.2s",
-                boxShadow: "0 4px 14px rgba(220,38,38,0.3)",
-              }}
-              onMouseEnter={(e) =>
-                (e.currentTarget.style.filter = "brightness(1.1)")
-              }
-              onMouseLeave={(e) => (e.currentTarget.style.filter = "none")}
-            >
-              <Ambulance size={18} /> Call Ambulance Now
-            </button>
+
+            {user ? (
+              <>
+                <h2 className="amb-empty-title">No emergencies so far, and we hope it stays that way</h2>
+                <p className="amb-empty-text">
+                  If you or someone you love ever needs urgent care, we'll send help and
+                  stay with you every step of the way.
+                </p>
+              </>
+            ) : (
+              <>
+                <h2 className="amb-empty-title">We're here when you need us</h2>
+                <p className="amb-empty-text">
+                  Sign in once so we know who you are and where to send help. It takes less than a minute.
+                </p>
+                <div className="amb-empty-sos" role="note">
+                  <strong>Is someone in danger right now?</strong> Don't wait to sign in.{" "}
+                  <a href="tel:108">Call 108</a> for an emergency ambulance.
+                </div>
+              </>
+            )}
+
+            {user ? (
+              <button type="button" className="amb-empty-btn" onClick={requestAmbulance}>
+                <Ambulance size={17} /> Request an Ambulance
+              </button>
+            ) : (
+              <div className="amb-empty-actions">
+                <a href="tel:108" className="amb-empty-btn amb-empty-btn--call">
+                  <Phone size={16} /> Call 108
+                </a>
+                <button type="button" className="amb-empty-btn" onClick={requestAmbulance}>
+                  <User size={16} /> Sign in to Continue
+                </button>
+              </div>
+            )}
           </div>
         ) : (
           <>
@@ -2992,7 +3078,7 @@ export default function AmbulancePage() {
       {/* ── FAB SOS ── */}
       {!showModal && (
         <button
-          onClick={() => setShowModal(true)}
+          onClick={requestAmbulance}
           className="ambulance-fab-sos"
           style={{
             position: "fixed",

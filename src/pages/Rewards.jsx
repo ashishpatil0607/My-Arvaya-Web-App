@@ -21,7 +21,9 @@ import {
   Gift,
   FlaskConical,
   CalendarDays,
-  CalendarClock
+  CalendarClock,
+  ArrowRight,
+  ShieldCheck
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { getLoyaltyConfig, getPatientLoyalty, getLoyaltyHistory, redeemLoyaltyPoints } from "../services/dataService";
@@ -439,10 +441,12 @@ export default function Rewards() {
             <div className="wallet-hero-img-col">
               <div className="wallet-hero-img-wrap" aria-hidden="true">
                 <img src="/images/rewards-loyalty.png" alt="" className="wallet-hero-photo" />
-                <div className="wallet-hero-stat-badge">
-                  <CheckCircle2 size={14} />
-                  <span>{loadingPoints ? "Loading points…" : `${points.toLocaleString()} pts available`}</span>
-                </div>
+                {isLoggedIn && (
+                  <div className="wallet-hero-stat-badge">
+                    <CheckCircle2 size={14} />
+                    <span>{loadingPoints ? "Loading points…" : `${points.toLocaleString()} pts available`}</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -450,8 +454,59 @@ export default function Rewards() {
       </header>
 
       <div className="container rewards-shell">
-        <div className="rewards-layout">
+        <div className={`rewards-layout${isLoggedIn ? "" : " is-guest"}`}>
           <section className="rewards-primary-column">
+            {!isLoggedIn ? (
+            <section className="wallet-panel wallet-guest-panel">
+              <div className="wallet-guest">
+                <div className="wallet-guest-copy">
+                  <span className="wallet-guest-eyebrow"><Sparkles size={13} /> Members only</span>
+                  <h3>Every visit can earn you something back</h3>
+                  <p>Sign in to see your loyalty points, track your activity and redeem points on your next booking.</p>
+
+                  <ul className="wallet-guest-list">
+                    <li>
+                      <span className="wallet-guest-list-icon gift"><Award size={16} /></span>
+                      <span><strong>Loyalty points</strong><small>Earn on every booking</small></span>
+                    </li>
+                    <li>
+                      <span className="wallet-guest-list-icon"><FileText size={16} /></span>
+                      <span><strong>Points history</strong><small>Every point, tracked</small></span>
+                    </li>
+                    <li>
+                      <span className="wallet-guest-list-icon ticket"><Gift size={16} /></span>
+                      <span><strong>Redeem rewards</strong><small>On eligible services</small></span>
+                    </li>
+                  </ul>
+
+                  <div className="wallet-guest-actions">
+                    <button type="button" className="wallet-guest-btn" onClick={() => openLoginModal && openLoginModal("/rewards")}>
+                      Log In / Sign Up <ArrowRight size={16} />
+                    </button>
+                    <span className="wallet-guest-note"><ShieldCheck size={14} /> Takes less than a minute</span>
+                  </div>
+                </div>
+
+                <div className="wallet-guest-visual" aria-hidden="true">
+                  <div className="wallet-guest-card">
+                    <div className="wallet-guest-card-top">
+                      <span>Arvaya Rewards</span>
+                      <Star size={16} />
+                    </div>
+                    <small>Loyalty points</small>
+                    <strong>• • • • pts</strong>
+                    <div className="wallet-guest-card-bars">
+                      <span /><span />
+                    </div>
+                    <span className="wallet-guest-coin c1">₹</span>
+                    <span className="wallet-guest-coin c2">₹</span>
+                  </div>
+                  <span className="wallet-guest-lock"><Lock size={20} /></span>
+                  <img src="/images/rewards.png" alt="" className="wallet-guest-gift" />
+                </div>
+              </div>
+            </section>
+            ) : (
             <article className="rewards-balance-card new-rewards-card">
               <span className="rewards-card-sheen" aria-hidden="true" />
               <div className="rewards-balance-left">
@@ -482,6 +537,7 @@ export default function Rewards() {
                 </div>
               </div>
             </article>
+            )}
 
             <section className="wallet-panel rewards-earn-panel">
               <div className="wallet-panel-heading">
@@ -537,6 +593,7 @@ export default function Rewards() {
             </section>
           </section>
 
+          {isLoggedIn && (
           <aside className="wallet-panel rewards-history-panel">
             <div className="wallet-panel-heading">
               <div className="wallet-section-title">
@@ -546,19 +603,10 @@ export default function Rewards() {
                   <p>Your points activity</p>
                 </div>
               </div>
-              {isLoggedIn && <span className="wallet-count-badge">{history.length} activities</span>}
+              <span className="wallet-count-badge">{history.length} activities</span>
             </div>
 
-            {!isLoggedIn ? (
-              <div className="wallet-empty-state rewards-history-empty">
-                <span className="wallet-empty-icon"><Lock size={22} /></span>
-                <h3>Log in to view recent history</h3>
-                <p>See your points activity and redemption history.</p>
-                <button type="button" className="wallet-primary-button" onClick={() => openLoginModal && openLoginModal()}>
-                  Log In / Sign Up
-                </button>
-              </div>
-            ) : history.length === 0 ? (
+            {history.length === 0 ? (
               <div className="wallet-empty-state compact rewards-history-empty">
                 <span className="wallet-empty-icon"><Inbox size={22} /></span>
                 <h3>No activity yet</h3>
@@ -584,6 +632,7 @@ export default function Rewards() {
               </div>
             )}
           </aside>
+          )}
         </div>
       </div>
     </main>
