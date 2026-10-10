@@ -1371,9 +1371,7 @@ export default function Header() {
                         {[
                           ["Notifications", "/notifications", Bell],
                           ["My Appointments", "/my-appointments", User],
-                          ["My Prescriptions", "/prescriptions", User],
                           ["My Orders", "/orders", User],
-                          ["Payments & Invoices", "/payments", User],
                         ].map(([label, path, Icon]) => (
                           <NavLink
                             key={label}

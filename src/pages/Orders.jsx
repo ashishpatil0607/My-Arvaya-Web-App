@@ -544,13 +544,14 @@ export default function Orders() {
           max-width: 440px;
         }
         .orders-empty-actions {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 8px;
+          display: inline-grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 10px;
         }
         .orders-empty-btn {
           display: inline-flex;
           align-items: center;
+          justify-content: center;
           gap: 6px;
           padding: 9px 16px;
           border-radius: 10px;
@@ -562,6 +563,7 @@ export default function Orders() {
         .orders-empty-btn--primary {
           background: var(--primary, #0d9488);
           color: #ffffff;
+          border: 1px solid transparent;
           box-shadow: 0 6px 14px rgba(13, 148, 136, 0.25);
         }
         .orders-empty-btn--primary:hover {
@@ -597,7 +599,14 @@ export default function Orders() {
             margin-right: auto;
           }
           .orders-empty-actions {
-            justify-content: center;
+            display: grid;
+            grid-template-columns: 1fr;
+            width: 100%;
+            max-width: 260px;
+            margin: 0 auto;
+          }
+          .orders-empty-btn {
+            padding: 11px 16px;
           }
         }
         .orders-hero-banner {
