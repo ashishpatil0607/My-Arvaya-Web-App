@@ -1246,176 +1246,204 @@ export default function Profile() {
           zIndex: 10000, padding: '16px', overflowY: 'auto'
         }}>
           <div className="animate-scale-in family-modal" style={{
-            background: 'var(--bg-surface, #ffffff)', borderRadius: '20px', width: '100%', maxWidth: '560px',
-            boxShadow: '0 24px 60px -12px rgba(11, 37, 69, 0.35)', overflow: 'hidden', border: '1px solid rgba(20, 184, 166, 0.18)',
+            background: 'var(--bg-surface, #ffffff)', borderRadius: '24px', width: '100%', maxWidth: '580px',
+            boxShadow: '0 30px 80px -16px rgba(11, 37, 69, 0.45), 0 0 0 1px rgba(20, 184, 166, 0.12)', overflow: 'hidden',
             maxHeight: 'calc(100dvh - 32px)', display: 'flex', flexDirection: 'column', margin: 'auto 0'
           }}>
-            {/* Modal Header */}
+            {/* Modal Header — hero with live member preview */}
             <div className="family-modal-header">
-              <svg className="family-modal-wave" viewBox="0 0 500 100" preserveAspectRatio="none" aria-hidden="true">
-                <path d="M0,30 C150,80 320,0 500,35 L500,0 L0,0 Z" fill="rgba(255, 255, 255, 0.45)" />
+              <span className="family-modal-blob family-modal-blob--a" aria-hidden="true" />
+              <span className="family-modal-blob family-modal-blob--b" aria-hidden="true" />
+              <svg className="family-modal-wave" viewBox="0 0 500 60" preserveAspectRatio="none" aria-hidden="true">
+                <path d="M0,40 C140,0 320,70 500,20 L500,60 L0,60 Z" fill="currentColor" />
               </svg>
-              <div className="family-modal-head-left">
-                <span className="family-modal-head-icon">{editingMemberId ? <Edit2 size={18} /> : <Users size={18} />}</span>
-                <div>
-                  <h3 className="family-modal-title">
-                    {editingMemberId ? "Edit Family Member" : "Add Family Member"}
-                  </h3>
-                  <p className="family-modal-sub">
-                    {editingMemberId ? "Update dependent/family member details" : "Enter dependent/family member details"}
-                  </p>
-                </div>
+
+              <div className="family-modal-topbar">
+                <span className="family-modal-badge">
+                  {editingMemberId ? <Edit2 size={12} /> : <Plus size={12} />}
+                  {editingMemberId ? "Edit Family Member" : "Add Family Member"}
+                </span>
+                <button
+                  type="button"
+                  className="family-modal-close"
+                  aria-label="Close"
+                  onClick={() => { setIsMemberModalOpen(false); setEditingMemberId(null); }}
+                >
+                  <X size={16} />
+                </button>
               </div>
-              <button
-                type="button"
-                className="family-modal-close"
-                aria-label="Close"
-                onClick={() => { setIsMemberModalOpen(false); setEditingMemberId(null); }}
-              >
-                <X size={16} />
-              </button>
-            </div>
 
-            {/* Modal Form */}
-            <form onSubmit={handleSaveMember} data-select-boundary style={{ padding: '18px 20px', overflowY: 'auto', minHeight: 0 }}>
-
-              {/* Profile Image Field */}
-              <div className="family-modal-photo">
-                <div className="family-modal-avatar">
+              <div className="family-modal-hero">
+                <label className="family-modal-avatar" title="Upload photo">
                   {memberForm.displayImage ? (
                     <img src={memberForm.displayImage} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   ) : (
-                    (memberForm.name.trim().charAt(0) || "F").toUpperCase()
+                    <span>{(memberForm.name.trim().charAt(0) || "F").toUpperCase()}</span>
                   )}
-                </div>
-                <div className="family-modal-photo-body">
-                  <div>
-                    <div className="family-modal-photo-title">Profile Image</div>
-                    <div className="family-modal-photo-hint">JPG or PNG, square works best</div>
+                  <span className="family-modal-avatar-cam"><Camera size={13} /></span>
+                  <input type="file" accept="image/*" onChange={handleImageUpload} style={{ display: 'none' }} />
+                </label>
+                <div className="family-modal-hero-body">
+                  <h3 className="family-modal-title">
+                    {[memberForm.title, memberForm.name.trim()].filter(Boolean).join(" ") || "New Member"}
+                  </h3>
+                  <div className="family-modal-chips">
+                    {memberForm.relation && <span className="family-modal-chip"><Users size={11} /> {memberForm.relation}</span>}
+                    {memberForm.bloodGroup && <span className="family-modal-chip family-modal-chip--blood"><Droplet size={11} /> {memberForm.bloodGroup}</span>}
+                    {memberForm.gender && <span className="family-modal-chip"><User size={11} /> {memberForm.gender}</span>}
+                    {!memberForm.relation && !memberForm.bloodGroup && !memberForm.gender && (
+                      <span className="family-modal-sub">Tap the avatar to upload a photo</span>
+                    )}
                   </div>
-                  <label className="family-modal-upload-btn">
-                    <Upload size={14} /> Upload Photo
-                    <input type="file" accept="image/*" onChange={handleImageUpload} style={{ display: 'none' }} />
-                  </label>
                 </div>
               </div>
+            </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            {/* Modal Form */}
+            <form onSubmit={handleSaveMember} data-select-boundary className="family-modal-form">
+              <div className="family-modal-scroll">
 
-                {/* Row 1: Title, Name, Relation */}
-                <div className="modal-form-3col" style={{ display: 'grid', gridTemplateColumns: '1fr 2fr 2fr', gap: '12px' }}>
-                  <div className="flex flex-col family-modal-field">
-                    <label className="family-modal-label">Title *</label>
-                    <ProfileSelect
-                      compact
-                      name="title"
-                      value={memberForm.title}
-                      onChange={handleMemberFormChange}
-                      options={[{ value: "", label: "None" }, ...TITLES.map(v => ({ value: v, label: v }))]}
-                    />
+                {/* Section: Personal Details */}
+                <div className="family-modal-section">
+                  <div className="family-modal-section-head">
+                    <span className="family-modal-section-icon"><User size={14} /></span>
+                    Personal Details
                   </div>
 
-                  <div className="flex flex-col family-modal-field">
-                    <label className="family-modal-label">Name *</label>
-                    <input name="name" value={memberForm.name} onChange={handleMemberFormChange} placeholder="Full Name" className="input-field" />
-                  </div>
-
-                  <div className="flex flex-col family-modal-field">
-                    <label className="family-modal-label">Relation *</label>
-                    <ProfileSelect
-                      compact
-                      name="relation"
-                      value={memberForm.relation}
-                      onChange={handleMemberFormChange}
-                      options={[{ value: "", label: "None" }, ...["Spouse", "Son", "Daughter", "Father", "Mother", "Brother", "Sister", "Other"].map(v => ({ value: v, label: v }))]}
-                    />
-                  </div>
-                </div>
-
-                {/* Row 2: Date of Birth, Gender, Blood Group */}
-                <div className="modal-form-3col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
-                  <div className="flex flex-col family-modal-field">
-                    <label className="family-modal-label">Date of Birth *</label>
-                    <input type="date" name="dob" value={memberForm.dob} max={new Date().toISOString().split('T')[0]} onChange={handleMemberFormChange} className="input-field" />
-                  </div>
-
-                  <div className="flex flex-col family-modal-field">
-                    <label className="family-modal-label">Gender *</label>
-                    <ProfileSelect
-                      compact
-                      name="gender"
-                      value={memberForm.gender}
-                      onChange={handleMemberFormChange}
-                      options={[{ value: "", label: "None" }, ...["Male", "Female", "Other"].map(v => ({ value: v, label: v }))]}
-                    />
-                  </div>
-
-                  <div className="flex flex-col family-modal-field">
-                    <label className="family-modal-label">Blood Group *</label>
-                    <ProfileSelect
-                      compact
-                      name="bloodGroup"
-                      value={memberForm.bloodGroup}
-                      onChange={handleMemberFormChange}
-                      options={[{ value: "", label: "None" }, ...["B+", "A+", "O+", "AB+", "A-", "B-", "O-", "AB-"].map(v => ({ value: v, label: v }))]}
-                    />
-                  </div>
-                </div>
-
-                {/* Row 5: Entity Location */}
-                <div className="flex flex-col family-modal-field">
-                  <label className="family-modal-label">Entity Location *</label>
-                  <div ref={locationDropdownRef} style={{ position: 'relative' }}>
-                    <div
-                      onClick={() => setLocationDropdownOpen(!locationDropdownOpen)}
-                      className={`family-modal-location${locationDropdownOpen ? ' is-open' : ''}`}
-                    >
-                      <MapPin size={15} className="family-modal-location-pin" />
-                      <div style={{
-                        flex: 1, fontSize: '13px', fontWeight: '600',
-                        color: memberForm.entitylocation ? 'var(--text-main)' : '#9ca3af',
-                        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
-                      }}>
-                        {memberForm.entitylocation
-                          ? (getLocationLabel(locations.find(l => l.entitylocation === memberForm.entitylocation || String(l.id) === String(memberForm.entitylocation) || String(l.location_key) === String(memberForm.entitylocation))) || memberForm.entitylocation)
-                          : "Select Location"}
-                      </div>
-                      <ChevronDown size={15} color="#0d9488" style={{ flexShrink: 0, transition: 'transform 0.2s', transform: locationDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)' }} />
+                  <div className="modal-form-3col" style={{ display: 'grid', gridTemplateColumns: '1fr 2fr 1.6fr', gap: '12px' }}>
+                    <div className="flex flex-col family-modal-field">
+                      <label className="family-modal-label">Title <em>*</em></label>
+                      <ProfileSelect
+                        compact
+                        name="title"
+                        value={memberForm.title}
+                        onChange={handleMemberFormChange}
+                        options={[{ value: "", label: "None" }, ...TITLES.map(v => ({ value: v, label: v }))]}
+                      />
                     </div>
 
-                    {locationDropdownOpen && (
-                      <div className="family-modal-location-menu">
-                        {locations.length === 0 ? (
-                          <div style={{ padding: '12px', textAlign: 'center', fontSize: '13px', color: 'var(--text-muted)' }}>Loading locations...</div>
-                        ) : (
-                          locations.map(loc => {
-                            const isSelected = memberForm.entitylocation === loc.entitylocation;
-                            return (
-                              <button
-                                key={loc.id}
-                                type="button"
-                                onClick={() => {
-                                  setMemberForm(prev => ({ ...prev, entitylocation: loc.entitylocation || "" }));
-                                  setLocationDropdownOpen(false);
-                                }}
-                                className={`family-modal-location-option${isSelected ? ' is-selected' : ''}`}
-                              >
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                  <div style={{
-                                    fontSize: '13px', fontWeight: isSelected ? '700' : '600',
-                                    color: isSelected ? '#0f766e' : 'inherit',
-                                    lineHeight: '1.4', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
-                                  }}>
-                                    {getLocationLabel(loc) || loc.entitylocation || "Location"}
-                                  </div>
-                                </div>
-                                {isSelected && <Check size={16} color="#0d9488" style={{ flexShrink: 0, marginTop: '2px' }} />}
-                              </button>
-                            );
-                          })
-                        )}
+                    <div className="flex flex-col family-modal-field">
+                      <label className="family-modal-label">Name <em>*</em></label>
+                      <input name="name" value={memberForm.name} onChange={handleMemberFormChange} placeholder="Full Name" className="input-field" />
+                    </div>
+
+                    <div className="flex flex-col family-modal-field">
+                      <label className="family-modal-label">Relation <em>*</em></label>
+                      <ProfileSelect
+                        compact
+                        name="relation"
+                        value={memberForm.relation}
+                        onChange={handleMemberFormChange}
+                        options={[{ value: "", label: "None" }, ...["Spouse", "Son", "Daughter", "Father", "Mother", "Brother", "Sister", "Other"].map(v => ({ value: v, label: v }))]}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="modal-form-3col" style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr', gap: '12px' }}>
+                    <div className="flex flex-col family-modal-field">
+                      <label className="family-modal-label">Date of Birth <em>*</em></label>
+                      <input type="date" name="dob" value={memberForm.dob} max={new Date().toISOString().split('T')[0]} onChange={handleMemberFormChange} className="input-field" />
+                    </div>
+
+                    <div className="flex flex-col family-modal-field">
+                      <label className="family-modal-label">Gender <em>*</em></label>
+                      <div className="family-modal-segment" role="radiogroup" aria-label="Gender">
+                        {["Male", "Female", "Other"].map(g => (
+                          <button
+                            key={g}
+                            type="button"
+                            role="radio"
+                            aria-checked={memberForm.gender === g}
+                            className={`family-modal-segment-btn${memberForm.gender === g ? ' is-active' : ''}`}
+                            onClick={() => handleMemberFormChange({ target: { name: "gender", value: g } })}
+                          >
+                            {g}
+                          </button>
+                        ))}
                       </div>
-                    )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section: Health & Location */}
+                <div className="family-modal-section">
+                  <div className="family-modal-section-head">
+                    <span className="family-modal-section-icon family-modal-section-icon--rose"><HeartPulse size={14} /></span>
+                    Health &amp; Location
+                  </div>
+
+                  <div className="flex flex-col family-modal-field">
+                    <label className="family-modal-label">Blood Group <em>*</em></label>
+                    <div className="family-modal-blood" role="radiogroup" aria-label="Blood Group">
+                      {["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"].map(bg => (
+                        <button
+                          key={bg}
+                          type="button"
+                          role="radio"
+                          aria-checked={memberForm.bloodGroup === bg}
+                          className={`family-modal-blood-btn${memberForm.bloodGroup === bg ? ' is-active' : ''}`}
+                          onClick={() => handleMemberFormChange({ target: { name: "bloodGroup", value: bg } })}
+                        >
+                          <Droplet size={12} /> {bg}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col family-modal-field">
+                    <label className="family-modal-label">Entity Location <em>*</em></label>
+                    <div ref={locationDropdownRef} style={{ position: 'relative' }}>
+                      <div
+                        onClick={() => setLocationDropdownOpen(!locationDropdownOpen)}
+                        className={`family-modal-location${locationDropdownOpen ? ' is-open' : ''}`}
+                      >
+                        <span className="family-modal-location-pin"><MapPin size={14} /></span>
+                        <div style={{
+                          flex: 1, fontSize: '13px', fontWeight: '600',
+                          color: memberForm.entitylocation ? 'var(--text-main)' : '#9ca3af',
+                          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
+                        }}>
+                          {memberForm.entitylocation
+                            ? (getLocationLabel(locations.find(l => l.entitylocation === memberForm.entitylocation || String(l.id) === String(memberForm.entitylocation) || String(l.location_key) === String(memberForm.entitylocation))) || memberForm.entitylocation)
+                            : "Select Location"}
+                        </div>
+                        <ChevronDown size={15} color="#0d9488" style={{ flexShrink: 0, transition: 'transform 0.2s', transform: locationDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)' }} />
+                      </div>
+
+                      {locationDropdownOpen && (
+                        <div className="family-modal-location-menu">
+                          {locations.length === 0 ? (
+                            <div style={{ padding: '12px', textAlign: 'center', fontSize: '13px', color: 'var(--text-muted)' }}>Loading locations...</div>
+                          ) : (
+                            locations.map(loc => {
+                              const isSelected = memberForm.entitylocation === loc.entitylocation;
+                              return (
+                                <button
+                                  key={loc.id}
+                                  type="button"
+                                  onClick={() => {
+                                    setMemberForm(prev => ({ ...prev, entitylocation: loc.entitylocation || "" }));
+                                    setLocationDropdownOpen(false);
+                                  }}
+                                  className={`family-modal-location-option${isSelected ? ' is-selected' : ''}`}
+                                >
+                                  <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{
+                                      fontSize: '13px', fontWeight: isSelected ? '700' : '600',
+                                      color: isSelected ? '#0f766e' : 'inherit',
+                                      lineHeight: '1.4', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
+                                    }}>
+                                      {getLocationLabel(loc) || loc.entitylocation || "Location"}
+                                    </div>
+                                  </div>
+                                  {isSelected && <Check size={16} color="#0d9488" style={{ flexShrink: 0, marginTop: '2px' }} />}
+                                </button>
+                              );
+                            })
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -1423,12 +1451,15 @@ export default function Profile() {
 
               {/* Form Footer Actions */}
               <div className="family-modal-footer">
-                <button type="button" className="btn btn-secondary family-modal-cancel" onClick={() => setIsMemberModalOpen(false)} style={{ padding: '9px 20px', fontSize: '13.5px' }}>
-                  Cancel
-                </button>
-                <button type="submit" disabled={savingMember} className="btn btn-primary flex items-center gap-2 family-modal-save" style={{ padding: '9px 22px', fontSize: '13.5px' }}>
-                  {savingMember ? <><Loader2 size={14} className="animate-spin" /> Saving...</> : "Save Member"}
-                </button>
+                <span className="family-modal-footer-note"><Shield size={13} /> Details are kept private</span>
+                <div className="family-modal-footer-actions">
+                  <button type="button" className="btn btn-secondary family-modal-cancel" onClick={() => setIsMemberModalOpen(false)} style={{ padding: '10px 20px', fontSize: '13.5px' }}>
+                    Cancel
+                  </button>
+                  <button type="submit" disabled={savingMember} className="btn btn-primary flex items-center gap-2 family-modal-save" style={{ padding: '10px 22px', fontSize: '13.5px' }}>
+                    {savingMember ? <><Loader2 size={14} className="animate-spin" /> Saving...</> : <><Check size={15} /> {editingMemberId ? "Save Changes" : "Add Member"}</>}
+                  </button>
+                </div>
               </div>
 
             </form>
@@ -1727,53 +1758,60 @@ export default function Profile() {
         .family-modal-header {
           position: relative;
           overflow: hidden;
+          padding: 16px 20px 30px;
+          color: #ffffff;
+          background: linear-gradient(135deg, #0b3b4a 0%, #0f766e 55%, #14b8a6 100%);
+          flex-shrink: 0;
+        }
+        .family-modal-blob {
+          position: absolute;
+          border-radius: 50%;
+          pointer-events: none;
+        }
+        .family-modal-blob--a {
+          width: 180px;
+          height: 180px;
+          top: -80px;
+          right: -40px;
+          background: radial-gradient(circle, rgba(94, 234, 212, 0.45) 0%, rgba(94, 234, 212, 0) 70%);
+        }
+        .family-modal-blob--b {
+          width: 120px;
+          height: 120px;
+          bottom: -50px;
+          left: 35%;
+          background: radial-gradient(circle, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0) 70%);
+        }
+        .family-modal-wave {
+          position: absolute;
+          left: 0;
+          bottom: -1px;
+          width: 100%;
+          height: 22px;
+          color: var(--bg-surface, #ffffff);
+          pointer-events: none;
+        }
+        .family-modal-topbar {
+          position: relative;
           display: flex;
           align-items: center;
           justify-content: space-between;
           gap: 12px;
-          padding: 16px 20px;
-          background: linear-gradient(90deg, #effaf7 0%, #e3f7f2 50%, #ccf4eb 100%);
-          border-bottom: 1px solid rgba(20, 184, 166, 0.18);
-          flex-shrink: 0;
+          margin-bottom: 14px;
         }
-        .family-modal-wave {
-          position: absolute;
-          right: 0;
-          top: 0;
-          width: 60%;
-          height: 100%;
-          pointer-events: none;
-        }
-        .family-modal-head-left {
-          position: relative;
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          min-width: 0;
-        }
-        .family-modal-head-icon {
-          width: 40px;
-          height: 40px;
-          flex-shrink: 0;
-          border-radius: 12px;
+        .family-modal-badge {
           display: inline-flex;
           align-items: center;
-          justify-content: center;
-          color: #ffffff;
-          background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%);
-          box-shadow: 0 6px 14px rgba(13, 148, 136, 0.28);
-        }
-        .family-modal-title {
-          font-size: 17px;
-          font-weight: 800;
-          color: #0b2545;
-          margin: 0;
-          letter-spacing: -0.01em;
-        }
-        .family-modal-sub {
-          font-size: 12px;
-          color: #55738d;
-          margin: 2px 0 0 0;
+          gap: 6px;
+          padding: 5px 11px;
+          border-radius: 999px;
+          font-size: 11px;
+          font-weight: 700;
+          letter-spacing: 0.06em;
+          text-transform: uppercase;
+          background: rgba(255, 255, 255, 0.14);
+          border: 1px solid rgba(255, 255, 255, 0.22);
+          backdrop-filter: blur(6px);
         }
         .family-modal-close {
           position: relative;
@@ -1784,97 +1822,166 @@ export default function Profile() {
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          background: rgba(255, 255, 255, 0.85);
-          border: 1px solid rgba(13, 148, 136, 0.18);
-          color: #55738d;
+          background: rgba(255, 255, 255, 0.14);
+          border: 1px solid rgba(255, 255, 255, 0.25);
+          color: #ffffff;
           cursor: pointer;
           transition: all 0.2s ease;
         }
         .family-modal-close:hover {
           background: #ffffff;
           color: #e11d48;
-          border-color: rgba(225, 29, 72, 0.25);
           transform: rotate(90deg);
         }
-        .family-modal-photo {
+        .family-modal-hero {
+          position: relative;
           display: flex;
           align-items: center;
-          gap: 14px;
-          margin-bottom: 16px;
-          padding: 12px 14px;
-          border-radius: 14px;
-          border: 1.5px dashed rgba(13, 148, 136, 0.3);
-          background: linear-gradient(135deg, #f6fdfb 0%, #effaf7 100%);
+          gap: 16px;
+          min-width: 0;
         }
         .family-modal-avatar {
           position: relative;
-          width: 52px;
-          height: 52px;
+          width: 72px;
+          height: 72px;
           flex-shrink: 0;
           border-radius: 50%;
-          overflow: hidden;
           display: flex;
           align-items: center;
           justify-content: center;
+          font-size: 28px;
+          font-weight: 800;
+          color: #ffffff;
+          background: linear-gradient(135deg, #5eead4 0%, #0d9488 100%);
+          border: 3px solid rgba(255, 255, 255, 0.9);
+          box-shadow: 0 10px 24px rgba(3, 30, 40, 0.35);
+          cursor: pointer;
+          transition: transform 0.2s ease;
+        }
+        .family-modal-avatar > img,
+        .family-modal-avatar > span:first-child {
+          border-radius: 50%;
+          overflow: hidden;
+        }
+        .family-modal-avatar:hover {
+          transform: scale(1.04);
+        }
+        .family-modal-avatar-cam {
+          position: absolute;
+          right: -2px;
+          bottom: -2px;
+          width: 26px;
+          height: 26px;
+          border-radius: 50%;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          color: #0d9488;
+          background: #ffffff;
+          box-shadow: 0 4px 10px rgba(3, 30, 40, 0.3);
+        }
+        .family-modal-hero-body {
+          min-width: 0;
+          flex: 1;
+        }
+        .family-modal-title {
           font-size: 20px;
           font-weight: 800;
           color: #ffffff;
-          background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%);
-          border: 3px solid #ffffff;
-          box-shadow: 0 0 0 2px rgba(13, 148, 136, 0.22), 0 6px 14px rgba(13, 148, 136, 0.22);
+          margin: 0 0 8px 0;
+          letter-spacing: -0.01em;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
-        .family-modal-photo-body {
-          flex: 1;
-          min-width: 0;
+        .family-modal-sub {
+          font-size: 12.5px;
+          color: rgba(255, 255, 255, 0.78);
+        }
+        .family-modal-chips {
           display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 10px;
           flex-wrap: wrap;
+          gap: 6px;
         }
-        .family-modal-photo-title {
-          font-size: 13.5px;
-          font-weight: 700;
-          color: #0b2545;
-        }
-        .family-modal-photo-hint {
-          font-size: 11.5px;
-          color: #7a94a9;
-          margin-top: 1px;
-        }
-        .family-modal-upload-btn {
+        .family-modal-chip {
           display: inline-flex;
           align-items: center;
-          gap: 6px;
-          padding: 7px 14px;
+          gap: 5px;
+          padding: 4px 10px;
           border-radius: 999px;
-          font-size: 12.5px;
+          font-size: 11.5px;
           font-weight: 700;
-          color: #0d9488;
-          background: #ffffff;
-          border: 1px solid rgba(13, 148, 136, 0.3);
-          cursor: pointer;
-          transition: all 0.2s ease;
-        }
-        .family-modal-upload-btn:hover {
-          background: #0d9488;
           color: #ffffff;
-          border-color: #0d9488;
-          box-shadow: 0 6px 14px rgba(13, 148, 136, 0.25);
+          background: rgba(255, 255, 255, 0.16);
+          border: 1px solid rgba(255, 255, 255, 0.24);
+        }
+        .family-modal-chip--blood {
+          background: rgba(244, 63, 94, 0.28);
+          border-color: rgba(254, 205, 211, 0.45);
+        }
+        .family-modal-form {
+          display: flex;
+          flex-direction: column;
+          min-height: 0;
+          flex: 1;
+        }
+        .family-modal-scroll {
+          padding: 8px 20px 4px;
+          overflow-y: auto;
+          min-height: 0;
+          display: flex;
+          flex-direction: column;
+          gap: 14px;
+        }
+        .family-modal-section {
+          display: flex;
+          flex-direction: column;
+          gap: 14px;
+          padding: 16px;
+          border-radius: 16px;
+          background: linear-gradient(180deg, #f8fdfc 0%, #ffffff 100%);
+          border: 1px solid rgba(13, 148, 136, 0.12);
+        }
+        .family-modal-section-head {
+          display: flex;
+          align-items: center;
+          gap: 9px;
+          font-size: 13.5px;
+          font-weight: 800;
+          color: #0b2545;
+        }
+        .family-modal-section-icon {
+          width: 26px;
+          height: 26px;
+          border-radius: 8px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          color: #0d9488;
+          background: #ccf4eb;
+        }
+        .family-modal-section-icon--rose {
+          color: #e11d48;
+          background: #ffe4e6;
         }
         .family-modal-field {
           gap: 6px;
           min-width: 0;
         }
         .family-modal-label {
-          font-size: 11.5px;
+          font-size: 11px;
           font-weight: 700;
           color: #55738d;
           text-transform: uppercase;
-          letter-spacing: 0.04em;
+          letter-spacing: 0.05em;
+        }
+        .family-modal-label em {
+          font-style: normal;
+          color: #e11d48;
         }
         .family-modal .input-field {
           border-radius: 12px;
+          background: #ffffff;
           transition: border-color 0.2s ease, box-shadow 0.2s ease;
         }
         .family-modal input.input-field {
@@ -1890,14 +1997,79 @@ export default function Profile() {
           border-color: #14b8a6;
           box-shadow: 0 0 0 4px rgba(20, 184, 166, 0.14);
         }
+        .family-modal-segment {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 4px;
+          padding: 4px;
+          min-height: 42px;
+          box-sizing: border-box;
+          border-radius: 12px;
+          background: #eef6f5;
+          border: 1px solid var(--border);
+        }
+        .family-modal-segment-btn {
+          border: none;
+          border-radius: 9px;
+          background: transparent;
+          font-size: 13px;
+          font-weight: 600;
+          color: #55738d;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+        .family-modal-segment-btn:hover {
+          color: #0d9488;
+        }
+        .family-modal-segment-btn.is-active {
+          color: #ffffff;
+          background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%);
+          box-shadow: 0 4px 10px rgba(13, 148, 136, 0.28);
+        }
+        .family-modal-blood {
+          display: grid;
+          grid-template-columns: repeat(8, 1fr);
+          gap: 6px;
+        }
+        .family-modal-blood-btn {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 3px;
+          padding: 8px 4px;
+          border-radius: 10px;
+          border: 1px solid var(--border);
+          background: #ffffff;
+          font-size: 12.5px;
+          font-weight: 700;
+          color: #334e68;
+          cursor: pointer;
+          transition: all 0.18s ease;
+        }
+        .family-modal-blood-btn svg {
+          color: #fb7185;
+        }
+        .family-modal-blood-btn:hover {
+          border-color: rgba(225, 29, 72, 0.4);
+          background: #fff5f6;
+        }
+        .family-modal-blood-btn.is-active {
+          color: #ffffff;
+          border-color: transparent;
+          background: linear-gradient(135deg, #fb7185 0%, #e11d48 100%);
+          box-shadow: 0 6px 14px rgba(225, 29, 72, 0.28);
+        }
+        .family-modal-blood-btn.is-active svg {
+          color: #ffffff;
+        }
         .family-modal-location {
           display: flex;
           align-items: center;
-          gap: 8px;
+          gap: 10px;
           width: 100%;
           box-sizing: border-box;
-          min-height: 42px;
-          padding: 9px 12px;
+          min-height: 46px;
+          padding: 7px 12px 7px 7px;
           border: 1px solid var(--border);
           border-radius: 12px;
           background: #ffffff;
@@ -1912,7 +2084,14 @@ export default function Profile() {
           box-shadow: 0 0 0 4px rgba(20, 184, 166, 0.14);
         }
         .family-modal-location-pin {
+          width: 30px;
+          height: 30px;
+          border-radius: 9px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
           color: #0d9488;
+          background: #ccf4eb;
           flex-shrink: 0;
         }
         .family-modal-location-menu {
@@ -1956,11 +2135,31 @@ export default function Profile() {
         }
         .family-modal-footer {
           display: flex;
-          justify-content: flex-end;
+          align-items: center;
+          justify-content: space-between;
           gap: 10px;
-          margin-top: 20px;
-          padding-top: 16px;
-          border-top: 1px dashed rgba(13, 148, 136, 0.22);
+          flex-wrap: wrap;
+          padding: 14px 20px;
+          margin-top: 12px;
+          background: #f8fbfc;
+          border-top: 1px solid rgba(13, 148, 136, 0.12);
+          flex-shrink: 0;
+        }
+        .family-modal-footer-note {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 12px;
+          font-weight: 600;
+          color: #7a94a9;
+        }
+        .family-modal-footer-note svg {
+          color: #0d9488;
+        }
+        .family-modal-footer-actions {
+          display: flex;
+          gap: 10px;
+          margin-left: auto;
         }
         .family-modal-cancel {
           border-radius: 999px !important;
@@ -1975,18 +2174,33 @@ export default function Profile() {
           box-shadow: 0 10px 22px rgba(13, 148, 136, 0.38);
           transform: translateY(-1px);
         }
+        @media (max-width: 520px) {
+          .family-modal-blood {
+            grid-template-columns: repeat(4, 1fr);
+          }
+        }
         @media (max-width: 480px) {
           .family-modal-header {
-            padding: 14px 16px;
+            padding: 14px 16px 26px;
           }
-          .family-modal-head-icon {
-            width: 36px;
-            height: 36px;
+          .family-modal-avatar {
+            width: 60px;
+            height: 60px;
+            font-size: 24px;
           }
           .family-modal-title {
-            font-size: 15.5px;
+            font-size: 17px;
           }
-          .family-modal-photo-hint {
+          .family-modal-scroll {
+            padding: 8px 14px 4px;
+          }
+          .family-modal-section {
+            padding: 14px 12px;
+          }
+          .family-modal-footer {
+            padding: 12px 14px;
+          }
+          .family-modal-footer-note {
             display: none;
           }
         }
