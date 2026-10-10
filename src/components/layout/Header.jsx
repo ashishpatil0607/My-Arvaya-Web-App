@@ -7,6 +7,14 @@ import { useBooking } from "../../context/BookingContext";
 import { fetchImageBlob, getImageUrl } from "../../services/uploadService";
 import { getPatients } from "../../services/dataService";
 import AmbulanceRequestModal from "../ambulance/AmbulanceRequestModal";
+import { stripTitle } from "../../utils/formatName";
+
+function getNameInitials(name) {
+  const parts = stripTitle(name).split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "U";
+  if (parts.length === 1) return parts[0][0].toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
 
 function getUserDisplayName(user) {
   if (!user) return "User";
@@ -386,8 +394,8 @@ export default function Header() {
     initLocations();
   }, []);
 
-  const displayName = getUserDisplayName(user);
-  const displayInitial = (displayName || "U").replace(/^(mr\.|ms\.|mrs\.|dr\.)\s*/i, "").charAt(0).toUpperCase();
+  const displayName = stripTitle(getUserDisplayName(user)) || "User";
+  const displayInitial = getNameInitials(displayName);
   const userPhone = getUserPhone(user);
   const currentUserId = user?.id || user?.user_id || user?.app_user_id;
   const otherProfiles = (linkedProfiles || []).filter(
@@ -815,8 +823,7 @@ export default function Header() {
                         <div style={{ maxHeight: '280px', overflowY: 'auto' }} className="no-scrollbar">
                           {otherProfiles.map((p) => {
                             const isPPrimary = p.isPrimary || (!p.relation && (!p.parent_account_id || p.parent_account_id === p.id));
-                            const pClean = (p.name || "U").replace(/^(mr\.|ms\.|mrs\.|dr\.)\s*/i, "").trim().split(/\s+/).filter(Boolean);
-                            const pInitials = pClean.length >= 2 ? (pClean[0][0] + pClean[pClean.length - 1][0]).toUpperCase() : (pClean[0] ? pClean[0][0] : "U").toUpperCase();
+                            const pInitials = getNameInitials(p.name);
                             return (
                               <div
                                 key={p.id}
@@ -860,8 +867,8 @@ export default function Header() {
                                     whiteSpace: 'nowrap',
                                     overflow: 'hidden',
                                     textOverflow: 'ellipsis'
-                                  }} title={p.name}>
-                                    {p.name}
+                                  }} title={stripTitle(p.name)}>
+                                    {stripTitle(p.name)}
                                   </div>
                                 </div>
                               </div>
@@ -1112,8 +1119,7 @@ export default function Header() {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       {otherProfiles.map(p => {
                         const isPPrimary = p.isPrimary || (!p.relation && (!p.parent_account_id || p.parent_account_id === p.id));
-                        const pClean = (p.name || "U").replace(/^(mr\.|ms\.|mrs\.|dr\.)\s*/i, "").trim().split(/\s+/).filter(Boolean);
-                        const pInitials = pClean.length >= 2 ? (pClean[0][0] + pClean[pClean.length - 1][0]).toUpperCase() : (pClean[0] ? pClean[0][0] : "U").toUpperCase();
+                        const pInitials = getNameInitials(p.name);
                         return (
                           <div
                             key={p.id}
@@ -1152,7 +1158,7 @@ export default function Header() {
                             </div>
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <div style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                {p.name}
+                                {stripTitle(p.name)}
                               </div>
                             </div>
                           </div>

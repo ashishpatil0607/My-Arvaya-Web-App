@@ -245,8 +245,8 @@ export default function Profile() {
       name: "",
       relation: "",
       dob: "",
-      bloodGroup: "",
-      gender: "",
+      bloodGroup: "A+",
+      gender: "Male",
       mobile: "",
       weight: "",
       height: "",
@@ -255,7 +255,7 @@ export default function Profile() {
       imageFile: null,
       abhaNumber: "",
       entitylocation: "",
-      title: ""
+      title: "Mr"
     });
     setIsMemberModalOpen(true);
   };
