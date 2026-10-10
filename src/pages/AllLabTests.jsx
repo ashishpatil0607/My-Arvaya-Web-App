@@ -255,7 +255,7 @@ export default function AllLabTests() {
       }
 
       const options = {
-        key: import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_test_TeZHDSZsRNLvz7",
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
         amount: amountToPay * 100,
         currency: "INR",
         name: "Arvaya Healthcare",
