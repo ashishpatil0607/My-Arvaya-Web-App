@@ -680,52 +680,85 @@ export default function MyAppointments() {
       </Modal>
 
       {/* Reschedule Modal */}
-      <Modal isOpen={rescheduleModalOpen} onClose={() => setRescheduleModalOpen(false)} title="Reschedule Appointment" maxWidth="800px">
-        <div style={{ padding: '8px 0 0 0' }}>
-          <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginBottom: '24px' }}>
-            Select a new date and time for your appointment with <strong>{appointmentToReschedule?.doctor}</strong>.
-          </p>
-          
-          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(250px, 300px) 1fr', gap: '24px', alignItems: 'start' }}>
-            <div>
-              <h4 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '12px' }}>Select Date</h4>
-              <div style={{ background: 'var(--bg-app)', padding: '12px', borderRadius: '12px', border: '1px solid var(--border)' }}>
-                {(() => {
-                  const minDate = new Date();
-                  minDate.setDate(minDate.getDate() + 1);
-                  return <Calendar selectedDate={rescheduleDate} onSelectDate={setRescheduleDate} minDate={minDate} />;
-                })()}
+      <Modal isOpen={rescheduleModalOpen} onClose={() => setRescheduleModalOpen(false)} title="Reschedule Appointment" maxWidth="820px">
+        <div className="reschedule-modal">
+          {appointmentToReschedule && (
+            <div className="reschedule-current">
+              <div className="reschedule-current-doctor">
+                <div className="appointment-doctor-icon">
+                  <Stethoscope size={18} />
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <div className="reschedule-current-name">{appointmentToReschedule.doctor}</div>
+                  {appointmentToReschedule.specialty && (
+                    <div className="reschedule-current-meta">{appointmentToReschedule.specialty}</div>
+                  )}
+                </div>
+              </div>
+              <div className="reschedule-current-slot">
+                <span className="reschedule-current-label">Current booking</span>
+                <span className="reschedule-current-value">
+                  <CalendarIcon size={13} />
+                  {new Date(appointmentToReschedule.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} • {formatTime(appointmentToReschedule.time)}
+                </span>
               </div>
             </div>
-            
+          )}
+
+          <div className="reschedule-grid">
             <div>
-              <h4 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '12px' }}>Available Slots</h4>
+              <h4 className="reschedule-step-title">
+                <span className="reschedule-step-num">1</span>
+                Select Date
+              </h4>
+              {(() => {
+                const minDate = new Date();
+                minDate.setDate(minDate.getDate() + 1);
+                return <Calendar selectedDate={rescheduleDate} onSelectDate={setRescheduleDate} minDate={minDate} />;
+              })()}
+            </div>
+
+            <div>
+              <h4 className="reschedule-step-title">
+                <span className="reschedule-step-num">2</span>
+                Choose Time
+                <span className="reschedule-step-date">
+                  {rescheduleDate.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}
+                </span>
+              </h4>
               {slotsLoading ? (
-                <div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--text-muted)' }}>Loading slots...</div>
+                <div className="reschedule-empty">
+                  <Clock size={22} />
+                  <span>Loading available slots...</span>
+                </div>
               ) : (
-                <div style={{ maxHeight: '400px', overflowY: 'auto', paddingRight: '8px' }} className="custom-scrollbar">
-                  {/* Morning */}
-                  {availableSlots.morning.length > 0 && (
-                    <div className="slot-section-group" style={{ gap: '10px', marginBottom: '22px' }}>
+                <div className="reschedule-slots custom-scrollbar">
+                  {[
+                    { key: 'morning', label: 'Morning', Icon: Sunrise, color: '#eab308' },
+                    { key: 'afternoon', label: 'Afternoon', Icon: Sun, color: '#f97316' },
+                    { key: 'evening', label: 'Evening', Icon: Sunset, color: '#8b5cf6' },
+                  ].map(({ key, label, Icon, color }) => availableSlots[key].length > 0 && (
+                    <div key={key} className="slot-section-group" style={{ gap: '10px', marginBottom: '20px' }}>
                       <div className="slot-section-header">
-                        <Sunrise size={15} color="#eab308" />
-                        <span>Morning</span>
-                        <span className="slot-section-tag morning">
-                          {availableSlots.morning.length} slots
+                        <Icon size={15} color={color} />
+                        <span>{label}</span>
+                        <span className={`slot-section-tag ${key}`}>
+                          {availableSlots[key].length} slots
                         </span>
                       </div>
                       <div className="time-slots-grid schedule-time-grid">
-                        {availableSlots.morning.map((slotItem, idx) => {
+                        {availableSlots[key].map((slotItem, idx) => {
                           const isCurrent = appointmentToReschedule?.time === getSlotDisplay(slotItem) && new Date(appointmentToReschedule?.date).toDateString() === rescheduleDate.toDateString();
                           const isSel = rescheduleSlot === slotItem;
                           return (
                             <button
-                              key={`m-${idx}`}
+                              key={`${key}-${idx}`}
                               type="button"
                               disabled={isCurrent}
                               onClick={() => setRescheduleSlot(slotItem)}
                               className={`slot-chip ${isSel ? 'selected' : ''}`}
                               aria-selected={isSel}
+                              title={isCurrent ? 'Your current booking' : undefined}
                               style={{ opacity: isCurrent ? 0.5 : 1, cursor: isCurrent ? 'not-allowed' : 'pointer' }}
                             >
                               <Clock size={11} className="slot-clock-icon" />
@@ -736,93 +769,41 @@ export default function MyAppointments() {
                         })}
                       </div>
                     </div>
-                  )}
-
-                  {/* Afternoon */}
-                  {availableSlots.afternoon.length > 0 && (
-                    <div className="slot-section-group" style={{ gap: '10px', marginBottom: '22px' }}>
-                      <div className="slot-section-header">
-                        <Sun size={15} color="#f97316" />
-                        <span>Afternoon</span>
-                        <span className="slot-section-tag afternoon">
-                          {availableSlots.afternoon.length} slots
-                        </span>
-                      </div>
-                      <div className="time-slots-grid schedule-time-grid">
-                        {availableSlots.afternoon.map((slotItem, idx) => {
-                          const isCurrent = appointmentToReschedule?.time === getSlotDisplay(slotItem) && new Date(appointmentToReschedule?.date).toDateString() === rescheduleDate.toDateString();
-                          const isSel = rescheduleSlot === slotItem;
-                          return (
-                            <button
-                              key={`a-${idx}`}
-                              type="button"
-                              disabled={isCurrent}
-                              onClick={() => setRescheduleSlot(slotItem)}
-                              className={`slot-chip ${isSel ? 'selected' : ''}`}
-                              aria-selected={isSel}
-                              style={{ opacity: isCurrent ? 0.5 : 1, cursor: isCurrent ? 'not-allowed' : 'pointer' }}
-                            >
-                              <Clock size={11} className="slot-clock-icon" />
-                              <span>{toDisplayTime(getSlotDisplay(slotItem))}</span>
-                              {isSel && <Check size={11} strokeWidth={3} />}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Evening */}
-                  {availableSlots.evening.length > 0 && (
-                    <div className="slot-section-group" style={{ gap: '10px', marginBottom: '22px' }}>
-                      <div className="slot-section-header">
-                        <Sunset size={15} color="#8b5cf6" />
-                        <span>Evening</span>
-                        <span className="slot-section-tag evening">
-                          {availableSlots.evening.length} slots
-                        </span>
-                      </div>
-                      <div className="time-slots-grid schedule-time-grid">
-                        {availableSlots.evening.map((slotItem, idx) => {
-                          const isCurrent = appointmentToReschedule?.time === getSlotDisplay(slotItem) && new Date(appointmentToReschedule?.date).toDateString() === rescheduleDate.toDateString();
-                          const isSel = rescheduleSlot === slotItem;
-                          return (
-                            <button
-                              key={`e-${idx}`}
-                              type="button"
-                              disabled={isCurrent}
-                              onClick={() => setRescheduleSlot(slotItem)}
-                              className={`slot-chip ${isSel ? 'selected' : ''}`}
-                              aria-selected={isSel}
-                              style={{ opacity: isCurrent ? 0.5 : 1, cursor: isCurrent ? 'not-allowed' : 'pointer' }}
-                            >
-                              <Clock size={11} className="slot-clock-icon" />
-                              <span>{toDisplayTime(getSlotDisplay(slotItem))}</span>
-                              {isSel && <Check size={11} strokeWidth={3} />}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
+                  ))}
 
                   {availableSlots.morning.length === 0 && availableSlots.afternoon.length === 0 && availableSlots.evening.length === 0 && (
-                    <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '14px' }}>
-                      No slots available for this date.
+                    <div className="reschedule-empty">
+                      <CalendarIcon size={22} />
+                      <span>No slots available for this date.</span>
+                      <small>Try picking another day from the calendar.</small>
                     </div>
                   )}
                 </div>
               )}
             </div>
           </div>
-          
-          <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '24px', borderTop: '1px solid var(--border)', paddingTop: '24px' }}>
-            <button className="btn btn-secondary" onClick={() => setRescheduleModalOpen(false)} disabled={isRescheduling}>
-              Cancel
-            </button>
-            <button className="btn btn-primary" onClick={confirmReschedule} disabled={isRescheduling || !rescheduleSlot}>
-              {isRescheduling ? "Rescheduling..." : "Confirm Reschedule"}
-            </button>
+
+          <div className="reschedule-actions">
+            <div className="reschedule-summary">
+              {rescheduleSlot ? (
+                <>
+                  <span className="reschedule-summary-label">New slot</span>
+                  <span className="reschedule-summary-value">
+                    {rescheduleDate.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })} • {toDisplayTime(getSlotDisplay(rescheduleSlot))}
+                  </span>
+                </>
+              ) : (
+                <span className="reschedule-summary-hint">Pick a time slot to continue</span>
+              )}
+            </div>
+            <div className="reschedule-buttons">
+              <button className="btn btn-secondary" onClick={() => setRescheduleModalOpen(false)} disabled={isRescheduling}>
+                Cancel
+              </button>
+              <button className="btn btn-primary" onClick={confirmReschedule} disabled={isRescheduling || !rescheduleSlot}>
+                {isRescheduling ? "Rescheduling..." : "Confirm Reschedule"}
+              </button>
+            </div>
           </div>
         </div>
       </Modal>

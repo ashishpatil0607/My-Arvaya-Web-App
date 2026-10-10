@@ -190,10 +190,14 @@ export default function PackageDetails() {
   if (loading) {
     return (
       <main style={{ padding: "48px 0", background: "var(--bg-app)", minHeight: "100vh" }}>
+        <style>{`
+          .pkg-skel-grid { display: grid; grid-template-columns: 1fr 380px; gap: 32px; }
+          @media (max-width: 992px) { .pkg-skel-grid { grid-template-columns: 1fr; } }
+        `}</style>
         <div className="container">
-          <div className="skeleton" style={{ height: "40px", width: "300px", borderRadius: "12px", marginBottom: "24px" }} />
-          <div className="skeleton" style={{ height: "260px", borderRadius: "24px", marginBottom: "32px" }} />
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: "32px" }}>
+          <div className="skeleton" style={{ height: "40px", width: "300px", maxWidth: "100%", borderRadius: "12px", marginBottom: "24px" }} />
+          <div className="skeleton" style={{ height: "260px", borderRadius: "28px", marginBottom: "32px" }} />
+          <div className="pkg-skel-grid">
             <div className="skeleton" style={{ height: "500px", borderRadius: "24px" }} />
             <div className="skeleton" style={{ height: "400px", borderRadius: "24px" }} />
           </div>
@@ -204,11 +208,18 @@ export default function PackageDetails() {
 
   if (!packageData) {
     return (
-      <main style={{ padding: "80px 0", textAlign: "center", background: "var(--bg-app)", minHeight: "100vh" }}>
+      <main style={{ padding: "96px 0", textAlign: "center", background: "var(--bg-app)", minHeight: "100vh" }}>
         <div className="container">
-          <Stethoscope size={54} style={{ opacity: 0.3, marginBottom: "16px", color: "var(--primary)" }} />
-          <h2 style={{ fontSize: "24px", fontWeight: "800", color: "var(--text-main)", marginBottom: "8px" }}>Health Package Not Found</h2>
-          <p style={{ color: "var(--text-muted)", marginBottom: "24px" }}>The package you are looking for might have been moved or removed.</p>
+          <div style={{
+            width: "96px", height: "96px", borderRadius: "50%", margin: "0 auto 20px auto",
+            background: "var(--primary-light)", color: "var(--primary)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            boxShadow: "0 0 0 10px rgba(46, 102, 110, 0.06)"
+          }}>
+            <Stethoscope size={44} />
+          </div>
+          <h2 style={{ fontSize: "26px", fontWeight: "800", color: "var(--text-main)", marginBottom: "8px", letterSpacing: "-0.02em" }}>Health Package Not Found</h2>
+          <p style={{ color: "var(--text-muted)", marginBottom: "28px", maxWidth: "420px", marginLeft: "auto", marginRight: "auto" }}>The package you are looking for might have been moved or removed.</p>
           <button onClick={() => go("/labs/all-packages")} className="btn btn-primary">
             Explore All Health Packages
           </button>
@@ -223,139 +234,160 @@ export default function PackageDetails() {
   const discount = Math.round(((oldPrice - price) / oldPrice) * 100);
 
   return (
-    <main className="page page-enter" style={{ background: "#f8fafc", minHeight: "100vh", paddingBottom: "80px", color: "#1e293b" }}>
-      
+    <main className="page page-enter" style={{ background: "#f6f8fa", minHeight: "100vh", paddingBottom: "96px", color: "#1e293b" }}>
+
       {/* ── STYLES ── */}
       <style>{`
+        @keyframes pkgFadeUp {
+          from { opacity: 0; transform: translateY(14px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes pkgFloat {
+          0%, 100% { transform: translate(0, 0); }
+          50% { transform: translate(0, -18px); }
+        }
+
+        .pkg-anim { animation: pkgFadeUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) both; }
+        .pkg-anim-d1 { animation-delay: 0.08s; }
+        .pkg-anim-d2 { animation-delay: 0.16s; }
+        .pkg-anim-d3 { animation-delay: 0.24s; }
+
+        @media (prefers-reduced-motion: reduce) {
+          .pkg-anim, .web-pkg-orb { animation: none !important; }
+        }
+
+        /* ── HERO ── */
         .web-pkg-hero {
-          background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+          background:
+            radial-gradient(120% 140% at 0% 0%, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 45%),
+            linear-gradient(135deg, #0f3a40 0%, var(--primary-dark) 45%, var(--primary) 100%);
           color: #ffffff;
-          padding: 36px 0 44px 0;
+          padding: 52px 0 60px 0;
           position: relative;
           overflow: hidden;
-          box-shadow: 0 10px 30px rgba(18, 51, 58, 0.12);
-        }
-
-        /* Responsive Breadcrumbs */
-        .pkg-breadcrumbs {
-          margin-bottom: 16px;
-          font-size: 13px;
-          color: rgba(255, 255, 255, 0.75);
-          line-height: 1.6;
-        }
-
-        .pkg-breadcrumb-item {
-          color: rgba(255, 255, 255, 0.85);
-          white-space: nowrap;
-          display: inline;
-          transition: color 0.2s;
-        }
-
-        .pkg-breadcrumb-item:hover {
-          color: #ffffff;
-        }
-
-        .pkg-breadcrumb-arrow {
-          display: inline-block;
-          vertical-align: -1px;
-          margin: 0 4px;
-          color: rgba(255, 255, 255, 0.5);
-        }
-
-        .pkg-breadcrumb-current {
-          color: #ffffff;
-          font-weight: 700;
-          display: inline;
-          word-break: break-word;
-        }
-
-        @media (max-width: 426px) {
-          .pkg-breadcrumbs {
-            font-size: 12px;
-            line-height: 1.5;
-            margin-bottom: 12px;
-          }
-          .pkg-breadcrumb-arrow {
-            margin: 0 3px;
-          }
+          isolation: isolate;
         }
 
         .web-pkg-hero::before {
           content: '';
           position: absolute;
-          top: -50%;
-          right: -10%;
-          width: 500px;
-          height: 500px;
-          background: radial-gradient(circle, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0) 70%);
+          inset: 0;
+          background-image: radial-gradient(rgba(255,255,255,0.09) 1px, transparent 1px);
+          background-size: 22px 22px;
+          mask-image: linear-gradient(115deg, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0) 60%);
+          -webkit-mask-image: linear-gradient(115deg, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0) 60%);
           pointer-events: none;
+          z-index: -1;
+        }
+
+        .web-pkg-hero::after {
+          content: '';
+          position: absolute;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          height: 1px;
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
+        }
+
+        .web-pkg-orb {
+          position: absolute;
+          border-radius: 50%;
+          filter: blur(10px);
+          pointer-events: none;
+          z-index: -1;
+          animation: pkgFloat 9s ease-in-out infinite;
+        }
+
+        .web-pkg-orb.one {
+          width: 420px;
+          height: 420px;
+          top: -180px;
+          right: -80px;
+          background: radial-gradient(circle, rgba(94, 234, 212, 0.22) 0%, rgba(94, 234, 212, 0) 70%);
+        }
+
+        .web-pkg-orb.two {
+          width: 320px;
+          height: 320px;
+          bottom: -160px;
+          right: 28%;
+          background: radial-gradient(circle, rgba(251, 145, 63, 0.18) 0%, rgba(251, 145, 63, 0) 70%);
+          animation-delay: -4s;
         }
 
         .web-pkg-hero-inner {
           display: grid;
           grid-template-columns: 1fr 380px;
-          gap: 36px;
+          gap: 48px;
           align-items: center;
         }
 
         @media (max-width: 992px) {
           .web-pkg-hero-inner {
             grid-template-columns: 1fr;
+            gap: 32px;
           }
         }
 
         .web-pkg-title {
           font-family: 'Plus Jakarta Sans', var(--font-sans, sans-serif);
-          font-size: 32px;
+          font-size: clamp(26px, 3.4vw, 40px);
           font-weight: 800;
-          line-height: 1.25;
+          line-height: 1.18;
           color: #ffffff;
-          margin: 12px 0 16px 0;
-          letter-spacing: -0.4px;
+          margin: 4px 0 14px 0;
+          letter-spacing: -0.03em;
+          text-wrap: balance;
         }
 
-        @media (max-width: 640px) {
-          .web-pkg-title {
-            font-size: 24px;
-          }
+        .web-pkg-lead {
+          font-size: 15.5px;
+          color: rgba(255,255,255,0.82);
+          margin: 0 0 8px 0;
+          max-width: 640px;
+          line-height: 1.6;
         }
 
         .web-pkg-hero-badges {
           display: flex;
           align-items: center;
-          gap: 10px;
+          gap: 8px;
           flex-wrap: wrap;
-          margin-bottom: 20px;
+          margin-bottom: 18px;
         }
 
         .web-hero-badge {
           display: inline-flex;
           align-items: center;
           gap: 6px;
-          padding: 5px 14px;
-          border-radius: 20px;
+          padding: 6px 13px;
+          border-radius: 999px;
           font-size: 12.5px;
           font-weight: 600;
+          letter-spacing: 0.01em;
         }
 
         .web-hero-badge.tag {
-          background: rgba(255, 255, 255, 0.15);
+          background: rgba(255, 255, 255, 0.12);
           backdrop-filter: blur(8px);
-          border: 1px solid rgba(255, 255, 255, 0.25);
+          -webkit-backdrop-filter: blur(8px);
+          border: 1px solid rgba(255, 255, 255, 0.2);
           color: #ffffff;
         }
 
         .web-hero-badge.green {
-          background: rgba(22, 163, 74, 0.2);
-          border: 1px solid rgba(34, 197, 94, 0.35);
-          color: #86efac;
+          background: rgba(34, 197, 94, 0.16);
+          border: 1px solid rgba(134, 239, 172, 0.4);
+          color: #bbf7d0;
         }
 
         .web-pkg-stat-cards {
           display: grid;
           grid-template-columns: repeat(3, 1fr);
           gap: 12px;
-          margin-top: 24px;
+          margin-top: 28px;
         }
 
         @media (max-width: 640px) {
@@ -365,33 +397,146 @@ export default function PackageDetails() {
         }
 
         .web-stat-card {
-          background: rgba(255, 255, 255, 0.1);
+          background: linear-gradient(180deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.06) 100%);
           backdrop-filter: blur(12px);
-          border: 1px solid rgba(255, 255, 255, 0.15);
-          border-radius: 16px;
+          -webkit-backdrop-filter: blur(12px);
+          border: 1px solid rgba(255, 255, 255, 0.16);
+          border-radius: 18px;
           padding: 14px 16px;
           display: flex;
           align-items: center;
           gap: 12px;
+          transition: transform 0.25s ease, background 0.25s ease, border-color 0.25s ease;
+        }
+
+        .web-stat-card:hover {
+          transform: translateY(-3px);
+          background: linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.08) 100%);
+          border-color: rgba(255, 255, 255, 0.28);
         }
 
         .web-stat-icon {
-          width: 36px;
-          height: 36px;
+          width: 40px;
+          height: 40px;
+          flex-shrink: 0;
           border-radius: 12px;
-          background: rgba(255, 255, 255, 0.18);
+          background: linear-gradient(135deg, rgba(255,255,255,0.28), rgba(255,255,255,0.1));
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.25);
           display: flex;
           align-items: center;
           justify-content: center;
           color: #ffffff;
         }
 
-        /* Layout Grid */
+        .web-stat-value {
+          font-size: 16px;
+          font-weight: 800;
+          letter-spacing: -0.01em;
+        }
+
+        .web-stat-label {
+          font-size: 12px;
+          color: rgba(255,255,255,0.7);
+          margin-top: 1px;
+        }
+
+        /* Hero price card */
+        .web-hero-price {
+          position: relative;
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          background: linear-gradient(160deg, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0.06) 100%);
+          backdrop-filter: blur(18px);
+          -webkit-backdrop-filter: blur(18px);
+          border: 1px solid rgba(255, 255, 255, 0.22);
+          border-radius: 28px;
+          padding: 26px;
+          box-shadow: 0 24px 60px rgba(4, 25, 29, 0.35), inset 0 1px 0 rgba(255,255,255,0.2);
+        }
+
+        .web-hero-price-label {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          align-self: flex-start;
+          font-size: 11.5px;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          color: #fed7aa;
+          background: rgba(251, 145, 63, 0.16);
+          border: 1px solid rgba(251, 145, 63, 0.35);
+          padding: 5px 11px;
+          border-radius: 999px;
+        }
+
+        .web-hero-price-row {
+          display: flex;
+          align-items: baseline;
+          gap: 10px;
+          flex-wrap: wrap;
+          margin-top: 4px;
+        }
+
+        .web-hero-price-value {
+          font-family: 'Plus Jakarta Sans', sans-serif;
+          font-size: 40px;
+          font-weight: 800;
+          color: #ffffff;
+          letter-spacing: -0.03em;
+          line-height: 1.1;
+        }
+
+        .web-hero-price-note {
+          font-size: 13px;
+          color: rgba(255,255,255,0.82);
+          margin: 0;
+          display: flex;
+          align-items: center;
+          gap: 7px;
+          padding-top: 12px;
+          border-top: 1px solid rgba(255,255,255,0.12);
+        }
+
+        /* Cancel the global main.page > div:first-of-type panel background */
+        #pkg-main-content {
+          background: none !important;
+          border-bottom: 0 !important;
+        }
+
+        /* ── BACK BUTTON ── */
+        .web-back-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 13px;
+          font-weight: 700;
+          color: var(--primary-dark);
+          background: #ffffff;
+          border: 1px solid #e2e8f0;
+          padding: 9px 18px 9px 14px;
+          border-radius: 999px;
+          cursor: pointer;
+          box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+          transition: all 0.2s ease;
+        }
+
+        .web-back-btn svg { transition: transform 0.2s ease; }
+
+        .web-back-btn:hover {
+          border-color: var(--primary);
+          box-shadow: 0 4px 14px rgba(46, 102, 110, 0.12);
+        }
+
+        .web-back-btn:hover svg { transform: translateX(-3px); }
+
+        /* ── LAYOUT ── */
         .web-pkg-layout {
           display: grid;
           grid-template-columns: 1fr 380px;
           gap: 32px;
-          margin-top: 36px;
+          margin-top: 28px;
         }
 
         @media (max-width: 992px) {
@@ -400,23 +545,55 @@ export default function PackageDetails() {
           }
         }
 
-        /* Included Category Card */
+        .web-section-title {
+          font-family: 'Plus Jakarta Sans', sans-serif;
+          font-size: clamp(22px, 2.4vw, 28px);
+          font-weight: 800;
+          color: #0f172a;
+          margin: 0;
+          letter-spacing: -0.025em;
+        }
+
+        .web-section-sub {
+          font-size: 14.5px;
+          color: #64748b;
+          margin: 6px 0 0 0;
+        }
+
+        /* ── CATEGORY CARD ── */
         .web-cat-card {
+          position: relative;
           background: #ffffff;
-          border-radius: 20px;
-          border: 1px solid #e2e8f0;
-          box-shadow: 0 4px 20px rgba(18, 51, 58, 0.04);
+          border-radius: 22px;
+          border: 1px solid #e8edf2;
+          box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03), 0 8px 28px rgba(18, 51, 58, 0.05);
           overflow: hidden;
-          margin-bottom: 24px;
+          margin-bottom: 20px;
+          transition: box-shadow 0.3s ease, transform 0.3s ease;
+        }
+
+        .web-cat-card::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 3px;
+          background: linear-gradient(90deg, var(--cat-color), color-mix(in srgb, var(--cat-color) 30%, transparent));
+        }
+
+        .web-cat-card:hover {
+          box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03), 0 16px 40px rgba(18, 51, 58, 0.09);
         }
 
         .web-cat-card-header {
-          padding: 20px 24px;
-          background: #ffffff;
+          padding: 22px 24px 18px 24px;
+          background: linear-gradient(180deg, color-mix(in srgb, var(--cat-bg) 55%, #ffffff) 0%, #ffffff 100%);
           border-bottom: 1px solid #f1f5f9;
           display: flex;
           align-items: center;
           justify-content: space-between;
+          gap: 12px;
         }
 
         .web-cat-card-title {
@@ -426,12 +603,14 @@ export default function PackageDetails() {
         }
 
         .web-cat-icon-box {
-          width: 44px;
-          height: 44px;
-          border-radius: 14px;
+          width: 48px;
+          height: 48px;
+          flex-shrink: 0;
+          border-radius: 15px;
           display: flex;
           align-items: center;
           justify-content: center;
+          box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cat-color) 18%, transparent);
         }
 
         .web-cat-name {
@@ -439,157 +618,332 @@ export default function PackageDetails() {
           font-size: 19px;
           font-weight: 800;
           color: #0f172a;
+          letter-spacing: -0.015em;
+        }
+
+        .web-cat-sub {
+          font-size: 12.5px;
+          color: #64748b;
         }
 
         .web-cat-count-pill {
-          background: #f1f5f9;
-          color: #475569;
-          font-size: 13.5px;
-          font-weight: 700;
-          padding: 5px 14px;
-          border-radius: 20px;
+          min-width: 40px;
+          text-align: center;
+          font-size: 14px;
+          font-weight: 800;
+          padding: 6px 14px;
+          border-radius: 999px;
+          color: var(--cat-color);
+          background: var(--cat-bg);
+          border: 1px solid color-mix(in srgb, var(--cat-color) 20%, transparent);
         }
 
         .web-cat-items-grid {
           display: grid;
           grid-template-columns: repeat(2, 1fr);
-          gap: 12px;
+          gap: 10px;
           padding: 20px 24px;
         }
 
         @media (max-width: 640px) {
           .web-cat-items-grid {
             grid-template-columns: 1fr;
+            padding: 16px;
+          }
+          .web-cat-card-header {
+            padding: 18px 16px 14px 16px;
           }
         }
 
         .web-item-pill {
           display: flex;
           align-items: center;
-          gap: 10px;
+          gap: 11px;
           background: #f8fafc;
-          border: 1px solid #f1f5f9;
+          border: 1px solid #eef2f6;
           padding: 12px 14px;
-          border-radius: 12px;
+          border-radius: 14px;
           font-size: 13.5px;
           font-weight: 600;
           color: #334155;
-          transition: all 0.2s;
+          line-height: 1.4;
+          transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
         }
 
         .web-item-pill:hover {
           background: #ffffff;
-          border-color: #cbd5e1;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+          border-color: color-mix(in srgb, var(--cat-color) 35%, #e2e8f0);
+          box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
+          transform: translateY(-1px);
+        }
+
+        .web-item-check {
+          width: 24px;
+          height: 24px;
+          flex-shrink: 0;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: #dcfce7;
+          color: #16a34a;
         }
 
         .web-expand-bar {
-          padding: 12px 24px 20px 24px;
+          padding: 4px 24px 22px 24px;
           text-align: center;
         }
 
         .web-expand-btn {
-          background: #f1f5f9;
+          background: #ffffff;
           border: 1px solid #e2e8f0;
-          color: #1b4d54;
+          color: var(--primary-dark);
           font-size: 13.5px;
           font-weight: 700;
-          padding: 8px 20px;
-          border-radius: 20px;
+          padding: 9px 20px;
+          border-radius: 999px;
           cursor: pointer;
           display: inline-flex;
           align-items: center;
           gap: 6px;
-          transition: all 0.2s;
+          transition: all 0.2s ease;
         }
 
         .web-expand-btn:hover {
-          background: #1b4d54;
+          background: var(--primary-dark);
           color: #ffffff;
-          border-color: #1b4d54;
+          border-color: var(--primary-dark);
+          box-shadow: 0 6px 16px rgba(31, 79, 87, 0.22);
         }
 
-        /* Right Sticky Card */
+        /* ── TRUST FEATURES ── */
+        .web-trust-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 14px;
+          margin-top: 8px;
+          margin-bottom: 32px;
+        }
+
+        @media (max-width: 640px) {
+          .web-trust-grid {
+            grid-template-columns: 1fr;
+          }
+        }
+
+        .web-trust-card {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          text-align: center;
+          background: #ffffff;
+          border: 1px solid #e8edf2;
+          border-radius: 20px;
+          padding: 24px 16px;
+          box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+          transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+        }
+
+        .web-trust-card:hover {
+          transform: translateY(-4px);
+          border-color: #bae6fd;
+          box-shadow: 0 14px 32px rgba(2, 132, 199, 0.1);
+        }
+
+        .web-trust-icon {
+          width: 60px;
+          height: 60px;
+          border-radius: 18px;
+          background: linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 100%);
+          color: #0284c7;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin-bottom: 14px;
+          box-shadow: 0 6px 16px rgba(2, 132, 199, 0.14), inset 0 0 0 1px rgba(2, 132, 199, 0.1);
+        }
+
+        .web-trust-label {
+          font-size: 14px;
+          font-weight: 700;
+          color: #1e293b;
+          line-height: 1.35;
+          max-width: 150px;
+        }
+
+        /* ── STICKY BOOKING CARD ── */
         .web-sticky-card {
           background: #ffffff;
-          border-radius: 24px;
+          border-radius: 26px;
           border: 1px solid #e2e8f0;
-          box-shadow: 0 10px 30px rgba(18, 51, 58, 0.08);
-          padding: 28px;
+          box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 20px 50px rgba(18, 51, 58, 0.1);
           position: sticky;
           top: 140px;
+          overflow: hidden;
+        }
+
+        .web-sticky-head {
+          position: relative;
+          padding: 24px 26px 22px 26px;
+          background:
+            radial-gradient(100% 120% at 100% 0%, rgba(94, 234, 212, 0.18) 0%, rgba(94, 234, 212, 0) 60%),
+            linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
+          color: #ffffff;
+        }
+
+        .web-sticky-head-label {
+          font-size: 11.5px;
+          color: rgba(255,255,255,0.72);
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+        }
+
+        .web-sticky-price {
+          font-size: 34px;
+          font-weight: 800;
+          color: #ffffff;
+          font-family: 'Plus Jakarta Sans', sans-serif;
+          letter-spacing: -0.03em;
+          line-height: 1.15;
+          margin-top: 4px;
+        }
+
+        .web-discount-pill {
+          background: #22c55e;
+          color: #ffffff;
+          font-size: 12px;
+          font-weight: 800;
+          padding: 5px 11px;
+          border-radius: 999px;
+          box-shadow: 0 4px 12px rgba(34, 197, 94, 0.35);
+          white-space: nowrap;
+        }
+
+        .web-sticky-body {
+          padding: 22px 26px 26px 26px;
+        }
+
+        .web-bill {
+          background: #f8fafc;
+          padding: 16px;
+          border-radius: 16px;
+          border: 1px solid #eef2f6;
+          margin-bottom: 20px;
+        }
+
+        .web-bill-row {
+          font-size: 13.5px;
+          color: #475569;
+          display: flex;
+          justify-content: space-between;
+        }
+
+        .web-bill-total {
+          border-top: 1px dashed #cbd5e1;
+          padding-top: 12px;
+          margin-top: 12px;
+          font-size: 15px;
+          font-weight: 800;
+          color: #0f172a;
+          display: flex;
+          justify-content: space-between;
         }
 
         .web-book-btn {
+          position: relative;
+          overflow: hidden;
           width: 100%;
-          background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+          background: linear-gradient(135deg, #fb923c 0%, #f97316 50%, #ea580c 100%);
           color: #ffffff;
           border: none;
           padding: 16px 24px;
           border-radius: 16px;
           font-size: 16px;
           font-weight: 800;
+          letter-spacing: 0.01em;
           cursor: pointer;
           display: flex;
           align-items: center;
           justify-content: center;
           gap: 10px;
-          box-shadow: 0 6px 20px rgba(249, 115, 22, 0.35);
-          transition: all 0.25s;
+          box-shadow: 0 8px 22px rgba(249, 115, 22, 0.35), inset 0 1px 0 rgba(255,255,255,0.25);
+          transition: transform 0.25s ease, box-shadow 0.25s ease;
           margin-bottom: 20px;
         }
 
+        .web-book-btn::after {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: -120%;
+          width: 60%;
+          height: 100%;
+          background: linear-gradient(110deg, transparent, rgba(255,255,255,0.35), transparent);
+          transition: left 0.6s ease;
+        }
+
+        .web-book-btn svg { transition: transform 0.25s ease; }
+
         .web-book-btn:hover {
           transform: translateY(-2px);
-          box-shadow: 0 10px 26px rgba(249, 115, 22, 0.45);
+          box-shadow: 0 14px 30px rgba(249, 115, 22, 0.45), inset 0 1px 0 rgba(255,255,255,0.25);
         }
 
-        /* How it works steps */
-        .web-steps-grid {
-          display: grid;
-          grid-template-columns: repeat(4, 1fr);
-          gap: 16px;
-          margin-top: 16px;
+        .web-book-btn:hover::after { left: 140%; }
+        .web-book-btn:hover svg { transform: translateX(4px); }
+
+        .web-book-btn:focus-visible,
+        .web-expand-btn:focus-visible,
+        .web-back-btn:focus-visible {
+          outline: 3px solid rgba(46, 102, 110, 0.35);
+          outline-offset: 2px;
         }
 
-        @media (max-width: 768px) {
-          .web-steps-grid {
-            grid-template-columns: repeat(2, 1fr);
-          }
+        .web-perks {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          border-top: 1px solid #f1f5f9;
+          padding-top: 20px;
         }
 
-        .web-step-card {
-          background: #ffffff;
-          border-radius: 18px;
-          border: 1px solid #e2e8f0;
-          padding: 20px;
-          text-align: center;
+        .web-perk {
+          font-size: 13px;
+          display: flex;
+          align-items: flex-start;
+          gap: 10px;
+          color: #475569;
+          line-height: 1.45;
         }
 
-        .web-step-num {
-          width: 32px;
-          height: 32px;
-          border-radius: 50%;
-          background: #1b4d54;
-          color: #ffffff;
-          font-weight: 800;
-          font-size: 14px;
+        .web-perk b { color: #0f172a; }
+
+        .web-perk-icon {
+          width: 26px;
+          height: 26px;
+          flex-shrink: 0;
+          border-radius: 8px;
+          background: #f0fdf4;
+          color: #16a34a;
           display: flex;
           align-items: center;
           justify-content: center;
-          margin: 0 auto 12px auto;
+          margin-top: -3px;
         }
       `}</style>
 
       {/* ── TOP HERO HEADER BANNER ── */}
       <section className="web-pkg-hero">
+        <span className="web-pkg-orb one" aria-hidden="true" />
+        <span className="web-pkg-orb two" aria-hidden="true" />
         <div className="container">
-          
+
           {/* Breadcrumbs Removed */}
           <div className="web-pkg-hero-inner">
             <div>
               {/* Badges Row */}
-              <div className="web-pkg-hero-badges">
+              <div className="web-pkg-hero-badges pkg-anim">
                 <span className="web-hero-badge tag">
                   <Globe size={14} /> {packageData.category || "Full Body Checkup"}
                 </span>
@@ -602,35 +956,35 @@ export default function PackageDetails() {
               </div>
 
               {/* Package Title */}
-              <h1 className="web-pkg-title">{title}</h1>
+              <h1 className="web-pkg-title pkg-anim pkg-anim-d1">{title}</h1>
 
-              <p style={{ fontSize: "15px", color: "rgba(255,255,255,0.85)", margin: "0 0 24px 0", maxWidth: "680px", lineHeight: 1.5 }}>
+              <p className="web-pkg-lead pkg-anim pkg-anim-d1">
                 Comprehensive health screening & diagnostic checkup package designed by specialist doctors with certified home sample collection.
               </p>
 
               {/* Stats Summary Bar */}
-              <div className="web-pkg-stat-cards">
+              <div className="web-pkg-stat-cards pkg-anim pkg-anim-d2">
                 <div className="web-stat-card">
                   <div className="web-stat-icon"><Droplet size={18} /></div>
                   <div>
-                    <div style={{ fontSize: "16px", fontWeight: "800" }}>{totalItemsCount} Total Items</div>
-                    <div style={{ fontSize: "11.5px", color: "rgba(255,255,255,0.7)" }}>Tests & Consultations</div>
+                    <div className="web-stat-value">{totalItemsCount} Total Items</div>
+                    <div className="web-stat-label">Tests & Consultations</div>
                   </div>
                 </div>
 
                 <div className="web-stat-card">
                   <div className="web-stat-icon"><Clock size={18} /></div>
                   <div>
-                    <div style={{ fontSize: "16px", fontWeight: "800" }}>24 Hours</div>
-                    <div style={{ fontSize: "11.5px", color: "rgba(255,255,255,0.7)" }}>Smart Digital Report</div>
+                    <div className="web-stat-value">24 Hours</div>
+                    <div className="web-stat-label">Smart Digital Report</div>
                   </div>
                 </div>
 
                 <div className="web-stat-card">
                   <div className="web-stat-icon"><UserCheck size={18} /></div>
                   <div>
-                    <div style={{ fontSize: "16px", fontWeight: "800" }}>Free Doctor</div>
-                    <div style={{ fontSize: "11.5px", color: "rgba(255,255,255,0.7)" }}>Report Consultation</div>
+                    <div className="web-stat-value">Free Doctor</div>
+                    <div className="web-stat-label">Report Consultation</div>
                   </div>
                 </div>
               </div>
@@ -638,17 +992,17 @@ export default function PackageDetails() {
             </div>
 
             {/* Top Quick Price Card for Large Screens */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "12px", background: "rgba(255, 255, 255, 0.08)", backdropFilter: "blur(16px)", border: "1px solid rgba(255, 255, 255, 0.18)", borderRadius: "24px", padding: "24px" }}>
-              <div style={{ fontSize: "13px", color: "rgba(255,255,255,0.75)", fontWeight: "600" }}>Package Special Offer</div>
-              <div style={{ display: "flex", alignItems: "baseline", gap: "10px" }}>
-                <span style={{ fontSize: "36px", fontWeight: "800", color: "#ffffff", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+            <div className="web-hero-price pkg-anim pkg-anim-d3">
+              <span className="web-hero-price-label">Package Special Offer</span>
+              <div className="web-hero-price-row">
+                <span className="web-hero-price-value">
                   ₹{price.toLocaleString()}
                 </span>
               </div>
-              <p style={{ fontSize: "12.5px", color: "rgba(255,255,255,0.8)", margin: 0, display: "flex", alignItems: "center", gap: "6px" }}>
-                <CheckCircle2 size={14} color="#86efac" /> Includes Home Sample Collection & Tax
+              <p className="web-hero-price-note">
+                <CheckCircle2 size={15} color="#86efac" /> Includes Home Sample Collection & Tax
               </p>
-              <button onClick={handleBookClick} className="web-book-btn" style={{ marginTop: "10px" }}>
+              <button onClick={handleBookClick} className="web-book-btn" style={{ marginTop: "8px", marginBottom: 0 }}>
                 Book Package Now <ArrowRight size={18} />
               </button>
             </div>
@@ -659,34 +1013,26 @@ export default function PackageDetails() {
       </section>
 
       {/* ── MAIN CONTENT CONTAINER (Two Column Layout) ── */}
-      <div className="container">
-        
+      <div className="container" id="pkg-main-content">
+
         {/* Back Button */}
-        <div style={{ marginTop: "24px", marginBottom: "8px" }}>
-          <button 
-            onClick={() => go(-1)} 
-            className="btn btn-secondary flex items-center gap-2"
-            style={{ fontSize: "13px", fontWeight: "700", padding: "8px 18px", borderRadius: "20px" }}
-          >
+        <div style={{ marginTop: "28px" }}>
+          <button onClick={() => go(-1)} className="web-back-btn">
             <ArrowLeft size={16} /> Back to Packages
           </button>
         </div>
 
         <div className="web-pkg-layout">
-          
+
           {/* ── LEFT COLUMN (Included Details & Info) ── */}
           <div>
 
             {/* Section Header */}
-            <div style={{ marginBottom: "20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div>
-                <h2 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: "24px", fontWeight: "800", color: "#0f172a", margin: 0 }}>
-                  What's Included in Package
-                </h2>
-                <p style={{ fontSize: "14px", color: "#64748b", margin: "4px 0 0 0" }}>
-                  Detailed list of {totalItemsCount} tests, consultations, and screening profiles included.
-                </p>
-              </div>
+            <div style={{ marginBottom: "22px" }}>
+              <h2 className="web-section-title">What's Included in Package</h2>
+              <p className="web-section-sub">
+                Detailed list of {totalItemsCount} tests, consultations, and screening profiles included.
+              </p>
             </div>
 
             {/* Inclusion Categories */}
@@ -696,8 +1042,12 @@ export default function PackageDetails() {
               const hiddenCount = group.items.length - 6;
 
               return (
-                <div key={group.title} className="web-cat-card">
-                  
+                <div
+                  key={group.title}
+                  className="web-cat-card"
+                  style={{ "--cat-color": group.color, "--cat-bg": group.bg }}
+                >
+
                   {/* Category Header */}
                   <div className="web-cat-card-header">
                     <div className="web-cat-card-title">
@@ -709,7 +1059,7 @@ export default function PackageDetails() {
                       </div>
                       <div>
                         <div className="web-cat-name">{group.title}</div>
-                        <span style={{ fontSize: "12.5px", color: "#64748b" }}>{group.items.length} Included Items</span>
+                        <span className="web-cat-sub">{group.items.length} Included Items</span>
                       </div>
                     </div>
                     <div className="web-cat-count-pill">{group.items.length}</div>
@@ -719,7 +1069,7 @@ export default function PackageDetails() {
                   <div className="web-cat-items-grid">
                     {displayItems.map((item, idx) => (
                       <div key={item.id || idx} className="web-item-pill">
-                        <CheckCircle2 size={16} color="#16a34a" style={{ shrink: 0 }} />
+                        <span className="web-item-check"><CheckCircle2 size={14} /></span>
                         <span style={{ wordBreak: "break-word" }}>{item.name}</span>
                       </div>
                     ))}
@@ -728,8 +1078,8 @@ export default function PackageDetails() {
                   {/* Expand Toggle */}
                   {hiddenCount > 0 && (
                     <div className="web-expand-bar">
-                      <button 
-                        className="web-expand-btn" 
+                      <button
+                        className="web-expand-btn"
                         onClick={() => toggleCategoryExpand(group.title)}
                       >
                         {isExpanded ? (
@@ -746,76 +1096,20 @@ export default function PackageDetails() {
             })}
 
             {/* ── 3 FEATURE CARDS BELOW PROFILES ── */}
-            <div style={{ 
-              display: "grid", 
-              gridTemplateColumns: "repeat(3, 1fr)", 
-              gap: "24px", 
-              marginTop: "24px", 
-              marginBottom: "32px",
-              padding: "28px 24px",
-              background: "#ffffff",
-              borderRadius: "22px",
-              border: "1px solid #e2e8f0",
-              boxShadow: "0 4px 20px rgba(15, 23, 42, 0.04)"
-            }}>
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                <div style={{ 
-                  width: "64px", 
-                  height: "64px", 
-                  borderRadius: "50%", 
-                  background: "#e0f2fe", 
-                  color: "#0284c7", 
-                  display: "flex", 
-                  alignItems: "center", 
-                  justifyContent: "center",
-                  marginBottom: "12px",
-                  boxShadow: "0 4px 12px rgba(2, 132, 199, 0.12)"
-                }}>
-                  <Award size={28} />
-                </div>
-                <span style={{ fontSize: "14px", fontWeight: "700", color: "#334155", textAlign: "center", lineHeight: 1.35, maxWidth: "130px" }}>
-                  Doctor Verified Report
-                </span>
+            <div className="web-trust-grid">
+              <div className="web-trust-card">
+                <div className="web-trust-icon"><Award size={28} /></div>
+                <span className="web-trust-label">Doctor Verified Report</span>
               </div>
 
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                <div style={{ 
-                  width: "64px", 
-                  height: "64px", 
-                  borderRadius: "50%", 
-                  background: "#e0f2fe", 
-                  color: "#0284c7", 
-                  display: "flex", 
-                  alignItems: "center", 
-                  justifyContent: "center",
-                  marginBottom: "12px",
-                  boxShadow: "0 4px 12px rgba(2, 132, 199, 0.12)"
-                }}>
-                  <Stethoscope size={28} />
-                </div>
-                <span style={{ fontSize: "14px", fontWeight: "700", color: "#334155", textAlign: "center", lineHeight: 1.35, maxWidth: "130px" }}>
-                  Certified Laboratory
-                </span>
+              <div className="web-trust-card">
+                <div className="web-trust-icon"><Stethoscope size={28} /></div>
+                <span className="web-trust-label">Certified Laboratory</span>
               </div>
 
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                <div style={{ 
-                  width: "64px", 
-                  height: "64px", 
-                  borderRadius: "50%", 
-                  background: "#e0f2fe", 
-                  color: "#0284c7", 
-                  display: "flex", 
-                  alignItems: "center", 
-                  justifyContent: "center",
-                  marginBottom: "12px",
-                  boxShadow: "0 4px 12px rgba(2, 132, 199, 0.12)"
-                }}>
-                  <Sparkles size={28} />
-                </div>
-                <span style={{ fontSize: "14px", fontWeight: "700", color: "#334155", textAlign: "center", lineHeight: 1.35, maxWidth: "130px" }}>
-                  Millions Happy Customer
-                </span>
+              <div className="web-trust-card">
+                <div className="web-trust-icon"><Sparkles size={28} /></div>
+                <span className="web-trust-label">Millions Happy Customer</span>
               </div>
             </div>
 
@@ -824,47 +1118,50 @@ export default function PackageDetails() {
           {/* ── RIGHT COLUMN (Sticky Booking Sidebar) ── */}
           <div>
             <div className="web-sticky-card">
-              
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
-                <div>
-                  <span style={{ fontSize: "12px", color: "#64748b", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                    Total Package Price
-                  </span>
-                  <div style={{ fontSize: "32px", fontWeight: "800", color: "#1b4d54", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-                    ₹{price.toLocaleString()}
+
+              <div className="web-sticky-head">
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px" }}>
+                  <div>
+                    <span className="web-sticky-head-label">Total Package Price</span>
+                    <div className="web-sticky-price">
+                      ₹{price.toLocaleString()}
+                    </div>
+                  </div>
+                  {discount > 0 && (
+                    <span className="web-discount-pill">{discount}% OFF</span>
+                  )}
+                </div>
+              </div>
+
+              <div className="web-sticky-body">
+                <div className="web-bill">
+                  <div className="web-bill-row">
+                    <span>Package Fee</span>
+                    <span>₹{price.toLocaleString()}</span>
+                  </div>
+                  <div className="web-bill-total">
+                    <span>Amount Payable</span>
+                    <span>₹{price.toLocaleString()}</span>
                   </div>
                 </div>
-                {discount > 0 && (
-                  <span style={{ background: "#dcfce7", color: "#15803d", fontSize: "12.5px", fontWeight: "700", padding: "4px 10px", borderRadius: "12px" }}>
-                    {discount}% OFF
-                  </span>
-                )}
-              </div>
 
-              <div style={{ background: "#f8fafc", padding: "14px", borderRadius: "14px", border: "1px solid #f1f5f9", marginBottom: "20px" }}>
-                <div style={{ fontSize: "13px", color: "#334155", display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
-                  <span>Package Fee</span>
-                  <span>₹{price.toLocaleString()}</span>
-                </div>
-                <div style={{ borderTop: "1px dashed #cbd5e1", paddingTop: "8px", marginTop: "8px", fontSize: "14px", fontWeight: "800", color: "#0f172a", display: "flex", justifyContent: "space-between" }}>
-                  <span>Amount Payable</span>
-                  <span>₹{price.toLocaleString()}</span>
-                </div>
-              </div>
+                <button className="web-book-btn" onClick={handleBookClick}>
+                  Book Health Package <ArrowRight size={18} />
+                </button>
 
-              <button className="web-book-btn" onClick={handleBookClick}>
-                Book Health Package <ArrowRight size={18} />
-              </button>
-
-              <div style={{ display: "flex", flexDirection: "column", gap: "10px", borderTop: "1px solid #f1f5f9", paddingTop: "18px" }}>
-                <div style={{ fontSize: "13px", display: "flex", alignItems: "center", gap: "8px", color: "#334155" }}>
-                  <CheckCircle2 size={16} color="#16a34a" /> <b>100% Certified Labs:</b> NABL & ISO Accredited
-                </div>
-                <div style={{ fontSize: "13px", display: "flex", alignItems: "center", gap: "8px", color: "#334155" }}>
-                  <CheckCircle2 size={16} color="#16a34a" /> <b>Free Phlebotomist:</b> Hygienic Home Collection
-                </div>
-                <div style={{ fontSize: "13px", display: "flex", alignItems: "center", gap: "8px", color: "#334155" }}>
-                  <CheckCircle2 size={16} color="#16a34a" /> <b>Doctor Review:</b> Free tele-consultation on report
+                <div className="web-perks">
+                  <div className="web-perk">
+                    <span className="web-perk-icon"><CheckCircle2 size={15} /></span>
+                    <span><b>100% Certified Labs:</b> NABL & ISO Accredited</span>
+                  </div>
+                  <div className="web-perk">
+                    <span className="web-perk-icon"><CheckCircle2 size={15} /></span>
+                    <span><b>Free Phlebotomist:</b> Hygienic Home Collection</span>
+                  </div>
+                  <div className="web-perk">
+                    <span className="web-perk-icon"><CheckCircle2 size={15} /></span>
+                    <span><b>Doctor Review:</b> Free tele-consultation on report</span>
+                  </div>
                 </div>
               </div>
 

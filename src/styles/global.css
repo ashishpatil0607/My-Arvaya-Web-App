@@ -12350,6 +12350,245 @@ schedule-calendar-card {
 
 }
 
+/* Reschedule Appointment modal (MyAppointments) */
+.reschedule-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.reschedule-current {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, var(--primary-light) 0%, #F4F9F9 100%);
+  border: 1px solid var(--primary-soft);
+}
+
+.reschedule-current-doctor {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.reschedule-current-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-main);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.reschedule-current-meta {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.reschedule-current-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.reschedule-current-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.reschedule-current-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: #ffffff;
+  border: 1px solid var(--primary-soft);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--primary-dark);
+  white-space: nowrap;
+}
+
+.reschedule-grid {
+  display: grid;
+  grid-template-columns: minmax(260px, 320px) 1fr;
+  gap: 28px;
+  align-items: start;
+}
+
+.reschedule-grid > * {
+  min-width: 0;
+}
+
+.reschedule-step-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 14px;
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--text-main);
+}
+
+.reschedule-step-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #ffffff;
+  font-size: 11.5px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.reschedule-step-date {
+  margin-left: auto;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--bg-app);
+  border: 1px solid var(--border);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--primary-dark);
+  white-space: nowrap;
+}
+
+.reschedule-slots {
+  max-height: 380px;
+  overflow-y: auto;
+  padding: 2px 8px 2px 2px;
+}
+
+.reschedule-slots .slot-section-group:last-child {
+  margin-bottom: 0 !important;
+}
+
+.reschedule-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 40px 16px;
+  border: 1.5px dashed var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-app);
+  color: var(--text-muted);
+  font-size: 14px;
+  text-align: center;
+}
+
+.reschedule-empty small {
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+.reschedule-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+
+.reschedule-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.reschedule-summary-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.reschedule-summary-value {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--primary-dark);
+}
+
+.reschedule-summary-hint {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.reschedule-buttons {
+  display: flex;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+  .reschedule-grid {
+    grid-template-columns: 1fr;
+    gap: 22px;
+  }
+
+  /* Modal body already scrolls; avoid a nested scroll area on mobile */
+  .reschedule-slots {
+    max-height: none;
+    overflow-y: visible;
+    padding-right: 2px;
+  }
+
+  .reschedule-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .reschedule-buttons .btn {
+    flex: 1;
+  }
+}
+
+@media (max-width: 480px) {
+  .reschedule-modal {
+    gap: 18px;
+  }
+
+  .reschedule-current {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .reschedule-current-slot {
+    align-items: flex-start;
+  }
+
+  .reschedule-slots .time-slots-grid.schedule-time-grid {
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  }
+
+  .reschedule-buttons {
+    flex-direction: column-reverse;
+  }
+
+  .reschedule-buttons .btn {
+    width: 100%;
+  }
+}
+
 
 
 .slot-chip:hover:not(.selected) {
