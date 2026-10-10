@@ -5,191 +5,17 @@ import {
   CalendarDays, MapPin, ArrowRight, CheckCircle2, Filter, X, Wallet, Home, Building2, User
 } from "lucide-react";
 import { useState, useEffect, useMemo, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { getLabPackages, getDiagnosticTests, getDiagnosticPackages, getAppointments, getLabOrderHistory, createLabOrder, verifyLabPayment, loadRazorpayScript, getWalletAmount } from "../services/dataService";
 import { useBooking } from "../context/BookingContext";
 import { useAuth } from "../context/AuthContext";
 import { packages as defaultPackages } from "../mocks/data";
+import { fallbackHealthPackages, normalizeHealthPackage } from "../utils/healthPackages";
+import { fallbackLabTests } from "../utils/labTests";
 import SelectSlotUI from "../components/doctors/SelectSlotUI";
 import Modal from "../components/common/Modal";
 import LabItemIcon from "../components/labs/LabItemIcon";
-
-/* ─── Mock Individual Lab Tests Data ─── */
-const mockLabTests = [
-  {
-    id: "lt-1",
-    title: "BILIRUBIN DIRECT",
-    category: "Fluid Bilirubin",
-    department: "Liver Care",
-    price: 150,
-    oldPrice: 250,
-    discount: "40% OFF",
-    fasting: "No Fasting Required",
-    reportTime: "24 Hours",
-    img: "/lab_test_sample.png",
-    popular: true
-  },
-  {
-    id: "lt-2",
-    title: "BILIRUBIN INDIRECT",
-    category: "Fluid Bilirubin",
-    department: "Liver Care",
-    price: 150,
-    oldPrice: 250,
-    discount: "40% OFF",
-    fasting: "No Fasting Required",
-    reportTime: "24 Hours",
-    img: "/lab_test_sample.png",
-    popular: false
-  },
-  {
-    id: "lt-3",
-    title: "BLOOD SUGAR FASTING",
-    category: "Renal & Metabolic Function",
-    department: "Diabetes",
-    price: 100,
-    oldPrice: 180,
-    discount: "44% OFF",
-    fasting: "8-10 Hrs Fasting",
-    reportTime: "12 Hours",
-    img: "/lab_test_sample.png",
-    popular: true
-  },
-  {
-    id: "lt-4",
-    title: "COMPLETE BLOOD COUNT (CBC)",
-    category: "Hematology Profile",
-    department: "Blood",
-    price: 299,
-    oldPrice: 500,
-    discount: "40% OFF",
-    fasting: "No Fasting Required",
-    reportTime: "24 Hours",
-    img: "/lab_test_sample.png",
-    popular: true
-  },
-  {
-    id: "lt-5",
-    title: "THYROID STIMULATING HORMONE (TSH)",
-    category: "Endocrine Profile",
-    department: "Thyroid",
-    price: 220,
-    oldPrice: 400,
-    discount: "45% OFF",
-    fasting: "No Fasting Required",
-    reportTime: "24 Hours",
-    img: "/lab_test_sample.png",
-    popular: true
-  },
-  {
-    id: "lt-6",
-    title: "LIPID PROFILE TOTAL",
-    category: "Cardiac Risk Panel",
-    department: "Heart",
-    price: 499,
-    oldPrice: 900,
-    discount: "44% OFF",
-    fasting: "10-12 Hrs Fasting",
-    reportTime: "24 Hours",
-    img: "/lab_test_sample.png",
-    popular: false
-  },
-  {
-    id: "lt-7",
-    title: "HbA1c GLYCATED HEMOGLOBIN",
-    category: "3-Month Diabetes Monitor",
-    department: "Diabetes",
-    price: 350,
-    oldPrice: 600,
-    discount: "41% OFF",
-    fasting: "No Fasting Required",
-    reportTime: "24 Hours",
-    img: "/lab_test_sample.png",
-    popular: true
-  },
-  {
-    id: "lt-8",
-    title: "VITAMIN D3 (25-OH)",
-    category: "Bone & Immune Health",
-    department: "Vitamins",
-    price: 599,
-    oldPrice: 1200,
-    discount: "50% OFF",
-    fasting: "No Fasting Required",
-    reportTime: "24 Hours",
-    img: "/lab_test_sample.png",
-    popular: false
-  }
-];
-
-/* ─── Mock Health Packages ─── */
-const mockHealthPackages = [
-  {
-    id: "pkg-1",
-    title: "Ortho Robotics Package",
-    category: "Bone & Joint Advanced",
-    tests: "45+ Tests Included",
-    price: 197380,
-    oldPrice: 225000,
-    discount: "12% OFF",
-    fasting: "Fasting Required",
-    reportTime: "24 Hours",
-    img: "/images/full-body-checkup.png",
-    badge: "Specialized"
-  },
-  {
-    id: "pkg-2",
-    title: "Paediatric Surgery 3A.S14.17143",
-    category: "Child Health & Pre-Surgery",
-    tests: "30+ Tests Included",
-    price: 40000,
-    oldPrice: 50000,
-    discount: "20% OFF",
-    fasting: "Fasting Required",
-    reportTime: "24 Hours",
-    img: "/images/thyroid-profile.png",
-    badge: "Clinical"
-  },
-  {
-    id: "pkg-3",
-    title: "Comprehensive Full Body Checkup",
-    category: "Complete Preventive Care",
-    tests: "80+ Tests Included",
-    price: 1499,
-    oldPrice: 2300,
-    discount: "35% OFF",
-    fasting: "10-12 Hrs Fasting",
-    reportTime: "24 Hours",
-    img: "/images/full-body-checkup.png",
-    badge: "Most Booked"
-  },
-  {
-    id: "pkg-4",
-    title: "Senior Citizen Diabetes & Cardiac Care",
-    category: "Geriatric Special",
-    tests: "55+ Tests Included",
-    price: 799,
-    oldPrice: 1200,
-    discount: "33% OFF",
-    fasting: "10-12 Hrs Fasting",
-    reportTime: "24 Hours",
-    img: "/images/diabetes.png",
-    badge: "Popular for Seniors"
-  },
-  {
-    id: "pkg-5",
-    title: "Advanced Cardiac Health Profile",
-    category: "Heart & Vascular Risk",
-    tests: "40+ Tests Included",
-    price: 1199,
-    oldPrice: 1800,
-    discount: "33% OFF",
-    fasting: "Fasting Required",
-    reportTime: "24 Hours",
-    img: "/images/heart-health.png",
-    badge: "Doctor Verified"
-  }
-];
+import CardsSkeleton from "../components/labs/CardsSkeleton";
 
 const categoriesFilterList = [
   { name: "All", icon: <FlaskConical size={16} /> },
@@ -232,6 +58,7 @@ const mockLabAppointments = [
 
 export default function Labs({ forceModalOpen = false }) {
   const go = useNavigate();
+  const location = useLocation();
   const { setBookingType, setLabPackage, setLabVisitType, setDate, setSlot, setBookingId, globalLocation } = useBooking();
   const { user, openLoginModal } = useAuth();
 
@@ -248,8 +75,11 @@ export default function Labs({ forceModalOpen = false }) {
   const [loadingWallet, setLoadingWallet] = useState(false);
 
   // Dynamic state populated by APIs
-  const [labTests, setLabTests] = useState(mockLabTests.slice(0, 8));
-  const [healthPackages, setHealthPackages] = useState(mockHealthPackages.slice(0, 5));
+  // Guests see the default list; logged-in users start empty and wait for API data (avoids a flash of default items)
+  const [labTests, setLabTests] = useState(() => (user ? [] : fallbackLabTests.slice(0, 8)));
+  const [healthPackages, setHealthPackages] = useState(() => (user ? [] : fallbackHealthPackages.slice(0, 5)));
+  const [loadingTests, setLoadingTests] = useState(!!user);
+  const [loadingPackages, setLoadingPackages] = useState(!!user);
   const [appointments, setAppointments] = useState([]);
 
   // Scroll refs for carousels
@@ -278,6 +108,16 @@ function toTitleCase(str) {
   // Fetch API data on mount / clicking Lab Tests
   useEffect(() => {
     let isMounted = true;
+
+    if (user) {
+      setLoadingTests(true);
+      setLoadingPackages(true);
+    } else {
+      setLabTests(fallbackLabTests.slice(0, 8));
+      setHealthPackages(fallbackHealthPackages.slice(0, 5));
+      setLoadingTests(false);
+      setLoadingPackages(false);
+    }
 
     // Trigger API 1: /api/diagnostic/getTests
     getDiagnosticTests({ pageSize: 12 })
@@ -309,48 +149,31 @@ function toTitleCase(str) {
           });
           // Display exact 1st 8 Lab Tests from /api/diagnostic/getTests
           setLabTests(normalized.slice(0, 8));
+        } else if (!user) {
+          setLabTests(fallbackLabTests.slice(0, 8));
         }
       })
       .catch((err) => {
         console.error("Failed to fetch /api/diagnostic/getTests:", err);
-      });
+      })
+      .finally(() => { if (isMounted) setLoadingTests(false); });
 
     // Trigger API 2: /api/diagnostic/getPackages
     getDiagnosticPackages({ pageSize: 10 })
       .then((apiPkgs) => {
         if (!isMounted) return;
         if (Array.isArray(apiPkgs) && apiPkgs.length > 0) {
-          const normalized = apiPkgs.map((p, idx) => {
-            let rawTitle = p.package_name || p.name || p.title || `Health Package ${idx+1}`;
-            if (rawTitle.includes('-')) rawTitle = rawTitle.split('-')[0].trim();
-            const priceVal = parseFloat(p.package_price || p.price || p.cost || p.amount || 999);
-            const oldPriceVal = Math.round(priceVal * 1.25);
-            const itemCount = Array.isArray(p.subitems) && p.subitems.length > 0 
-              ? `${p.subitems.length}+ Tests Included` 
-              : "30+ Tests Included";
-
-            return {
-              id: p.rateplan_package_id || p.id || p.package_key || `api-pkg-${idx}`,
-              title: rawTitle,
-              category: p.category || p.package_category || "Comprehensive Health Care",
-              tests: itemCount,
-              subitems: Array.isArray(p.subitems) ? p.subitems : [],
-              price: priceVal,
-              oldPrice: oldPriceVal,
-              discount: `${Math.round(((oldPriceVal - priceVal) / oldPriceVal) * 100)}% OFF`,
-              fasting: p.fasting || (p.fasting_required ? "Fasting Required" : "10-12 Hrs Fasting"),
-              reportTime: p.reportTime || p.report_time || "24 Hours",
-              img: p.img || p.image || (rawTitle.toLowerCase().includes("diabet") ? "/images/diabetes.png" : rawTitle.toLowerCase().includes("heart") ? "/images/heart-health.png" : rawTitle.toLowerCase().includes("thyroid") ? "/images/thyroid-profile.png" : "/images/full-body-checkup.png"),
-              badge: p.badge || (idx === 0 ? "Most Booked" : idx === 1 ? "Popular" : "Doctor Verified")
-            };
-          });
+          const normalized = apiPkgs.map(normalizeHealthPackage);
           // Display 5 Packages
           setHealthPackages(normalized.slice(0, 5));
+        } else if (!user) {
+          setHealthPackages(fallbackHealthPackages.slice(0, 5));
         }
       })
       .catch((err) => {
         console.error("Failed to fetch /api/diagnostic/getPackages:", err);
-      });
+      })
+      .finally(() => { if (isMounted) setLoadingPackages(false); });
 
     // Trigger API 3: /api/lims/laborder/history
     const patientId = user?.id || user?.user_id || user?.patient_id || "";
@@ -395,7 +218,7 @@ function toTitleCase(str) {
       });
 
     return () => { isMounted = false; };
-  }, []);
+  }, [user]); // re-fetch after login/logout so guest fallback data is replaced with real API data
 
   useEffect(() => {
     if (!selectedItem || !user) return;
@@ -439,20 +262,11 @@ function toTitleCase(str) {
     setWalletAppliedAmount(val);
   };
 
-  // Close the booking modal while the login modal is open, then reopen it for the same item once logged in
-  const pendingBookItemRef = useRef(null);
+  // Close the booking modal and open login; after login the user stays on this same page
   const handleLoginToBook = () => {
-    pendingBookItemRef.current = selectedItem;
     setSelectedItem(null);
-    openLoginModal("/labs");
+    openLoginModal(location.pathname);
   };
-
-  useEffect(() => {
-    if (user && pendingBookItemRef.current) {
-      setSelectedItem(pendingBookItemRef.current);
-      pendingBookItemRef.current = null;
-    }
-  }, [user]);
 
   const scrollContainer = (ref, direction) => {
     if (ref.current) {
@@ -2703,7 +2517,9 @@ function toTitleCase(str) {
             </button>
           </div>
 
-          {filteredTests.length === 0 ? (
+          {loadingTests ? (
+            <CardsSkeleton count={4} label="Loading lab tests" />
+          ) : filteredTests.length === 0 ? (
             <div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--text-muted)' }}>
               <FlaskConical size={36} style={{ opacity: 0.3, marginBottom: '8px' }} />
               <p>No lab tests found matching "{q}".</p>
@@ -2773,7 +2589,9 @@ function toTitleCase(str) {
             </button>
           </div>
 
-          {filteredPackages.length === 0 ? (
+          {loadingPackages ? (
+            <CardsSkeleton count={4} label="Loading health packages" />
+          ) : filteredPackages.length === 0 ? (
             <div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--text-muted)' }}>
               <Stethoscope size={36} style={{ opacity: 0.3, marginBottom: '8px' }} />
               <p>No health packages found matching "{q}".</p>

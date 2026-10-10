@@ -1,15 +1,24 @@
 import { 
   Search, ChevronRight, ArrowLeft, FlaskConical, Clock, Heart, ShieldCheck, 
-   Droplets, Beaker, Stethoscope, TestTube, MapPin, ArrowRight, X, Filter, Wallet
+   Droplets, Beaker, Stethoscope, TestTube, MapPin, ArrowRight, X, Filter, Wallet, Home, User
 } from "lucide-react";
 import { useState, useEffect, useMemo, useRef } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import { getDiagnosticTests, getWalletAmount, createLabOrder, verifyLabPayment, loadRazorpayScript } from "../services/dataService";
 import { useBooking } from "../context/BookingContext";
 import { useAuth } from "../context/AuthContext";
 import SelectSlotUI from "../components/doctors/SelectSlotUI";
 import Modal from "../components/common/Modal";
 import LabItemIcon from "../components/labs/LabItemIcon";
+import { fallbackLabTests } from "../utils/labTests";
+
+// Fallback tests (same as Labs page) shown when the API returns nothing, e.g. user not logged in
+const normalizeFallbackTest = (t) => ({
+  ...t,
+  service_name: t.title,
+  title: toTitleCase(t.title),
+  rawTitle: t.title
+});
 
 function toTitleCase(str) {
   if (!str) return "";
@@ -31,6 +40,7 @@ function toTitleCase(str) {
 
 export default function AllLabTests() {
   const go = useNavigate();
+  const location = useLocation();
   const { setBookingType, setLabPackage, setLabVisitType, setDate, setSlot, setBookingId, globalLocation } = useBooking();
   const { user, openLoginModal } = useAuth();
 
@@ -62,7 +72,10 @@ export default function AllLabTests() {
 
     getDiagnosticTests(payload)
       .then((apiTests) => {
-        if (Array.isArray(apiTests)) {
+        // Not logged in → API returns 401 (empty list), show the same tests as Labs
+        if (!user && (!Array.isArray(apiTests) || apiTests.length === 0)) {
+          setTests(fallbackLabTests.map(normalizeFallbackTest));
+        } else if (Array.isArray(apiTests)) {
           const normalized = apiTests.map((t, idx) => {
             const rawTitle = t.service_name || t.name || t.title || t.test_name || `Lab Test ${idx + 1}`;
             const rawCategory = t.profile_name || t.category || t.test_category_name || t.department || "Fluid & Clinical Test";
@@ -87,14 +100,16 @@ export default function AllLabTests() {
       })
       .catch((err) => {
         console.error("AllLabTests fetch error:", err);
+        if (!user) setTests(fallbackLabTests.map(normalizeFallbackTest));
         setLoading(false);
       });
   };
 
   // Initial fetch on page load
   useEffect(() => {
+    setQ("");
     fetchTestsFromApi("");
-  }, []);
+  }, [user]); // re-fetch after login/logout so guest fallback data is replaced with real API data
 
   // Trigger API and clear filter in UI when search bar input length becomes 0 (after backspace / clearing)
   useEffect(() => {
@@ -132,6 +147,12 @@ export default function AllLabTests() {
       return true;
     });
    }, [tests, appliedQuery, selectedProfile]);
+
+  // Close the booking modal and open login; after login the user stays on this same page
+  const handleLoginToBook = () => {
+    setSelectedItem(null);
+    openLoginModal(location.pathname);
+  };
 
    useEffect(() => {
      if (!selectedItem || !user) return;
@@ -1095,6 +1116,137 @@ export default function AllLabTests() {
            </div>
          )}
 
+        {!user ? (
+          <div className="lab-guest">
+            <style>{`
+              .lab-guest {
+                padding: 24px 22px 20px;
+                text-align: center;
+                background: radial-gradient(circle at 50% 0%, rgba(46, 102, 110, 0.12), transparent 65%), #ffffff;
+                border: 1px solid var(--border);
+                border-radius: 18px;
+                box-shadow: 0 8px 24px -14px rgba(5, 73, 78, 0.25);
+              }
+              .lab-guest-art {
+                position: relative;
+                width: 64px;
+                height: 64px;
+                margin: 0 auto 12px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: var(--primary);
+                background: var(--primary-light);
+              }
+              .lab-guest-art::after {
+                content: "";
+                position: absolute;
+                inset: 0;
+                border-radius: 50%;
+                border: 2px solid rgba(46, 102, 110, 0.3);
+                animation: labGuestPulse 2.4s ease-out infinite;
+              }
+              .lab-guest-title {
+                margin: 0 0 6px;
+                font-size: 17px;
+                font-weight: 800;
+                letter-spacing: -0.015em;
+                color: var(--text-main);
+              }
+              .lab-guest-text {
+                margin: 0 auto 16px;
+                max-width: 380px;
+                font-size: 13px;
+                line-height: 1.55;
+                color: var(--text-muted);
+              }
+              .lab-guest-perks {
+                display: flex;
+                justify-content: center;
+                flex-wrap: wrap;
+                gap: 8px;
+                margin: 0 auto 18px;
+              }
+              .lab-guest-perk {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                padding: 6px 11px;
+                border-radius: 999px;
+                font-size: 11.5px;
+                font-weight: 650;
+                color: var(--text-main);
+                background: #f7fbfa;
+                border: 1px solid var(--border);
+              }
+              .lab-guest-perk svg { color: var(--primary); }
+              .lab-guest-btn {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+                padding: 11px 24px;
+                border: none;
+                border-radius: 12px;
+                font-size: 14px;
+                font-weight: 700;
+                color: #fff;
+                cursor: pointer;
+                background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+                box-shadow: 0 6px 16px -6px rgba(46, 102, 110, 0.6);
+                transition: transform 0.2s ease, filter 0.2s ease;
+              }
+              .lab-guest-btn:hover { transform: translateY(-1px); filter: brightness(1.08); }
+              .lab-guest-btn svg:last-child { transition: transform 0.2s ease; }
+              .lab-guest-btn:hover svg:last-child { transform: translateX(3px); }
+              .lab-guest-foot {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 6px;
+                margin-top: 12px;
+                font-size: 11.5px;
+                color: var(--text-muted);
+              }
+              @keyframes labGuestPulse {
+                0% { transform: scale(1); opacity: 0.9; }
+                100% { transform: scale(1.35); opacity: 0; }
+              }
+              @media (max-width: 560px) {
+                .lab-guest { padding: 20px 14px 18px; }
+                .lab-guest-btn { width: 100%; }
+              }
+              @media (prefers-reduced-motion: reduce) {
+                .lab-guest-art::after { animation: none; }
+              }
+            `}</style>
+
+            <div className="lab-guest-art" aria-hidden="true">
+              <FlaskConical size={28} />
+            </div>
+            <h3 className="lab-guest-title">
+              You're one step away from booking this {selectedItem?.tests ? "package" : "test"}
+            </h3>
+            <p className="lab-guest-text">
+              Sign in to pick a convenient slot and get your reports delivered straight to your account.
+            </p>
+
+            <div className="lab-guest-perks">
+              <span className="lab-guest-perk"><Home size={13} /> Home sample collection</span>
+              <span className="lab-guest-perk"><Clock size={13} /> Reports in {selectedItem?.reportTime || "24 Hours"}</span>
+            </div>
+
+            <button type="button" className="lab-guest-btn" onClick={handleLoginToBook}>
+              <User size={16} /> Sign in to Continue <ArrowRight size={16} />
+            </button>
+
+            <div className="lab-guest-foot">
+              <ShieldCheck size={13} color="var(--primary)" /> Takes less than a minute. Your details stay private.
+            </div>
+          </div>
+        ) : (
+        <>
          <div style={{ marginBottom: "24px" }}>
           <label style={{ display: "block", fontSize: "14px", fontWeight: "700", color: "var(--text-main)", marginBottom: "12px" }}>
             Select Collection Preference
@@ -1140,6 +1292,8 @@ export default function AllLabTests() {
         </div>
 
         <SelectSlotUI onConfirm={confirmBooking} type="lab" submitting={submitting} />
+        </>
+        )}
       </Modal>
 
     </main>

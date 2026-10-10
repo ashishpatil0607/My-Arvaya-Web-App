@@ -5,6 +5,7 @@ import {
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { getDiagnosticPackages } from "../services/dataService";
+import { fallbackHealthPackages } from "../utils/healthPackages";
 import { useBooking } from "../context/BookingContext";
 import { useAuth } from "../context/AuthContext";
 import SelectSlotUI from "../components/doctors/SelectSlotUI";
@@ -38,7 +39,10 @@ export default function AllHealthPackages() {
 
     getDiagnosticPackages(payload)
       .then((apiPkgs) => {
-        if (Array.isArray(apiPkgs)) {
+        // Not logged in → API returns 401 (empty list), show the same packages as Home & Labs
+        if (!user && (!Array.isArray(apiPkgs) || apiPkgs.length === 0)) {
+          setPackages(fallbackHealthPackages);
+        } else if (Array.isArray(apiPkgs)) {
           const normalized = apiPkgs.map((p, idx) => {
             let rawTitle = p.package_name || p.name || p.title || `Health Package ${idx + 1}`;
             if (rawTitle.includes('-')) rawTitle = rawTitle.split('-')[0].trim();
@@ -74,7 +78,7 @@ export default function AllHealthPackages() {
   // Initial fetch on page load
   useEffect(() => {
     fetchPackagesFromApi("");
-  }, []);
+  }, [user]);
 
   // Trigger API and clear filter in UI when search bar input length becomes 0 (after backspace / clearing)
   useEffect(() => {

@@ -34,7 +34,7 @@ import {
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
-import { packages } from "../mocks/data";
+import { fallbackHealthPackages, normalizeHealthPackage } from "../utils/healthPackages";
 import AmbulanceRequestModal from "../components/ambulance/AmbulanceRequestModal";
 import AmbulanceLoginPrompt from "../components/ambulance/AmbulanceLoginPrompt";
 import {
@@ -44,6 +44,7 @@ import {
 } from "../services/dataService";
 import { getImageUrl, fetchImageBlob } from "../services/uploadService";
 import { useAuth } from "../context/AuthContext";
+import CardsSkeleton from "../components/labs/CardsSkeleton";
 
 export default function Home() {
   const go = useNavigate();
@@ -74,7 +75,9 @@ export default function Home() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [showAmbulanceModal, setShowAmbulanceModal] = useState(false);
   const [showAmbulanceLoginPrompt, setShowAmbulanceLoginPrompt] = useState(false);
-  const [apiPackages, setApiPackages] = useState(packages.slice(0, 4));
+  // Guests see the default packages; logged-in users start empty and wait for API data (avoids a flash of default items)
+  const [apiPackages, setApiPackages] = useState(() => (user ? [] : fallbackHealthPackages.slice(0, 4)));
+  const [loadingPackages, setLoadingPackages] = useState(!!user);
   const [reviews, setReviews] = useState([
     {
       name: "Ananya Reddy",
@@ -115,57 +118,23 @@ export default function Home() {
         console.error("Failed to fetch /api/patientReview/get for Home:", err);
       });
 
+    if (user) {
+      setApiPackages([]);
+      setLoadingPackages(true);
+    } else {
+      setApiPackages(fallbackHealthPackages.slice(0, 4));
+      setLoadingPackages(false);
+    }
+
     getDiagnosticPackages({ pageSize: 10 })
       .then((apiPkgs) => {
         if (!isMounted) return;
         if (Array.isArray(apiPkgs) && apiPkgs.length > 0) {
-          const normalized = apiPkgs.map((p, idx) => {
-            let rawTitle =
-              p.package_name ||
-              p.name ||
-              p.title ||
-              `Health Package ${idx + 1}`;
-            if (rawTitle.includes('-')) rawTitle = rawTitle.split('-')[0].trim();
-            const priceVal = parseFloat(
-              p.package_price || p.price || p.cost || p.amount || 999,
-            );
-            const oldPriceVal = Math.round(priceVal * 1.25);
-            const itemCount =
-              Array.isArray(p.subitems) && p.subitems.length > 0
-                ? `${p.subitems.length}+ Tests Included`
-                : "30+ Tests";
-
-            return {
-              id:
-                p.rateplan_package_id ||
-                p.id ||
-                p.package_key ||
-                `api-pkg-${idx}`,
-              title: rawTitle,
-              tests: itemCount,
-              price: `₹${priceVal}`,
-              oldPrice: `₹${oldPriceVal}`,
-              discount: `${Math.round(((oldPriceVal - priceVal) / oldPriceVal) * 100)}% OFF`,
-              img:
-                p.img ||
-                p.image ||
-                (rawTitle.toLowerCase().includes("diabet")
-                  ? "/images/diabetes.png"
-                  : rawTitle.toLowerCase().includes("heart")
-                    ? "/images/heart-health.png"
-                    : rawTitle.toLowerCase().includes("thyroid")
-                      ? "/images/thyroid-profile.png"
-                      : "/images/full-body-checkup.png"),
-              trend:
-                p.badge ||
-                (idx === 0
-                  ? "Most Booked"
-                  : idx === 1
-                    ? "Popular"
-                    : "Doctor Verified"),
-            };
-          });
+          const normalized = apiPkgs.map(normalizeHealthPackage);
           setApiPackages(normalized.slice(0, 4));
+        } else {
+          // Not logged in (API 401) or empty → same fallback list as Labs page
+          setApiPackages(fallbackHealthPackages.slice(0, 4));
         }
       })
       .catch((err) => {
@@ -173,6 +142,9 @@ export default function Home() {
           "Failed to fetch /api/diagnostic/getPackages for Home:",
           err,
         );
+      })
+      .finally(() => {
+        if (isMounted) setLoadingPackages(false);
       });
     return () => {
       isMounted = false;
@@ -807,6 +779,9 @@ export default function Home() {
             </div>
           </div>
 
+          {loadingPackages && (
+            <CardsSkeleton count={4} label="Loading health packages" />
+          )}
           <div className="packages-grid">
             {apiPackages.map((pkg, idx) => {
               const openPkg = () =>
