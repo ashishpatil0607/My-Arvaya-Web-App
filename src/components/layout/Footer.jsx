@@ -13,6 +13,13 @@ const SUPPORT_PHONE = "+91 1800-123-4567";
 const SUPPORT_TEL = "tel:+9118001234567";
 const SUPPORT_EMAIL = "support@arvaya.health";
 
+const SOCIAL_LINKS = {
+  facebook: "https://www.facebook.com/arvayahealthcare",
+  x: "https://x.com/arvayahealthcare",
+  instagram: "https://www.instagram.com/arvayahealthcare",
+  linkedin: "https://www.linkedin.com/company/arvayahealthcare"
+};
+
 export default function Footer() {
   return (
     <footer className="main-footer">
@@ -273,12 +280,19 @@ export default function Footer() {
             {/* Social Icons */}
             <div className="footer-socials">
               {[
-                ["Facebook", fbPath],
-                ["X (Twitter)", xPath],
-                ["Instagram", igPath],
-                ["LinkedIn", liPath]
-              ].map(([label, d]) => (
-                <a key={label} href="#" className="social-btn" aria-label={label}>
+                ["Facebook", fbPath, SOCIAL_LINKS.facebook],
+                ["X (Twitter)", xPath, SOCIAL_LINKS.x],
+                ["Instagram", igPath, SOCIAL_LINKS.instagram],
+                ["LinkedIn", liPath, SOCIAL_LINKS.linkedin]
+              ].map(([label, d, url]) => (
+                <a
+                  key={label}
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="social-btn"
+                  aria-label={label}
+                >
                   <SocialIcon d={d} />
                 </a>
               ))}

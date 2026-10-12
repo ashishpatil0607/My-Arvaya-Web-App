@@ -2391,17 +2391,134 @@ export default function AmbulancePage() {
                   }}
                 >
                   {filteredPastRequests.length === 0 ? (
-                    <div
-                      style={{
-                        padding: "36px 20px",
-                        textAlign: "center",
-                        color: "var(--text-muted)",
-                        fontSize: "14px",
-                      }}
-                    >
-                      No {historyFilter === "all" ? "" : historyFilter} requests
-                      found.
-                    </div>
+                    (() => {
+                      const emptyCfg = {
+                        all: {
+                          Icon: FileX2,
+                          title: "No requests yet",
+                          text: "Your emergency requests will appear here once you book an ambulance.",
+                          color: "#245d65",
+                          tint: "rgba(36,93,101,0.10)",
+                        },
+                        completed: {
+                          Icon: CheckCircle2,
+                          title: "No completed requests",
+                          text: "Trips that reach the destination safely will be listed here.",
+                          color: "#16a34a",
+                          tint: "rgba(22,163,74,0.10)",
+                        },
+                        cancelled: {
+                          Icon: XCircle,
+                          title: "No cancelled requests",
+                          text: "Great — you haven't cancelled any ambulance requests.",
+                          color: "#dc2626",
+                          tint: "rgba(220,38,38,0.09)",
+                        },
+                      }[historyFilter] || {
+                        Icon: FileX2,
+                        title: "No requests found",
+                        text: "Try a different filter.",
+                        color: "#245d65",
+                        tint: "rgba(36,93,101,0.10)",
+                      };
+                      const { Icon } = emptyCfg;
+                      return (
+                        <div
+                          className="amb-history-empty"
+                          style={{
+                            padding: "40px 20px 36px",
+                            textAlign: "center",
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            background: `radial-gradient(circle at 50% 0%, ${emptyCfg.tint} 0%, transparent 60%)`,
+                          }}
+                        >
+                          <style>{`
+                            @keyframes ambHistEmptyFloat {
+                              0%, 100% { transform: translateY(0); }
+                              50% { transform: translateY(-5px); }
+                            }
+                            @keyframes ambHistEmptyRing {
+                              0% { transform: scale(0.9); opacity: 0.7; }
+                              100% { transform: scale(1.45); opacity: 0; }
+                            }
+                            .amb-history-empty-icon { animation: ambHistEmptyFloat 3.2s ease-in-out infinite; }
+                            .amb-history-empty-icon::after {
+                              content: ""; position: absolute; inset: 0; border-radius: 50%;
+                              border: 2px solid currentColor;
+                              animation: ambHistEmptyRing 2.4s ease-out infinite;
+                            }
+                            .amb-history-empty-btn:hover { transform: translateY(-1px); filter: brightness(1.08); }
+                            @media (prefers-reduced-motion: reduce) {
+                              .amb-history-empty-icon, .amb-history-empty-icon::after { animation: none; }
+                            }
+                          `}</style>
+                          <div
+                            className="amb-history-empty-icon"
+                            aria-hidden="true"
+                            style={{
+                              position: "relative",
+                              width: "64px",
+                              height: "64px",
+                              borderRadius: "50%",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              color: emptyCfg.color,
+                              background: emptyCfg.tint,
+                              boxShadow: `0 0 0 8px ${emptyCfg.tint}`,
+                              marginBottom: "18px",
+                            }}
+                          >
+                            <Icon size={28} strokeWidth={2} />
+                          </div>
+                          <h3
+                            style={{
+                              margin: "0 0 6px",
+                              fontSize: "16px",
+                              fontWeight: "700",
+                              color: "var(--text-main)",
+                              letterSpacing: "-0.01em",
+                            }}
+                          >
+                            {emptyCfg.title}
+                          </h3>
+                          <p
+                            style={{
+                              margin: 0,
+                              maxWidth: "340px",
+                              fontSize: "13.5px",
+                              lineHeight: 1.55,
+                              color: "var(--text-muted)",
+                            }}
+                          >
+                            {emptyCfg.text}
+                          </p>
+                          {historyFilter !== "all" && (
+                            <button
+                              type="button"
+                              className="amb-history-empty-btn"
+                              onClick={() => setHistoryFilter("all")}
+                              style={{
+                                marginTop: "18px",
+                                padding: "8px 18px",
+                                borderRadius: "20px",
+                                border: "1px solid rgba(36,93,101,0.25)",
+                                background: "#ffffff",
+                                color: "#245d65",
+                                fontSize: "13px",
+                                fontWeight: "700",
+                                cursor: "pointer",
+                                transition: "all 0.2s ease",
+                              }}
+                            >
+                              View all requests
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })()
                   ) : (
                     paginatedPastRequests.map((req, idx) => {
                       const rawStatus = req.status

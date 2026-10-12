@@ -1,4 +1,4 @@
-import { ChevronLeft, Building2, AlertTriangle, Activity, ChevronRight, CalendarCheck, Loader2, FileSearch, IdCard, Stethoscope, Headset, RefreshCw, Home, Lock, LogIn, FileText, Pill, ShieldCheck } from "lucide-react";
+import { ChevronLeft, User, Building2, AlertTriangle, Activity, ChevronRight, CalendarCheck, Loader2, FileSearch, IdCard, Stethoscope, Headset, RefreshCw, Home, Lock, LogIn, FileText, Pill, ShieldCheck } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
@@ -183,7 +183,7 @@ export default function CareJourney() {
 
             {uhid && error.kind !== 'no_uhid' && (
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: '700', color: 'var(--primary-dark)', background: 'var(--bg-app)', border: '1px solid var(--border)', padding: '5px 12px', borderRadius: '999px', marginBottom: '16px', letterSpacing: '0.03em' }}>
-                <IdCard size={14} /> UHID · {uhid}
+                <IdCard size={13} /> UHID · {uhid}
               </span>
             )}
 
@@ -223,51 +223,51 @@ export default function CareJourney() {
   };
 
   return (
-    <main className="page animate-fade-in-up" style={{ padding: 0, background: 'var(--bg-app)', minHeight: '100vh', position: 'relative' }}>
+    <main className="page care-journey-page animate-fade-in-up" style={{ padding: 0, background: 'var(--bg-app)', minHeight: '100vh', position: 'relative' }}>
       {/* HEADER HERO */}
-      <div style={{ background: 'var(--bg-surface)', borderBottom: '1px solid var(--border)', padding: '24px 0' }}>
+      <div className="cj-hero">
         <div className="container">
-          <button onClick={() => navigate(-1)} className="hover-glow" style={{ background: 'var(--bg-app)', border: '1px solid var(--border)', cursor: 'pointer', color: 'var(--text-main)', display: 'inline-flex', alignItems: 'center', gap: '8px', marginBottom: '20px', padding: '6px 12px', fontSize: '13px', fontWeight: '700', borderRadius: '8px' }}>
-            <ChevronLeft size={16} /> Back to Dashboard
+          <button onClick={() => navigate(-1)} className="cj-back">
+            <ChevronLeft size={14} /> Back to Home
           </button>
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '24px' }}>
-            {/* PATIENT INFO */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-              <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'var(--primary-light)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', fontWeight: '800', flexShrink: 0, border: '3px solid white', boxShadow: '0 4px 12px rgba(0,0,0,0.06)' }}>
-                {patientInfo?.name ? patientInfo.name.substring(0, 2).toUpperCase() : 'PT'}
-              </div>
-              <div>
-                <h1 style={{ fontSize: '22px', fontWeight: '800', color: 'var(--text-main)', margin: '0 0 6px 0', textTransform: 'uppercase', lineHeight: 1.2 }}>{patientInfo?.name}</h1>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>
-                  <span>{patientInfo?.age} yrs</span>
-                  <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'var(--border)' }}></span>
-                  <span style={{ textTransform: 'capitalize' }}>{patientInfo?.gender}</span>
-                  <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'var(--border)' }}></span>
-                  <span style={{ color: 'var(--text-main)', background: 'var(--bg-app)', padding: '4px 8px', borderRadius: '6px', border: '1px solid var(--border)' }}>UHID: {patientInfo?.uhid}</span>
+          <div className="cj-hero-card">
+            <div className="cj-hero-row">
+              {/* PATIENT INFO */}
+              <div className="cj-patient">
+                <div className="cj-avatar">
+                  {patientInfo?.name ? patientInfo.name.substring(0, 2).toUpperCase() : 'PT'}
                 </div>
-              </div>
-            </div>
-
-            {/* STATS */}
-            <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-              <div style={{ background: '#eef4fd', borderRadius: '16px', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '16px', minWidth: '160px' }}>
-                <div style={{ background: 'white', borderRadius: '12px', padding: '10px', color: '#1565c0', boxShadow: '0 2px 8px rgba(21,101,192,0.1)' }}>
-                  <Building2 size={22} strokeWidth={2.5} />
-                </div>
-                <div>
-                  <div style={{ fontSize: '24px', fontWeight: '800', color: '#1565c0', lineHeight: 1 }}>{patientInfo?.totalVisits || 0}</div>
-                  <div style={{ fontSize: '12px', color: '#1565c0', fontWeight: '700', marginTop: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Visits</div>
+                <div style={{ minWidth: 0 }}>
+                  <h1 className="cj-name">{patientInfo?.name}</h1>
+                  <div className="cj-meta">
+                    <span className="cj-chip"><User size={13} /> {patientInfo?.age} yrs</span>
+                    <span className="cj-chip" style={{ textTransform: 'capitalize' }}>{patientInfo?.gender}</span>
+                    <span className="cj-chip cj-chip-strong"><IdCard size={13} /> UHID: {patientInfo?.uhid}</span>
+                  </div>
                 </div>
               </div>
 
-              <div style={{ background: '#fdeded', borderRadius: '16px', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '16px', minWidth: '160px' }}>
-                <div style={{ background: 'white', borderRadius: '12px', padding: '10px', color: '#c62828', boxShadow: '0 2px 8px rgba(198,40,40,0.1)' }}>
-                  <AlertTriangle size={22} strokeWidth={2.5} />
+              {/* STATS */}
+              <div className="cj-stats">
+                <div className="cj-stat">
+                  <div className="cj-stat-icon" style={{ color: '#1565c0' }}>
+                    <Building2 size={18} strokeWidth={2.25} />
+                  </div>
+                  <div style={{ minWidth: 0 }}>
+                    <div className="cj-stat-value">{patientInfo?.totalVisits || 0}</div>
+                    <div className="cj-stat-label">Total Visits</div>
+                  </div>
                 </div>
-                <div>
-                  <div style={{ fontSize: '24px', fontWeight: '800', color: '#c62828', lineHeight: 1 }}>{stats?.criticalCases || 0}</div>
-                  <div style={{ fontSize: '12px', color: '#c62828', fontWeight: '700', marginTop: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Critical Records</div>
+
+                <div className={`cj-stat${stats?.criticalCases ? ' cj-stat-alert' : ''}`}>
+                  <div className="cj-stat-icon" style={{ color: '#c62828' }}>
+                    <AlertTriangle size={18} strokeWidth={2.25} />
+                  </div>
+                  <div style={{ minWidth: 0 }}>
+                    <div className="cj-stat-value">{stats?.criticalCases || 0}</div>
+                    <div className="cj-stat-label">Critical Records</div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -275,19 +275,19 @@ export default function CareJourney() {
         </div>
       </div>
 
-      <div className="container" style={{ padding: '32px 0 64px', display: 'grid', gridTemplateColumns: 'minmax(280px, 340px) 1fr', gap: '32px', alignItems: 'start' }}>
+      <div className="container cj-layout">
 
         {/* LEFT COLUMN: VISITS (scrolls on its own when the list is long) */}
-        <aside style={{ position: 'sticky', top: '100px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+        <aside className="cj-visits">
+          <div className="cj-section-head">
             <h3 style={{ fontSize: '15px', fontWeight: '800', color: 'var(--text-main)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Recent Visits</h3>
             <span style={{ fontSize: '12px', fontWeight: '700', color: 'var(--primary)', background: 'var(--primary-light)', padding: '4px 12px', borderRadius: '20px' }}>{patientInfo?.totalVisits || 0} Total</span>
           </div>
 
-          <div style={{ maxHeight: 'calc(100vh - 180px)', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px', paddingRight: '4px' }}>
+          <div className="cj-visits-list">
             {(patientInfo?.visits || []).map((visit, index) => (
               <div key={visit.visitId || index} className="card hover-glow" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '16px 18px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0 }}>
                   <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'var(--primary-light)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <CalendarCheck size={22} strokeWidth={2} />
                   </div>
@@ -310,7 +310,7 @@ export default function CareJourney() {
 
         {/* RIGHT COLUMN: CARE JOURNEY TIMELINE */}
         <section style={{ minWidth: 0 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <div className="cj-section-head">
             <h3 style={{ fontSize: '15px', fontWeight: '800', color: 'var(--text-main)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Care Journey Documents</h3>
             <span style={{ fontSize: '12px', fontWeight: '700', color: '#2e7d32', background: '#e8f5e9', padding: '4px 12px', borderRadius: '20px' }}>{stats?.totalRecords || 0} Documents</span>
           </div>
@@ -338,8 +338,8 @@ export default function CareJourney() {
               const isLast = idx === shownDocs.length - 1;
 
               return (
-                <div key={key} style={{ display: 'flex', gap: '16px' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '48px', flexShrink: 0 }}>
+                <div key={key} className="cj-tl-item">
+                  <div className="cj-tl-rail">
                     <div style={{ fontSize: '20px', fontWeight: '800', color: 'var(--text-main)', lineHeight: 1 }}>
                       {docDate ? docDate.getDate() : '-'}
                     </div>
@@ -350,7 +350,7 @@ export default function CareJourney() {
                     {!isLast && <div style={{ width: '2px', flex: 1, background: 'var(--border)' }}></div>}
                   </div>
 
-                  <div className="card hover-glow" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '16px 20px', flex: 1, minWidth: 0, marginBottom: isLast ? 0 : '16px' }}>
+                  <div className="card hover-glow cj-doc-card" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: '16px', flex: 1, minWidth: 0, marginBottom: isLast ? 0 : '16px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', minWidth: 0 }}>
                         <span style={{ fontSize: '12px', fontWeight: '800', color: '#1b5e20', background: '#e8f5e9', padding: '4px 10px', borderRadius: '8px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{doc.documenttype}</span>
@@ -397,7 +397,7 @@ export default function CareJourney() {
       {/* Portal to body: <main>'s fade-in animation leaves a transform on it,
           which would anchor position:fixed to the page instead of the viewport */}
       {isModalOpen && activeDoc && createPortal(
-        <div onClick={() => setIsModalOpen(false)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px', backdropFilter: 'blur(4px)' }}>
+        <div className="cj-modal-overlay" onClick={() => setIsModalOpen(false)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(4px)' }}>
           <div onClick={e => e.stopPropagation()} className="animate-fade-in-up" style={{ background: '#ffffff', width: '100%', maxWidth: '850px', borderRadius: '16px', overflow: 'hidden', display: 'flex', flexDirection: 'column', height: '95vh', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
             {/* Modal Header */}
             <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -410,22 +410,22 @@ export default function CareJourney() {
             {/* Modal Body */}
             <div style={{ padding: '20px', overflowY: 'auto', flex: 1 }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '150px 1fr', alignItems: 'center' }}>
+                <div className="cj-detail-row">
                   <span style={{ color: '#2a7c88', fontSize: '14px', fontWeight: '500' }}>Report Date :</span>
                   <span style={{ color: '#333333', fontSize: '14px', fontWeight: '400' }}>{activeDoc.documentdate_display || activeDoc.documentdate || 'Undated'}</span>
                 </div>
                 {activeDoc.department && (
-                  <div style={{ display: 'grid', gridTemplateColumns: '150px 1fr', alignItems: 'center' }}>
+                  <div className="cj-detail-row">
                     <span style={{ color: '#2a7c88', fontSize: '14px', fontWeight: '500' }}>Department :</span>
                     <span style={{ color: '#333333', fontSize: '14px', fontWeight: '400' }}>{activeDoc.department}</span>
                   </div>
                 )}
-                <div style={{ display: 'grid', gridTemplateColumns: '150px 1fr', alignItems: 'center' }}>
+                <div className="cj-detail-row">
                   <span style={{ color: '#2a7c88', fontSize: '14px', fontWeight: '500' }}>Document Type :</span>
                   <span style={{ color: '#333333', fontSize: '14px', fontWeight: '400', textTransform: 'uppercase' }}>{activeDoc.documenttype}</span>
                 </div>
                 {activeDoc.doctorname && (
-                  <div style={{ display: 'grid', gridTemplateColumns: '150px 1fr', alignItems: 'center' }}>
+                  <div className="cj-detail-row">
                     <span style={{ color: '#2a7c88', fontSize: '14px', fontWeight: '500' }}>Doctor Name :</span>
                     <span style={{ color: '#333333', fontSize: '14px', fontWeight: '400' }}>{activeDoc.doctorname}</span>
                   </div>
@@ -433,7 +433,7 @@ export default function CareJourney() {
               </div>
 
               {/* Report Document Placeholder (Just generic info for now) */}
-              <div style={{ border: '1px solid #e0e0e0', borderRadius: '12px', overflow: 'hidden', background: '#fcfcfc', minHeight: '400px', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '32px' }}>
+              <div className="cj-report" style={{ border: '1px solid #e0e0e0', borderRadius: '12px', overflow: 'hidden', background: '#fcfcfc', minHeight: '400px', display: 'flex', alignItems: 'flex-start', justifyContent: 'center' }}>
                 <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div style={{ fontSize: '18px', fontWeight: '700', color: '#444', textTransform: 'uppercase' }}>{activeDoc.documenttype}</div>
