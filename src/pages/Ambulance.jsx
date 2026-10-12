@@ -761,63 +761,6 @@ export default function AmbulancePage() {
                     <Clock size={14} color="#60a5fa" /> Real-time Tracking
                   </span>
                 </div>
-
-                {!showModal && (
-                  <button
-                    type="button"
-                    onClick={requestAmbulance}
-                    className="amb-hero-sos"
-                    title="Emergency SOS: request an ambulance now"
-                  >
-                    <span className="amb-hero-sos-icon" aria-hidden="true">
-                      <AlertTriangle size={12} />
-                    </span>
-                    <span className="amb-hero-sos-text">
-                      <strong>SOS</strong> Request Ambulance
-                    </span>
-                  </button>
-                )}
-                <style>{`
-                  .amb-hero-sos {
-                    margin-top: 10px;
-                    display: inline-flex;
-                    align-items: center;
-                    gap: 6px;
-                    padding: 6px 12px 6px 6px;
-                    background: #dc2626;
-                    color: #fff;
-                    border: 1px solid rgba(255, 255, 255, 0.2);
-                    border-radius: 999px;
-                    font-size: 11px;
-                    font-weight: 600;
-                    line-height: 1;
-                    white-space: nowrap;
-                    cursor: pointer;
-                    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.35);
-                    transition: transform 0.2s ease, background 0.2s ease;
-                    animation: amb-sos-pulse 2s ease-out infinite;
-                  }
-                  .amb-hero-sos:hover { background: #b91c1c; transform: translateY(-1px); }
-                  .amb-hero-sos:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
-                  .amb-hero-sos-icon {
-                    display: inline-flex;
-                    align-items: center;
-                    justify-content: center;
-                    width: 20px;
-                    height: 20px;
-                    border-radius: 50%;
-                    background: rgba(255, 255, 255, 0.2);
-                  }
-                  .amb-hero-sos-text strong { font-weight: 800; letter-spacing: 0.06em; margin-right: 3px; }
-                  @keyframes amb-sos-pulse {
-                    0% { box-shadow: 0 4px 12px rgba(220, 38, 38, 0.35), 0 0 0 0 rgba(248, 113, 113, 0.5); }
-                    70% { box-shadow: 0 4px 12px rgba(220, 38, 38, 0.35), 0 0 0 7px rgba(248, 113, 113, 0); }
-                    100% { box-shadow: 0 4px 12px rgba(220, 38, 38, 0.35), 0 0 0 0 rgba(248, 113, 113, 0); }
-                  }
-                  @media (prefers-reduced-motion: reduce) {
-                    .amb-hero-sos { animation: none; }
-                  }
-                `}</style>
               </div>
             </div>
 
