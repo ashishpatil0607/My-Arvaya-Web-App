@@ -217,24 +217,37 @@ export default function Home() {
     },
   ]);
 
+  // Load reviews on mount, and reload whenever the FeedbackModal submits a new one
   useEffect(() => {
     let isMounted = true;
-    getPatientReviews({ pageIndex: 0, pageSize: 0 })
-      .then((apiReviews) => {
-        if (!isMounted) return;
-        if (Array.isArray(apiReviews) && apiReviews.length > 0) {
-          const normalized = apiReviews.map((r) => ({
-            name: r.patient_name || "Patient",
-            role: "Verified Patient",
-            text: r.review || "",
-            rating: r.ratings || 5,
-          }));
-          setReviews(normalized);
-        }
-      })
-      .catch((err) => {
-        console.error("Failed to fetch /api/patientReview/get for Home:", err);
-      });
+    const loadReviews = () =>
+      getPatientReviews({ pageIndex: 0, pageSize: 0 })
+        .then((apiReviews) => {
+          if (!isMounted) return;
+          if (Array.isArray(apiReviews) && apiReviews.length > 0) {
+            const normalized = apiReviews.map((r) => ({
+              name: r.patient_name || "Patient",
+              role: "Verified Patient",
+              text: r.review || "",
+              rating: r.ratings || 5,
+            }));
+            setReviews(normalized);
+          }
+        })
+        .catch((err) => {
+          console.error("Failed to fetch /api/patientReview/get for Home:", err);
+        });
+
+    loadReviews();
+    window.addEventListener("arvaya_feedback_submitted", loadReviews);
+    return () => {
+      isMounted = false;
+      window.removeEventListener("arvaya_feedback_submitted", loadReviews);
+    };
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
 
     if (user) {
       setApiPackages([]);

@@ -6,19 +6,33 @@ import { upsertPatientReview } from "../services/dataService";
 import { Antworkapi } from "../services/apiClient";
 import { api } from "../services/api";
 
-const STORAGE_KEY = "arvaya_feedback_state";
+const STORAGE_KEY_PREFIX = "arvaya_feedback_state";
+const SUCCESS_AUTO_CLOSE_MS = 4000;
 
-function getStoredFeedbackState() {
+const RATING_MESSAGES = {
+  1: "We're sorry — we'll do better",
+  2: "Thanks for being honest",
+  3: "Thanks — we'll keep improving",
+  4: "Glad you had a good experience!",
+  5: "You made our day!",
+};
+
+// Stored per user so the "submitted" flag survives logout/re-login.
+function getStorageKey(userKey) {
+  return `${STORAGE_KEY_PREFIX}_${userKey}`;
+}
+
+function getStoredFeedbackState(userKey) {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(getStorageKey(userKey));
     if (raw) return JSON.parse(raw);
   } catch (e) { }
   return { visitCount: 0, dismissCount: 0, submitted: false };
 }
 
-function saveStoredFeedbackState(state) {
+function saveStoredFeedbackState(userKey, state) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    localStorage.setItem(getStorageKey(userKey), JSON.stringify(state));
   } catch (e) { }
 }
 
@@ -35,6 +49,7 @@ export default function FeedbackModal() {
   const [errorMessage, setErrorMessage] = useState("");
 
   const lastKeyRef = useRef(null);
+  const successTimerRef = useRef(null);
 
   // Helper to get patient ID
   const getPatientId = () => {
@@ -53,13 +68,40 @@ export default function FeedbackModal() {
     return 107707;
   };
 
-  // Listen to Home page visits
+  // Key for per-user feedback state. Prefers id/user_id/app_user_id because
+  // switchProfile overwrites those, while patient_id can carry over from the
+  // previously logged-in profile.
+  const getFeedbackUserKey = () => {
+    const raw = user?.id || user?.user_id || user?.app_user_id || user?.patient_id;
+    return raw ? String(raw) : String(getPatientId());
+  };
+  const feedbackUserKey = user ? getFeedbackUserKey() : null;
+
+  // Clear the form whenever the modal closes so it always reopens fresh
   useEffect(() => {
+    if (isOpen) return;
+    clearTimeout(successTimerRef.current);
+    setRatings(0);
+    setHoverRating(0);
+    setReview("");
+    setErrorMessage("");
+    setSubmittedSuccess(false);
+  }, [isOpen]);
+
+  // Close the modal when the logged-in user changes (logout or account switch)
+  useEffect(() => {
+    setIsOpen(false);
+  }, [feedbackUserKey]);
+
+  // Listen to Home page visits (logged-in users only)
+  useEffect(() => {
+    if (!user) return;
+
     if (location.pathname === "/") {
       if (lastKeyRef.current !== location.key) {
         lastKeyRef.current = location.key;
 
-        const state = getStoredFeedbackState();
+        const state = getStoredFeedbackState(getFeedbackUserKey());
 
         if (state.submitted) {
           return;
@@ -67,7 +109,7 @@ export default function FeedbackModal() {
 
         const newVisitCount = (state.visitCount || 0) + 1;
         state.visitCount = newVisitCount;
-        saveStoredFeedbackState(state);
+        saveStoredFeedbackState(getFeedbackUserKey(), state);
 
         if (newVisitCount >= 3) {
           const timer = setTimeout(() => {
@@ -77,7 +119,7 @@ export default function FeedbackModal() {
         }
       }
     }
-  }, [location.pathname, location.key]);
+  }, [location.pathname, location.key, user]);
 
   // Support manual trigger via custom event
   useEffect(() => {
@@ -95,10 +137,10 @@ export default function FeedbackModal() {
 
   const handleDismiss = () => {
     setIsOpen(false);
-    const state = getStoredFeedbackState();
+    const state = getStoredFeedbackState(getFeedbackUserKey());
     state.dismissCount = (state.dismissCount || 0) + 1;
     state.visitCount = 0;
-    saveStoredFeedbackState(state);
+    saveStoredFeedbackState(getFeedbackUserKey(), state);
   };
 
   const handleSubmit = async (e) => {
@@ -129,28 +171,23 @@ export default function FeedbackModal() {
         }
       }
 
-      const state = getStoredFeedbackState();
+      const state = getStoredFeedbackState(getFeedbackUserKey());
       state.submitted = true;
       state.visitCount = 0;
-      saveStoredFeedbackState(state);
+      saveStoredFeedbackState(getFeedbackUserKey(), state);
+
+      // Let listeners (e.g. Home's "What Our Patients Say") refresh their reviews
+      window.dispatchEvent(new Event("arvaya_feedback_submitted"));
 
       setSubmittedSuccess(true);
-      setTimeout(() => {
-        setIsOpen(false);
-        setSubmittedSuccess(false);
-        setReview("");
-        setRatings(0);
-      }, 1500);
+      successTimerRef.current = setTimeout(() => setIsOpen(false), SUCCESS_AUTO_CLOSE_MS);
     } catch (err) {
       console.error("Feedback submit error:", err);
-      const state = getStoredFeedbackState();
+      const state = getStoredFeedbackState(getFeedbackUserKey());
       state.submitted = true;
-      saveStoredFeedbackState(state);
+      saveStoredFeedbackState(getFeedbackUserKey(), state);
       setSubmittedSuccess(true);
-      setTimeout(() => {
-        setIsOpen(false);
-        setSubmittedSuccess(false);
-      }, 1500);
+      successTimerRef.current = setTimeout(() => setIsOpen(false), SUCCESS_AUTO_CLOSE_MS);
     } finally {
       setLoading(false);
     }
@@ -213,51 +250,193 @@ export default function FeedbackModal() {
 
         {submittedSuccess ? (
           /* Thank You State */
-          <div
-            style={{
-              padding: "36px 20px",
-              textAlign: "center",
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <div
-              style={{
-                width: "54px",
-                height: "54px",
-                borderRadius: "50%",
-                background: "#ecfdf5",
-                color: "#10b981",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                marginBottom: "12px",
-              }}
-            >
-              <CheckCircle2 size={32} strokeWidth={2.5} />
+          <div style={{ display: "flex", flexDirection: "column", textAlign: "center" }}>
+            <style>{`
+              @keyframes feedbackCheckPop {
+                0% { opacity: 0; transform: scale(0.4); }
+                60% { opacity: 1; transform: scale(1.12); }
+                100% { opacity: 1; transform: scale(1); }
+              }
+              @keyframes feedbackRingPulse {
+                0% { opacity: 0.55; transform: scale(1); }
+                100% { opacity: 0; transform: scale(1.7); }
+              }
+              @keyframes feedbackFadeUp {
+                from { opacity: 0; transform: translateY(8px); }
+                to { opacity: 1; transform: translateY(0); }
+              }
+              @keyframes feedbackStarIn {
+                0% { opacity: 0; transform: scale(0.3) rotate(-30deg); }
+                70% { opacity: 1; transform: scale(1.15) rotate(6deg); }
+                100% { opacity: 1; transform: scale(1) rotate(0); }
+              }
+              @keyframes feedbackTwinkle {
+                0%, 100% { opacity: 0.25; transform: scale(0.8); }
+                50% { opacity: 1; transform: scale(1.15); }
+              }
+              @media (prefers-reduced-motion: reduce) {
+                .feedback-success * { animation: none !important; opacity: 1 !important; }
+              }
+            `}</style>
+
+            <div className="feedback-success" style={{ display: "contents" }}>
+              {/* Teal hero with animated check */}
+              <div
+                style={{
+                  position: "relative",
+                  background: "linear-gradient(135deg, #006874 0%, #005660 100%)",
+                  padding: "34px 20px 46px",
+                  overflow: "hidden",
+                  display: "flex",
+                  justifyContent: "center",
+                }}
+              >
+                {/* Decorative circles */}
+                <span style={{ position: "absolute", top: "-40px", left: "-30px", width: "120px", height: "120px", borderRadius: "50%", background: "rgba(255,255,255,0.07)" }} />
+                <span style={{ position: "absolute", bottom: "-50px", right: "-20px", width: "140px", height: "140px", borderRadius: "50%", background: "rgba(255,255,255,0.06)" }} />
+
+                {/* Twinkling sparkles */}
+                {[
+                  { top: "22%", left: "22%", size: 6, delay: "0s", color: "#fbbf24" },
+                  { top: "30%", right: "20%", size: 8, delay: "0.4s", color: "#ffffff" },
+                  { bottom: "26%", left: "28%", size: 5, delay: "0.8s", color: "#ffffff" },
+                  { bottom: "32%", right: "27%", size: 6, delay: "0.2s", color: "#fb923c" },
+                  { top: "16%", right: "36%", size: 4, delay: "1s", color: "#fbbf24" },
+                ].map(({ size, delay, color, ...pos }, i) => (
+                  <span
+                    key={i}
+                    style={{
+                      position: "absolute",
+                      ...pos,
+                      width: `${size}px`,
+                      height: `${size}px`,
+                      borderRadius: "50%",
+                      background: color,
+                      animation: `feedbackTwinkle 1.6s ease-in-out ${delay} infinite`,
+                    }}
+                  />
+                ))}
+
+                <div style={{ position: "relative", width: "76px", height: "76px" }}>
+                  <span
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      borderRadius: "50%",
+                      border: "2px solid rgba(255,255,255,0.6)",
+                      animation: "feedbackRingPulse 1.6s ease-out 0.3s infinite",
+                    }}
+                  />
+                  <div
+                    style={{
+                      position: "relative",
+                      width: "76px",
+                      height: "76px",
+                      borderRadius: "50%",
+                      background: "#ffffff",
+                      color: "#10b981",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      boxShadow: "0 10px 24px -6px rgba(0,0,0,0.35)",
+                      animation: "feedbackCheckPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both",
+                    }}
+                  >
+                    <CheckCircle2 size={44} strokeWidth={2.2} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Body */}
+              <div
+                style={{
+                  position: "relative",
+                  marginTop: "-18px",
+                  background: "#ffffff",
+                  borderRadius: "18px 18px 0 0",
+                  padding: "22px 24px 22px",
+                }}
+              >
+                <h3
+                  style={{
+                    fontSize: "21px",
+                    fontWeight: "800",
+                    color: "var(--text-main, #1e293b)",
+                    margin: "0 0 6px",
+                    animation: "feedbackFadeUp 0.4s ease-out 0.15s both",
+                  }}
+                >
+                  Thank You!
+                </h3>
+                <p
+                  style={{
+                    fontSize: "13.5px",
+                    color: "var(--text-muted, #64748b)",
+                    margin: "0 auto",
+                    maxWidth: "300px",
+                    lineHeight: "1.5",
+                    animation: "feedbackFadeUp 0.4s ease-out 0.25s both",
+                  }}
+                >
+                  Your feedback helps us continuously improve our patient care.
+                </p>
+
+                {ratings > 0 && (
+                  <div
+                    style={{
+                      margin: "16px auto 0",
+                      padding: "12px 16px",
+                      background: "#fffbeb",
+                      border: "1px solid #fde68a",
+                      borderRadius: "14px",
+                      display: "inline-flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      gap: "6px",
+                      animation: "feedbackFadeUp 0.4s ease-out 0.35s both",
+                    }}
+                  >
+                    <div style={{ display: "flex", gap: "4px" }}>
+                      {[1, 2, 3, 4, 5].map((n) => (
+                        <Star
+                          key={n}
+                          size={22}
+                          strokeWidth={1.8}
+                          color={n <= ratings ? "#f59e0b" : "#cbd5e1"}
+                          fill={n <= ratings ? "#f59e0b" : "none"}
+                          style={{ animation: `feedbackStarIn 0.4s ease-out ${0.4 + n * 0.08}s both` }}
+                        />
+                      ))}
+                    </div>
+                    <span style={{ fontSize: "12.5px", fontWeight: "600", color: "#b45309" }}>
+                      {RATING_MESSAGES[ratings]}
+                    </span>
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => setIsOpen(false)}
+                  style={{
+                    display: "block",
+                    width: "100%",
+                    marginTop: "20px",
+                    height: "42px",
+                    border: "none",
+                    borderRadius: "10px",
+                    background: "var(--accent, #FB913F)",
+                    color: "#ffffff",
+                    fontSize: "14px",
+                    fontWeight: "700",
+                    cursor: "pointer",
+                    boxShadow: "0 3px 10px rgba(251, 145, 63, 0.3)",
+                    animation: "feedbackFadeUp 0.4s ease-out 0.5s both",
+                  }}
+                >
+                  Done
+                </button>
+              </div>
             </div>
-            <h3
-              style={{
-                fontSize: "18px",
-                fontWeight: "700",
-                color: "var(--text-main, #1e293b)",
-                margin: "0 0 6px",
-              }}
-            >
-              Thank You!
-            </h3>
-            <p
-              style={{
-                fontSize: "13px",
-                color: "var(--text-muted, #64748b)",
-                margin: 0,
-                lineHeight: "1.4",
-              }}
-            >
-              Your feedback helps us continuously improve our patient care.
-            </p>
           </div>
         ) : (
           <>

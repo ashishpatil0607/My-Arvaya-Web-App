@@ -250,7 +250,6 @@ export function AuthProvider({ children }) {
       localStorage.removeItem("abha_user_token");
       localStorage.removeItem("abha_token");
       localStorage.removeItem("arvaya_linked_profiles");
-      localStorage.removeItem("arvaya_feedback_state");
 
       deleteCookie("token");
       deleteCookie("arvaya_token");
