@@ -433,7 +433,21 @@ export async function getDiagnosticTests(filters = {}) {
     };
     const res = await api.post("/api/diagnostic/getTests", payload);
     const list = res?.data || res?.tests || res?.list || res?.result || res || [];
-    return Array.isArray(list) ? list : [];
+    const resultList = Array.isArray(list) ? list : [];
+
+    // Total record count for server-side pagination (undefined when the API doesn't send one)
+    resultList.total =
+      res?.totalRecords ??
+      res?.data?.totalRecords ??
+      res?.count ??
+      res?.totalCount ??
+      res?.total ??
+      res?.total_records ??
+      res?.total_count ??
+      res?.data?.count ??
+      res?.data?.totalCount ??
+      res?.data?.total;
+    return resultList;
   } catch (err) {
     console.error("getDiagnosticTests API error:", err);
     return [];
@@ -454,7 +468,21 @@ export async function getDiagnosticPackages(filters = {}) {
     };
     const res = await api.post("/api/diagnostic/getPackages", payload);
     const list = res?.data || res?.packages || res?.list || res?.result || res || [];
-    return Array.isArray(list) ? list : [];
+    const resultList = Array.isArray(list) ? list : [];
+
+    // Total record count for server-side pagination (undefined when the API doesn't send one)
+    resultList.total =
+      res?.totalRecords ??
+      res?.data?.totalRecords ??
+      res?.count ??
+      res?.totalCount ??
+      res?.total ??
+      res?.total_records ??
+      res?.total_count ??
+      res?.data?.count ??
+      res?.data?.totalCount ??
+      res?.data?.total;
+    return resultList;
   } catch (err) {
     console.error("getDiagnosticPackages API error:", err);
     return [];

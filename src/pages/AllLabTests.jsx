@@ -1,5 +1,5 @@
 import { 
-  Search, ChevronRight, ArrowLeft, FlaskConical, Clock, Heart, ShieldCheck, 
+  Search, ChevronLeft, ChevronRight, ArrowLeft, FlaskConical, Clock, Heart, ShieldCheck, 
    Droplets, Beaker, Stethoscope, TestTube, MapPin, ArrowRight, X, Filter, Wallet, Home, User
 } from "lucide-react";
 import { useState, useEffect, useMemo, useRef } from "react";
@@ -11,6 +11,8 @@ import SelectSlotUI from "../components/doctors/SelectSlotUI";
 import Modal from "../components/common/Modal";
 import LabItemIcon from "../components/labs/LabItemIcon";
 import { fallbackLabTests } from "../utils/labTests";
+
+const ITEMS_PER_PAGE = 10;
 
 // Fallback tests (same as Labs page) shown when the API returns nothing, e.g. user not logged in
 const normalizeFallbackTest = (t) => ({
@@ -56,15 +58,28 @@ export default function AllLabTests() {
   const [walletAppliedAmount, setWalletAppliedAmount] = useState(0);
   const [loadingWallet, setLoadingWallet] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(null);
   const isInitialMount = useRef(true);
+  const latestRequest = useRef(0);
 
-  // Fetch tests from API and apply filter upon response
-  const fetchTestsFromApi = (searchKeyword = "") => {
+  // Show one page of the static fallback tests (guest users)
+  const showFallbackPage = (page) => {
+    const start = (page - 1) * ITEMS_PER_PAGE;
+    setTests(fallbackLabTests.slice(start, start + ITEMS_PER_PAGE).map(normalizeFallbackTest));
+    setTotalCount(fallbackLabTests.length);
+  };
+
+  // Fetch one page of tests from API and apply filter upon response
+  const fetchTestsFromApi = (searchKeyword = "", page = 1) => {
+    const requestId = ++latestRequest.current;
     setLoading(true);
     setAppliedQuery(searchKeyword);
+    setCurrentPage(page);
 
     const payload = {
-      pageSize: 300,
+      pageIndex: page,
+      pageSize: ITEMS_PER_PAGE,
       search: searchKeyword,
       q: searchKeyword,
       filter: searchKeyword ? ` AND (service_name LIKE '%${searchKeyword}%' OR name LIKE '%${searchKeyword}%' OR profile_name LIKE '%${searchKeyword}%')` : ""
@@ -72,11 +87,16 @@ export default function AllLabTests() {
 
     getDiagnosticTests(payload)
       .then((apiTests) => {
+        // Ignore responses from older requests (e.g. fast page clicks)
+        if (requestId !== latestRequest.current) return;
+
         // Not logged in → API returns 401 (empty list), show the same tests as Labs
         if (!user && (!Array.isArray(apiTests) || apiTests.length === 0)) {
-          setTests(fallbackLabTests.map(normalizeFallbackTest));
+          showFallbackPage(page);
         } else if (Array.isArray(apiTests)) {
-          const normalized = apiTests.map((t, idx) => {
+          const offset = (page - 1) * ITEMS_PER_PAGE;
+          const normalized = apiTests.map((t, i) => {
+            const idx = offset + i;
             const rawTitle = t.service_name || t.name || t.title || t.test_name || `Lab Test ${idx + 1}`;
             const rawCategory = t.profile_name || t.category || t.test_category_name || t.department || "Fluid & Clinical Test";
             const priceVal = parseFloat(t.price || t.cost || t.amount || 150);
@@ -95,12 +115,15 @@ export default function AllLabTests() {
             };
           });
           setTests(normalized);
+          const total = Number(apiTests.total);
+          setTotalCount(Number.isFinite(total) ? total : null);
         }
         setLoading(false);
       })
       .catch((err) => {
+        if (requestId !== latestRequest.current) return;
         console.error("AllLabTests fetch error:", err);
-        if (!user) setTests(fallbackLabTests.map(normalizeFallbackTest));
+        if (!user) showFallbackPage(page);
         setLoading(false);
       });
   };
@@ -147,6 +170,21 @@ export default function AllLabTests() {
       return true;
     });
    }, [tests, appliedQuery, selectedProfile]);
+
+  // Server-side Pagination - 10 cards per page.
+  // If the API doesn't send a total count, allow "Next" while a full page comes back.
+  const hasMore = tests.length === ITEMS_PER_PAGE;
+  const totalPages = totalCount != null
+    ? Math.max(1, Math.ceil(totalCount / ITEMS_PER_PAGE))
+    : currentPage + (hasMore ? 1 : 0);
+  const pageStart = (currentPage - 1) * ITEMS_PER_PAGE;
+
+  const goToPage = (pageNum) => {
+    const target = Math.min(totalPages, Math.max(1, pageNum));
+    if (target === currentPage) return;
+    fetchTestsFromApi(appliedQuery, target);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   // Close the booking modal and open login; after login the user stays on this same page
   const handleLoginToBook = () => {
@@ -626,8 +664,20 @@ export default function AllLabTests() {
 
         .all-tests-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-          gap: 20px;
+          grid-template-columns: repeat(5, 1fr);
+          gap: 16px;
+        }
+
+        @media (max-width: 1280px) {
+          .all-tests-grid {
+            grid-template-columns: repeat(4, 1fr);
+          }
+        }
+
+        @media (max-width: 1024px) {
+          .all-tests-grid {
+            grid-template-columns: repeat(3, 1fr);
+          }
         }
 
         /* ── Match Labs page card styling ── */
@@ -845,6 +895,24 @@ export default function AllLabTests() {
             min-height: 32px;
           }
         }
+
+        .all-tests-pagination-bar {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          flex-wrap: wrap;
+          margin-top: 28px;
+          padding-top: 16px;
+          border-top: 1px solid var(--border);
+        }
+
+        @media (max-width: 640px) {
+          .all-tests-pagination-bar {
+            flex-direction: column;
+            align-items: center;
+          }
+        }
       `}</style>
 
       {/* Hero / Header Section */}
@@ -866,9 +934,9 @@ export default function AllLabTests() {
 
               <div className="all-tests-hero-title-row">
                 <h1 className="all-tests-hero-title">All Diagnostic Lab Tests</h1>
-                {!loading && filteredTests.length > 0 && (
+                {!loading && totalCount > 0 && (
                   <span className="all-tests-hero-chip">
-                    <FlaskConical size={13} /> {filteredTests.length} {filteredTests.length === 1 ? "test" : "tests"}
+                    <FlaskConical size={13} /> {totalCount} {totalCount === 1 ? "test" : "tests"}
                   </span>
                 )}
               </div>
@@ -972,7 +1040,7 @@ export default function AllLabTests() {
         {/* Results Bar */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
           <span style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-muted)' }}>
-            Showing {filteredTests.length} {filteredTests.length === 1 ? 'Lab Test' : 'Lab Tests'}
+            Showing {totalCount ?? filteredTests.length} {(totalCount ?? filteredTests.length) === 1 ? 'Lab Test' : 'Lab Tests'}
           </span>
         </div>
 
@@ -1013,6 +1081,56 @@ export default function AllLabTests() {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Server-side Pagination Controls for 10 cards per page */}
+        {!loading && filteredTests.length > 0 && (
+          <div className="all-tests-pagination-bar">
+            <span className="pagination-info-text">
+              Showing{" "}
+              <strong>{pageStart + 1}</strong>–
+              <strong>{pageStart + tests.length}</strong>
+              {totalCount != null && <> of <strong>{totalCount}</strong></>} tests
+            </span>
+
+            {totalPages > 1 && (
+              <div className="pagination-controls">
+                <button
+                  type="button"
+                  className="pagination-btn"
+                  disabled={currentPage === 1}
+                  onClick={() => goToPage(currentPage - 1)}
+                  aria-label="Previous page"
+                >
+                  <ChevronLeft size={14} /> Prev
+                </button>
+
+                <div className="pagination-pages-list">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+                    <button
+                      key={pageNum}
+                      type="button"
+                      className={`pagination-num-btn ${currentPage === pageNum ? "active" : ""}`}
+                      onClick={() => goToPage(pageNum)}
+                      aria-label={`Page ${pageNum}`}
+                    >
+                      {pageNum}
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  type="button"
+                  className="pagination-btn"
+                  disabled={currentPage === totalPages}
+                  onClick={() => goToPage(currentPage + 1)}
+                  aria-label="Next page"
+                >
+                  Next <ChevronRight size={14} />
+                </button>
+              </div>
+            )}
           </div>
         )}
 

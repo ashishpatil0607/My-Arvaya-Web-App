@@ -1,5 +1,5 @@
 import { 
-  Search, ChevronRight, ArrowLeft, FlaskConical, Clock, Heart, ShieldCheck, 
+  Search, ChevronLeft, ChevronRight, ArrowLeft, FlaskConical, Clock, Heart, ShieldCheck, 
   Droplets, Beaker, Stethoscope, TestTube, MapPin, ArrowRight, X, Sparkles 
 } from "lucide-react";
 import { useState, useEffect, useMemo, useRef } from "react";
@@ -10,6 +10,8 @@ import { useBooking } from "../context/BookingContext";
 import { useAuth } from "../context/AuthContext";
 import SelectSlotUI from "../components/doctors/SelectSlotUI";
 import Modal from "../components/common/Modal";
+
+const ITEMS_PER_PAGE = 10;
 
 export default function AllHealthPackages() {
   const go = useNavigate();
@@ -23,15 +25,21 @@ export default function AllHealthPackages() {
   const [selectedFilter, setSelectedFilter] = useState("All");
   const [selectedItem, setSelectedItem] = useState(null);
   const [visitType, setVisitType] = useState("home");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(null);
   const isInitialMount = useRef(true);
+  const latestRequest = useRef(0);
 
-  // Fetch health packages from API and apply filter upon response
-  const fetchPackagesFromApi = (searchKeyword = "") => {
+  // Fetch one page of health packages from API and apply filter upon response
+  const fetchPackagesFromApi = (searchKeyword = "", page = 1) => {
+    const requestId = ++latestRequest.current;
     setLoading(true);
     setAppliedQuery(searchKeyword);
+    setCurrentPage(page);
 
     const payload = {
-      pageSize: 200,
+      pageIndex: page,
+      pageSize: ITEMS_PER_PAGE,
       search: searchKeyword,
       q: searchKeyword,
       filter: searchKeyword ? ` AND (package_name LIKE '%${searchKeyword}%' OR name LIKE '%${searchKeyword}%')` : ""
@@ -39,11 +47,18 @@ export default function AllHealthPackages() {
 
     getDiagnosticPackages(payload)
       .then((apiPkgs) => {
+        // Ignore responses from older requests (e.g. fast page clicks)
+        if (requestId !== latestRequest.current) return;
+
         // Not logged in → API returns 401 (empty list), show the same packages as Home & Labs
         if (!user && (!Array.isArray(apiPkgs) || apiPkgs.length === 0)) {
-          setPackages(fallbackHealthPackages);
+          const start = (page - 1) * ITEMS_PER_PAGE;
+          setPackages(fallbackHealthPackages.slice(start, start + ITEMS_PER_PAGE));
+          setTotalCount(fallbackHealthPackages.length);
         } else if (Array.isArray(apiPkgs)) {
-          const normalized = apiPkgs.map((p, idx) => {
+          const offset = (page - 1) * ITEMS_PER_PAGE;
+          const normalized = apiPkgs.map((p, i) => {
+            const idx = offset + i;
             let rawTitle = p.package_name || p.name || p.title || `Health Package ${idx + 1}`;
             if (rawTitle.includes('-')) rawTitle = rawTitle.split('-')[0].trim();
             const priceVal = parseFloat(p.package_price || p.price || p.cost || p.amount || 999);
@@ -66,10 +81,13 @@ export default function AllHealthPackages() {
             };
           });
           setPackages(normalized);
+          const total = Number(apiPkgs.total);
+          setTotalCount(Number.isFinite(total) ? total : null);
         }
         setLoading(false);
       })
       .catch((err) => {
+        if (requestId !== latestRequest.current) return;
         console.error("AllHealthPackages fetch error:", err);
         setLoading(false);
       });
@@ -107,6 +125,21 @@ export default function AllHealthPackages() {
       return true;
     });
   }, [packages, appliedQuery, selectedFilter]);
+
+  // Server-side Pagination - 10 cards per page.
+  // If the API doesn't send a total count, allow "Next" while a full page comes back.
+  const hasMore = packages.length === ITEMS_PER_PAGE;
+  const totalPages = totalCount != null
+    ? Math.max(1, Math.ceil(totalCount / ITEMS_PER_PAGE))
+    : currentPage + (hasMore ? 1 : 0);
+  const pageStart = (currentPage - 1) * ITEMS_PER_PAGE;
+
+  const goToPage = (pageNum) => {
+    const target = Math.min(totalPages, Math.max(1, pageNum));
+    if (target === currentPage) return;
+    fetchPackagesFromApi(appliedQuery, target);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   const confirmBooking = (slotData) => {
     setBookingType("lab");
@@ -255,11 +288,17 @@ export default function AllHealthPackages() {
 
         .all-pkg-grid {
           display: grid;
-          grid-template-columns: repeat(4, 1fr);
-          gap: 20px;
+          grid-template-columns: repeat(5, 1fr);
+          gap: 16px;
         }
 
-        @media (max-width: 1200px) {
+        @media (max-width: 1280px) {
+          .all-pkg-grid {
+            grid-template-columns: repeat(4, 1fr);
+          }
+        }
+
+        @media (max-width: 1024px) {
           .all-pkg-grid {
             grid-template-columns: repeat(3, 1fr);
           }
@@ -498,6 +537,24 @@ export default function AllHealthPackages() {
           border-color: var(--primary);
           box-shadow: 0 4px 12px rgba(46, 102, 110, 0.25);
         }
+
+        .all-pkg-pagination-bar {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          flex-wrap: wrap;
+          margin-top: 28px;
+          padding-top: 16px;
+          border-top: 1px solid var(--border);
+        }
+
+        @media (max-width: 640px) {
+          .all-pkg-pagination-bar {
+            flex-direction: column;
+            align-items: center;
+          }
+        }
       `}</style>
 
       {/* ── Internal Hero Banner ── */}
@@ -519,9 +576,9 @@ export default function AllHealthPackages() {
 
               <div className="pkg-hero-title-row">
                 <h1 className="pkg-hero-title">All Health Checkup Packages</h1>
-                {!loading && packages.length > 0 && (
+                {!loading && totalCount > 0 && (
                   <span className="pkg-hero-chip">
-                    <FlaskConical size={13} /> {packages.length} {packages.length === 1 ? "package" : "packages"}
+                    <FlaskConical size={13} /> {totalCount} {totalCount === 1 ? "package" : "packages"}
                   </span>
                 )}
               </div>
@@ -618,7 +675,7 @@ export default function AllHealthPackages() {
         {/* Results Bar */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
           <span style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-muted)' }}>
-            Showing {filteredPackages.length} {filteredPackages.length === 1 ? 'Health Package' : 'Health Packages'}
+            Showing {totalCount ?? filteredPackages.length} {(totalCount ?? filteredPackages.length) === 1 ? 'Health Package' : 'Health Packages'}
           </span>
         </div>
 
@@ -660,6 +717,56 @@ export default function AllHealthPackages() {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Frontend Pagination Controls for 10 cards per page */}
+        {!loading && filteredPackages.length > 0 && (
+          <div className="all-pkg-pagination-bar">
+            <span className="pagination-info-text">
+              Showing{" "}
+              <strong>{pageStart + 1}</strong>–
+              <strong>{pageStart + packages.length}</strong>
+              {totalCount != null && <> of <strong>{totalCount}</strong></>} packages
+            </span>
+
+            {totalPages > 1 && (
+              <div className="pagination-controls">
+                <button
+                  type="button"
+                  className="pagination-btn"
+                  disabled={currentPage === 1}
+                  onClick={() => goToPage(currentPage - 1)}
+                  aria-label="Previous page"
+                >
+                  <ChevronLeft size={14} /> Prev
+                </button>
+
+                <div className="pagination-pages-list">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+                    <button
+                      key={pageNum}
+                      type="button"
+                      className={`pagination-num-btn ${currentPage === pageNum ? "active" : ""}`}
+                      onClick={() => goToPage(pageNum)}
+                      aria-label={`Page ${pageNum}`}
+                    >
+                      {pageNum}
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  type="button"
+                  className="pagination-btn"
+                  disabled={currentPage === totalPages}
+                  onClick={() => goToPage(currentPage + 1)}
+                  aria-label="Next page"
+                >
+                  Next <ChevronRight size={14} />
+                </button>
+              </div>
+            )}
           </div>
         )}
 
