@@ -242,7 +242,7 @@ export default function AmbulanceRequestModal({ onClose, onSuccess }) {
     }
 
     try {
-      const res = await requestAmbulance({
+      const submitted = {
         patient_id: patientId,
         patient_name: patientName.trim(),
         requester_phone: contactNumber.trim(),
@@ -251,13 +251,17 @@ export default function AmbulanceRequestModal({ onClose, onSuccess }) {
         pickup_lng: pickupLng,
         pickup_address: pickupAddress.trim(),
         location_key: locationKey
-      });
+      };
+      const res = await requestAmbulance(submitted);
+
+      if (onSuccess) onSuccess(res, submitted);
+      onClose();
+      // The modal is opened from Header/Home/Ambulance; hand the booking to the
+      // Ambulance page via route state so it can show it immediately
+      go("/ambulance", { state: { bookedRequest: { res, submitted, at: Date.now() } } });
+
       window.alert("Opening dialer for dummy call to 108...");
       window.location.href = "tel:108";
-      
-      if (onSuccess) onSuccess(res);
-      onClose();
-      go("/ambulance");
     } catch (e) { setErr(e.message || "Failed to submit request. Please try again."); }
     finally { setBusy(false); }
   };

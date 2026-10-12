@@ -131,7 +131,7 @@ export default function Orders() {
   };
 
   return (
-    <main className="page animate-fade-in-up" style={{ padding: 0, background: 'var(--bg-app)' }}>
+    <main className="page animate-fade-in-up" style={{ padding: 0, minHeight: 0, background: 'var(--bg-app)' }}>
       {/* ── Internal Hero Banner ── */}
       <div className="orders-hero-banner">
         <svg className="orders-hero-wave" viewBox="0 0 500 150" preserveAspectRatio="none" aria-hidden="true">
@@ -185,7 +185,7 @@ export default function Orders() {
         </div>
       </div>
 
-      <div className="container" style={{ paddingTop: '24px', paddingBottom: '28px' }}>
+      <div className="container" style={{ paddingTop: '24px', paddingBottom: '40px' }}>
         {loading ? (
           <div className="orders-grid" aria-busy="true" aria-label="Loading orders">
             {Array.from({ length: PAGE_SIZE }, (_, i) => (

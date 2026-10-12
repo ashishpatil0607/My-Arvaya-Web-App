@@ -1,12 +1,22 @@
 import React, { useEffect, useState } from "react";
-import ReactDOM from "react-dom";
-import { AlertCircle, Loader2 } from "lucide-react";
+import { AlertCircle, Ambulance, Clock, Loader2, MapPin } from "lucide-react";
+import Modal from "../common/Modal";
 import { updateAmbulanceStatus } from "../../services/ambulanceService";
+
+const MAX_REASON_LENGTH = 250;
+
+const QUICK_REASONS = [
+  "Arranged own transport",
+  "Patient feels better",
+  "Ambulance taking too long",
+  "Booked by mistake",
+];
 
 export default function CancelAmbulanceModal({
   isOpen,
   onClose,
   requestId,
+  request,
   onCancelled
 }) {
   const [reason, setReason] = useState("");
@@ -27,6 +37,11 @@ export default function CancelAmbulanceModal({
   if (!isOpen) return null;
 
   const isValid = reason.trim().length > 0;
+  const showRequiredError = touched && !isValid;
+
+  const handleClose = () => {
+    if (!isSubmitting) onClose?.();
+  };
 
   const handleSubmit = async (e) => {
     e?.preventDefault();
@@ -61,209 +76,134 @@ export default function CancelAmbulanceModal({
     }
   };
 
-  const modalContent = (
-    <div
-      className="cancel-ambulance-modal-backdrop"
-      onClick={onClose}
-      style={{
-        position: "fixed",
-        inset: 0,
-        backgroundColor: "rgba(15, 23, 42, 0.65)",
-        backdropFilter: "blur(4px)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        zIndex: 99999,
-        padding: "16px"
-      }}
-    >
-      <div
-        className="cancel-ambulance-modal-card"
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          width: "100%",
-          maxWidth: "460px",
-          background: "#ffffff",
-          borderRadius: "24px",
-          padding: "28px 24px",
-          boxShadow: "0 24px 60px rgba(0, 0, 0, 0.22)",
-          position: "relative",
-          animation: "cancelModalIn 0.2s cubic-bezier(0.16, 1, 0.3, 1)"
-        }}
-      >
-        <h3
-          style={{
-            margin: "0 0 6px",
-            fontSize: "20px",
-            fontWeight: "800",
-            color: "#111827",
-            letterSpacing: "-0.01em"
-          }}
-        >
-          Cancel Ambulance Request
-        </h3>
-        <p
-          style={{
-            margin: "0 0 18px",
-            fontSize: "14px",
-            color: "#6b7280",
-            lineHeight: "1.4"
-          }}
-        >
-          Please tell us why you're cancelling this request.
-        </p>
+  const displayId = requestId ? String(requestId).slice(-8).toUpperCase() : null;
+  const requestedAt = request?.createdAt ? new Date(request.createdAt) : null;
+  const hasValidDate = requestedAt && !Number.isNaN(requestedAt.getTime());
 
-        {error && (
-          <div
-            style={{
-              padding: "10px 14px",
-              background: "#fee2e2",
-              border: "1px solid #fca5a5",
-              borderRadius: "10px",
-              color: "#dc2626",
-              fontSize: "13px",
-              fontWeight: "600",
-              marginBottom: "16px",
-              display: "flex",
-              alignItems: "center",
-              gap: "8px"
-            }}
-          >
+  return (
+    <Modal isOpen={isOpen} onClose={handleClose} title="Cancel Ambulance Request" maxWidth="560px">
+      <form className="reschedule-modal" onSubmit={handleSubmit}>
+        <div className="reschedule-current">
+          <div className="reschedule-current-doctor">
+            <div className="cancel-ambulance-icon">
+              <Ambulance size={18} />
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <div className="reschedule-current-name">
+                {request?.patientName || "Ambulance Request"}
+              </div>
+              <div className="reschedule-current-meta cancel-ambulance-meta">
+                {request?.pickupAddress ? (
+                  <>
+                    <MapPin size={12} style={{ flexShrink: 0 }} />
+                    <span>{request.pickupAddress}</span>
+                  </>
+                ) : (
+                  <span>{request?.emergencyType || "Emergency transport"}</span>
+                )}
+              </div>
+            </div>
+          </div>
+          <div className="reschedule-current-slot">
+            <span className="reschedule-current-label">
+              {displayId ? `Request #${displayId}` : "Requested"}
+            </span>
+            {hasValidDate && (
+              <span className="reschedule-current-value">
+                <Clock size={13} />
+                {requestedAt.toLocaleDateString("en-GB", { day: "numeric", month: "short" })},{" "}
+                {requestedAt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {error && !showRequiredError && (
+          <div className="cancel-ambulance-alert">
             <AlertCircle size={15} style={{ flexShrink: 0 }} />
             <span>{error}</span>
           </div>
         )}
 
-        <form onSubmit={handleSubmit}>
-          <div>
-            <textarea
-              rows={4}
-              value={reason}
-              onChange={(e) => {
-                setReason(e.target.value);
-                if (error) setError(null);
-              }}
-              onBlur={() => setTouched(true)}
-              placeholder="Enter reason for cancellation"
-              style={{
-                width: "100%",
-                minHeight: "120px",
-                padding: "14px 16px",
-                borderRadius: "14px",
-                border: touched && !isValid ? "1.5px solid #ef4444" : "1.5px solid #d1d5db",
-                fontSize: "14.5px",
-                color: "#111827",
-                outline: "none",
-                resize: "none",
-                fontFamily: "inherit",
-                boxSizing: "border-box",
-                transition: "border-color 0.2s, box-shadow 0.2s"
-              }}
-              onFocus={(e) => {
-                if (!(touched && !isValid)) {
-                  e.target.style.borderColor = "#005963";
-                  e.target.style.boxShadow = "0 0 0 3px rgba(0, 89, 99, 0.12)";
-                }
-              }}
-              onBlurCapture={(e) => {
-                e.target.style.boxShadow = "none";
-              }}
-              autoFocus
-            />
-            {touched && !isValid && (
-              <span style={{ fontSize: "12px", color: "#dc2626", fontWeight: "600", marginTop: "4px", display: "block" }}>
-                Reason is required
-              </span>
-            )}
+        <div>
+          <h4 className="reschedule-step-title">
+            <span className="reschedule-step-num">1</span>
+            Reason for cancellation
+          </h4>
+
+          <div className="cancel-reason-chips">
+            {QUICK_REASONS.map((item) => (
+              <button
+                key={item}
+                type="button"
+                className={`cancel-reason-chip ${reason === item ? "selected" : ""}`}
+                onClick={() => {
+                  setReason(item);
+                  if (error) setError(null);
+                }}
+                disabled={isSubmitting}
+              >
+                {item}
+              </button>
+            ))}
           </div>
 
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "flex-end",
-              gap: "16px",
-              marginTop: "22px"
+          <textarea
+            className={`cancel-reason-input ${showRequiredError ? "has-error" : ""}`}
+            value={reason}
+            onChange={(e) => {
+              setReason(e.target.value);
+              if (error) setError(null);
             }}
-          >
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={isSubmitting}
-              style={{
-                background: "transparent",
-                border: "none",
-                color: "#111827",
-                fontSize: "15px",
-                fontWeight: "600",
-                cursor: isSubmitting ? "not-allowed" : "pointer",
-                padding: "8px 12px",
-                transition: "opacity 0.2s",
-                opacity: isSubmitting ? 0.6 : 1
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.opacity = "0.75"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.opacity = isSubmitting ? "0.6" : "1"; }}
-            >
-              Go Back
-            </button>
+            onBlur={() => setTouched(true)}
+            maxLength={MAX_REASON_LENGTH}
+            rows={4}
+            placeholder="Please tell us why you are cancelling..."
+            aria-invalid={showRequiredError}
+            disabled={isSubmitting}
+            autoFocus
+          />
+          <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", fontSize: "12px", marginTop: "4px" }}>
+            <span className="cancel-reason-error">{showRequiredError ? "Reason is required" : ""}</span>
+            <span style={{ color: "var(--text-muted)" }}>{reason.length}/{MAX_REASON_LENGTH}</span>
+          </div>
+        </div>
 
+        <div className="reschedule-actions">
+          <div className="reschedule-summary">
+            <span className="reschedule-summary-hint" style={{ whiteSpace: "nowrap" }}>This action cannot be undone</span>
+          </div>
+          <div className="reschedule-buttons">
+            <button type="button" className="btn btn-secondary" onClick={handleClose} disabled={isSubmitting}>
+              Keep Request
+            </button>
             <button
               type="submit"
+              className="btn"
               disabled={!isValid || isSubmitting}
               style={{
-                background: "#005963",
-                color: "#ffffff",
+                background: "var(--danger, #dc2626)",
+                color: "white",
                 border: "none",
-                borderRadius: "12px",
-                padding: "11px 22px",
-                fontSize: "15px",
-                fontWeight: "700",
-                cursor: !isValid || isSubmitting ? "not-allowed" : "pointer",
-                opacity: !isValid || isSubmitting ? 0.6 : 1,
                 display: "inline-flex",
                 alignItems: "center",
                 gap: "8px",
-                transition: "all 0.2s ease"
-              }}
-              onMouseEnter={(e) => {
-                if (isValid && !isSubmitting) {
-                  e.currentTarget.style.background = "#00474f";
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (isValid && !isSubmitting) {
-                  e.currentTarget.style.background = "#005963";
-                }
+                opacity: !isValid || isSubmitting ? 0.6 : 1,
+                cursor: !isValid || isSubmitting ? "not-allowed" : "pointer"
               }}
             >
               {isSubmitting ? (
                 <>
                   <Loader2 size={16} className="animate-spin" />
-                  <span>Cancelling…</span>
+                  Cancelling...
                 </>
               ) : (
-                "Yes, Cancel"
+                "Confirm Cancel"
               )}
             </button>
           </div>
-        </form>
-      </div>
-
-      <style>{`
-        @keyframes cancelModalIn {
-          from {
-            opacity: 0;
-            transform: scale(0.96) translateY(8px);
-          }
-          to {
-            opacity: 1;
-            transform: scale(1) translateY(0);
-          }
-        }
-      `}</style>
-    </div>
+        </div>
+      </form>
+    </Modal>
   );
-
-  if (typeof window === "undefined") return modalContent;
-  return ReactDOM.createPortal(modalContent, document.body);
 }

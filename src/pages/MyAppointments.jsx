@@ -325,7 +325,7 @@ export default function MyAppointments() {
   };
 
   return (
-    <main className="page animate-fade-in-up" style={{ padding: 0, background: 'var(--bg-app)' }}>
+    <main className="page animate-fade-in-up" style={{ padding: 0, minHeight: 0, background: 'var(--bg-app)' }}>
       {/* ── Internal Hero Banner with Gradient & Calendar Graphic ── */}
       <div className="appointments-hero-banner">
         <svg
@@ -428,7 +428,7 @@ export default function MyAppointments() {
         </div>
       </div>
 
-      <div className="container" style={{ paddingTop: '24px', paddingBottom: '60px' }}>
+      <div className="container" style={{ paddingTop: '24px', paddingBottom: '40px' }}>
 
       {/* List */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }} aria-busy={loading}>

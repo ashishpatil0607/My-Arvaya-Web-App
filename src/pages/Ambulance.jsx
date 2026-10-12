@@ -24,7 +24,7 @@ import {
   ChevronRight,
   Sparkles,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import {
   getAmbulanceRequests,
@@ -119,11 +119,13 @@ const ITEMS_PER_PAGE = 5;
 
 export default function AmbulancePage() {
   const go = useNavigate();
+  const location = useLocation();
   const { user, openLoginModal } = useAuth();
   const defaultRequests = [];
 
   const [requests, setRequests] = useState(defaultRequests);
-  const [loading, setLoading] = useState(false);
+  // Start in the loading state so the empty state doesn't flash before the first fetch resolves
+  const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [viewMapRequest, setViewMapRequest] = useState(null);
   const [historyFilter, setHistoryFilter] = useState("all");
@@ -153,14 +155,87 @@ export default function AmbulancePage() {
   };
 
   const load = async () => {
-    const data = await getAmbulanceRequests();
-    if (Array.isArray(data) && data.length > 0) setRequests(data);
-    setLoading(false);
+    try {
+      const data = await getAmbulanceRequests(user);
+      if (Array.isArray(data) && data.length > 0) {
+        // Keep optimistic (just-booked) entries until the server returns them
+        setRequests((prev) => {
+          const pending = prev.filter(
+            (p) => p.isOptimistic && !data.some((d) => isRequestMatch(d, p.requestId || p.id)),
+          );
+          return [...pending, ...data];
+        });
+      }
+      return data;
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
     load();
-  }, []);
+  }, [user]);
+
+  // Show the booking right away, then refetch until the server lists it
+  const handleRequestSuccess = (res, submitted = {}) => {
+    const created = res?.data?.data || res?.data || res || {};
+    const newId =
+      created.request_id || created.id || created.requestId || `local-${Date.now()}`;
+
+    const optimistic = {
+      id: newId,
+      requestId: newId,
+      patientId: submitted.patient_id || "",
+      patientName: submitted.patient_name || "Patient",
+      contactNumber: submitted.requester_phone || "",
+      pickupAddress: submitted.pickup_address || "",
+      pickupLat: Number(submitted.pickup_lat) || null,
+      pickupLng: Number(submitted.pickup_lng) || null,
+      emergencyType: submitted.emergency_type || "General Emergency",
+      status: "Requested",
+      eta: null,
+      createdAt: created.created_at || new Date().toISOString(),
+      ambulanceId: "N/A",
+      driverName: "Unassigned",
+      driverPhone: "",
+      isOptimistic: true,
+    };
+
+    setRequests((prev) => [optimistic, ...prev]);
+    setSelectedRequestId(newId);
+    setLoading(false);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+
+    // Backend may take a moment to list the new request; retry a few times
+    let attempts = 0;
+    const refresh = async () => {
+      attempts += 1;
+      const data = await load();
+      const found = Array.isArray(data) && data.some((d) => isRequestMatch(d, newId));
+      if (found) return;
+      if (attempts < 4) {
+        setTimeout(refresh, 1500);
+        return;
+      }
+      // Create API didn't return a usable id: drop the placeholder and let the
+      // queue fall back to the newest request from the server
+      if (String(newId).startsWith("local-")) {
+        setRequests((prev) => prev.filter((r) => !r.isOptimistic));
+        setSelectedRequestId(null);
+      }
+    };
+    refresh();
+  };
+
+  // A booking made from any AmbulanceRequestModal (Header, Home, this page)
+  // arrives here as route state
+  useEffect(() => {
+    const booked = location.state?.bookedRequest;
+    if (!booked) return;
+    // Clear it so a refresh/back navigation doesn't re-add the entry
+    go(location.pathname, { replace: true, state: null });
+    handleRequestSuccess(booked.res, booked.submitted);
+  }, [location.state]);
 
   // Requesting needs a logged-in user; send logged-out users to login and bring them back here
   const requestAmbulance = () => {
@@ -652,7 +727,7 @@ export default function AmbulancePage() {
   return (
     <main
       className="page ambulance-page animate-fade-in-up"
-      style={{ padding: 0, background: "var(--bg-app)" }}
+      style={{ padding: 0, minHeight: 0, background: "var(--bg-app)" }}
     >
       {/* ── Internal Hero ── */}
       <header className="wallet-top-shell">
@@ -706,27 +781,242 @@ export default function AmbulancePage() {
         </div>
       </header>
 
-      <div className="container" style={{ padding: "28px 10px 60px" }}>
+      <div className="container" style={{ paddingTop: "22px", paddingBottom: "40px" }}>
         {loading ? (
-          <div
-            style={{
-              textAlign: "center",
-              padding: "48px 0",
-              color: "var(--text-muted)",
-            }}
-          >
-            <div
-              style={{
-                width: "36px",
-                height: "36px",
-                border: "3px solid var(--border)",
-                borderTopColor: "var(--primary)",
-                borderRadius: "50%",
-                animation: "spin 0.8s linear infinite",
-                margin: "0 auto 12px",
-              }}
-            />
-            Loading requests…
+          /* ── Loading Skeleton (mirrors the master-detail layout) ── */
+          <div className="amb-skel" role="status" aria-busy="true" aria-live="polite">
+            <style>{`
+              .amb-skel {
+                display: grid;
+                grid-template-columns: 340px 1fr;
+                background: var(--bg-surface);
+                border: 1px solid var(--border);
+                border-radius: 22px;
+                box-shadow: 0 10px 32px rgba(5, 73, 78, 0.07);
+                overflow: hidden;
+              }
+              .amb-skel-queue {
+                border-right: 1px solid var(--border);
+                background: #ffffff;
+              }
+              .amb-skel-queue-head {
+                padding: 18px 20px;
+                border-bottom: 1px solid var(--border);
+              }
+              .amb-skel-row {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 18px 20px;
+                border-bottom: 1px solid var(--border);
+              }
+              .amb-skel-row.is-active {
+                background: var(--primary-light);
+                box-shadow: inset 3px 0 0 var(--primary);
+              }
+              .amb-skel-row-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+              .amb-skel-detail { padding: 26px 28px 30px; display: flex; flex-direction: column; gap: 22px; min-width: 0; }
+              .amb-skel-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+              .amb-skel-top-text { display: flex; flex-direction: column; gap: 10px; flex: 1; }
+              .amb-skel-status {
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                padding: 6px 14px 6px 6px;
+                border-radius: 999px;
+                background: var(--primary-light);
+                color: var(--primary);
+                font-size: 12.5px;
+                font-weight: 700;
+                white-space: nowrap;
+              }
+              .amb-skel-status-icon {
+                position: relative;
+                width: 26px;
+                height: 26px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: #ffffff;
+              }
+              .amb-skel-status-icon::after {
+                content: "";
+                position: absolute;
+                inset: -3px;
+                border-radius: 50%;
+                border: 2px solid rgba(46, 102, 110, 0.35);
+                animation: ambSkelPulse 2s ease-out infinite;
+              }
+              .amb-skel-status-icon svg { animation: ambSkelDrive 1.6s ease-in-out infinite; }
+              .amb-skel-dots span {
+                display: inline-block;
+                width: 3px;
+                height: 3px;
+                margin-left: 2px;
+                border-radius: 50%;
+                background: currentColor;
+                animation: ambSkelDot 1.2s ease-in-out infinite;
+              }
+              .amb-skel-dots span:nth-child(2) { animation-delay: 0.15s; }
+              .amb-skel-dots span:nth-child(3) { animation-delay: 0.3s; }
+              .amb-skel-stepper {
+                position: relative;
+                display: flex;
+                justify-content: space-between;
+                padding: 22px 26px;
+                border: 1px solid var(--border);
+                border-radius: 16px;
+                background: #f8fafc;
+              }
+              .amb-skel-stepper::before,
+              .amb-skel-stepper::after {
+                content: "";
+                position: absolute;
+                left: 57px;
+                top: 37px;
+                height: 3px;
+                border-radius: 3px;
+              }
+              .amb-skel-stepper::before { right: 57px; background: #e2e8f0; }
+              .amb-skel-stepper::after {
+                width: 0;
+                background: linear-gradient(90deg, var(--primary), #5fb3a8);
+                animation: ambSkelProgress 2.4s ease-in-out infinite;
+              }
+              .amb-skel-step { position: relative; z-index: 1; width: 62px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+              .amb-skel-card {
+                display: flex;
+                align-items: center;
+                gap: 14px;
+                padding: 20px 22px;
+                border: 1px solid rgba(46, 102, 110, 0.15);
+                border-radius: 16px;
+                background: #f3fbfa;
+              }
+              .amb-skel-lines { display: flex; flex-direction: column; gap: 12px; }
+              .amb-skel-bar {
+                display: block;
+                height: 12px;
+                border-radius: 8px;
+                background: linear-gradient(90deg, #e6edef 0%, #f5f9f9 40%, #e6edef 80%);
+                background-size: 220% 100%;
+                animation: ambSkelShimmer 1.4s ease-in-out infinite;
+              }
+              .amb-skel-bar.circle { border-radius: 50%; flex-shrink: 0; }
+              .amb-skel-bar.pill { border-radius: 999px; flex-shrink: 0; }
+              @keyframes ambSkelShimmer {
+                0% { background-position: 120% 0; }
+                100% { background-position: -120% 0; }
+              }
+              @keyframes ambSkelProgress {
+                0% { width: 0; opacity: 1; }
+                70% { width: calc(100% - 114px); opacity: 1; }
+                100% { width: calc(100% - 114px); opacity: 0; }
+              }
+              @keyframes ambSkelDrive {
+                0%, 100% { transform: translateX(-1.5px); }
+                50% { transform: translateX(1.5px); }
+              }
+              @keyframes ambSkelDot {
+                0%, 80%, 100% { opacity: 0.25; transform: translateY(0); }
+                40% { opacity: 1; transform: translateY(-2px); }
+              }
+              @keyframes ambSkelPulse {
+                0% { transform: scale(1); opacity: 0.9; }
+                100% { transform: scale(1.35); opacity: 0; }
+              }
+              @media (max-width: 992px) {
+                .amb-skel { grid-template-columns: 1fr; }
+                .amb-skel-queue { border-right: none; border-bottom: 1px solid var(--border); }
+                .amb-skel-row:nth-child(n + 4) { display: none; }
+              }
+              @media (max-width: 560px) {
+                .amb-skel-detail { padding: 20px 18px 22px; }
+                .amb-skel-top { flex-direction: column; }
+                .amb-skel-stepper { padding: 18px 14px; }
+                .amb-skel-step { width: 32px; }
+                .amb-skel-step .amb-skel-bar:not(.circle) { display: none; }
+                .amb-skel-stepper::before,
+                .amb-skel-stepper::after { left: 30px; top: 33px; }
+                .amb-skel-stepper::before { right: 30px; }
+                @keyframes ambSkelProgress {
+                  0% { width: 0; opacity: 1; }
+                  70% { width: calc(100% - 60px); opacity: 1; }
+                  100% { width: calc(100% - 60px); opacity: 0; }
+                }
+                .amb-skel-card .amb-skel-bar.pill { display: none; }
+              }
+              @media (prefers-reduced-motion: reduce) {
+                .amb-skel-bar,
+                .amb-skel-stepper::after,
+                .amb-skel-status-icon::after,
+                .amb-skel-status-icon svg,
+                .amb-skel-dots span { animation: none; }
+              }
+            `}</style>
+
+            {/* Queue column */}
+            <div className="amb-skel-queue" aria-hidden="true">
+              <div className="amb-skel-queue-head">
+                <span className="amb-skel-bar" style={{ width: "46%", height: "14px" }} />
+              </div>
+              {[0, 1, 2].map((i) => (
+                <div className={`amb-skel-row${i === 0 ? " is-active" : ""}`} key={i}>
+                  <span className="amb-skel-bar circle" style={{ width: "8px", height: "8px" }} />
+                  <div className="amb-skel-row-body">
+                    <span className="amb-skel-bar" style={{ width: `${70 - i * 12}%`, height: "13px" }} />
+                    <span className="amb-skel-bar" style={{ width: "54%", height: "10px" }} />
+                  </div>
+                  <span className="amb-skel-bar pill" style={{ width: "72px", height: "22px" }} />
+                </div>
+              ))}
+            </div>
+
+            {/* Detail column */}
+            <div className="amb-skel-detail">
+              <div className="amb-skel-top">
+                <div className="amb-skel-top-text" aria-hidden="true">
+                  <span className="amb-skel-bar" style={{ width: "42%", height: "20px" }} />
+                  <span className="amb-skel-bar" style={{ width: "58%", height: "12px" }} />
+                </div>
+                <span className="amb-skel-status">
+                  <span className="amb-skel-status-icon">
+                    <Ambulance size={15} />
+                  </span>
+                  Fetching your requests
+                  <span className="amb-skel-dots" aria-hidden="true">
+                    <span />
+                    <span />
+                    <span />
+                  </span>
+                </span>
+              </div>
+
+              <div className="amb-skel-stepper" aria-hidden="true">
+                {[0, 1, 2, 3, 4].map((i) => (
+                  <div className="amb-skel-step" key={i}>
+                    <span className="amb-skel-bar circle" style={{ width: "32px", height: "32px" }} />
+                    <span className="amb-skel-bar" style={{ width: "100%", height: "10px" }} />
+                  </div>
+                ))}
+              </div>
+
+              <div className="amb-skel-card" aria-hidden="true">
+                <span className="amb-skel-bar circle" style={{ width: "52px", height: "52px" }} />
+                <div className="amb-skel-row-body">
+                  <span className="amb-skel-bar" style={{ width: "40%", height: "15px" }} />
+                  <span className="amb-skel-bar" style={{ width: "28%", height: "11px" }} />
+                </div>
+                <span className="amb-skel-bar pill" style={{ width: "150px", height: "40px" }} />
+              </div>
+
+              <div className="amb-skel-lines" aria-hidden="true">
+                <span className="amb-skel-bar" style={{ width: "48%" }} />
+                <span className="amb-skel-bar" style={{ width: "40%" }} />
+                <span className="amb-skel-bar" style={{ width: "62%" }} />
+              </div>
+            </div>
           </div>
         ) : requests.length === 0 ? (
           /* ── Empty State ── */
@@ -734,7 +1024,7 @@ export default function AmbulancePage() {
             <style>{`
               .amb-empty {
                 max-width: 520px;
-                margin: 10px auto 32px;
+                margin: 0 auto;
                 padding: 28px 28px 26px;
                 text-align: center;
                 background: radial-gradient(circle at 50% 0%, rgba(46, 102, 110, 0.08), transparent 60%), var(--bg-surface);
@@ -1002,7 +1292,7 @@ export default function AmbulancePage() {
           <>
             {/* ── Active Dashboard Split View (Master-Detail) ── */}
             {selectedRequest && (
-              <section style={{ marginBottom: "36px" }}>
+              <section style={{ marginBottom: "22px" }}>
                 <div
                   className="ambulance-master-detail-card"
                   style={{
@@ -1958,7 +2248,7 @@ export default function AmbulancePage() {
             {sortedRequests.length > 0 && (
               <section
                 id="ambulance-history-section"
-                style={{ margin: "44px 0 24px", scrollMarginTop: "90px" }}
+                style={{ margin: "22px 0 0", scrollMarginTop: "90px" }}
               >
                 <div
                   className="ambulance-history-header"
@@ -3119,11 +3409,7 @@ export default function AmbulancePage() {
       {/* ── Modal (Used in React) ── */}
       {showModal && (
         <AmbulanceRequestModal
-          onClose={() => {
-            setShowModal(false);
-            load();
-          }}
-          onSuccess={() => { }}
+          onClose={() => setShowModal(false)}
         />
       )}
 
@@ -3132,6 +3418,7 @@ export default function AmbulancePage() {
         isOpen={cancelModalOpen}
         onClose={() => setCancelModalOpen(false)}
         requestId={selectedRequest?.id || selectedRequest?.requestId}
+        request={selectedRequest}
         onCancelled={(reason) => {
           handleCancelRequest(
             selectedRequest?.id || selectedRequest?.requestId,

@@ -416,7 +416,7 @@ export default function Home() {
       </section>
 
       {/* ── Value Props ── */}
-      <section style={{ padding: "20px 0" }}>
+      <section style={{ padding: "calc(var(--home-section-y) / 2) 0" }}>
         <div className="container">
           <div className="trust-features-panel trust-features-panel--home">
             <div className="trust-features-grid">
@@ -448,7 +448,7 @@ export default function Home() {
       {/* ── Arvaya Ecosystem ── */}
       <div
         className="bg-mesh-primary"
-        style={{ padding: "56px 0", borderBottom: "1px solid var(--border)" }}
+        style={{ padding: "var(--home-section-y) 0", borderBottom: "1px solid var(--border)" }}
       >
         <section className="container" style={{ padding: "0 24px" }}>
           <style>{`
@@ -456,7 +456,7 @@ export default function Home() {
           .ecosystem-grid > * { flex: 1; min-width: 250px; max-width: 320px; }
           @media (max-width: 900px) { .ecosystem-grid { justify-content: center; } }
         `}</style>
-          <div className="flex flex-col items-center text-center mb-8 w-full">
+          <div className="flex flex-col items-center text-center home-section-heading w-full">
             <span className="home-how-eyebrow">
               <Sparkles size={14} /> All-in-one
             </span>
@@ -667,14 +667,14 @@ export default function Home() {
       {/* ── Consult Top Specialties ── */}
       <section
         className="container home-specialties-section"
-        style={{ padding: "56px 24px" }}
+        style={{ padding: "var(--home-section-y) 24px" }}
       >
         <style>{`
           .specialties-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 20px; }
           @media (max-width: 900px) { .specialties-grid { grid-template-columns: repeat(3, 1fr); } }
           @media (max-width: 600px) { .specialties-grid { grid-template-columns: repeat(2, 1fr); } }
         `}</style>
-        <div className="mb-8 w-full">
+        <div className="home-section-heading w-full">
           <div className="flex flex-col items-center text-center">
             <span className="home-how-eyebrow">
               <Stethoscope size={14} /> Expert Care
@@ -765,7 +765,7 @@ export default function Home() {
       {/* ── Featured Lab Packages ── */}
       <section className="home-pkg-section">
         <div className="container">
-          <div className="mb-8 w-full">
+          <div className="home-section-heading w-full">
             <div className="flex flex-col items-center text-center">
               <span className="home-how-eyebrow">
                 <ShieldCheck size={14} /> Health Packages
@@ -1244,7 +1244,7 @@ export default function Home() {
         }
 
         .arv-app-section {
-          padding: 32px 0 40px;
+          padding: var(--home-section-y) 0;
         }
         .arv-app-card {
           position: relative;
@@ -1431,9 +1431,6 @@ export default function Home() {
         }
 
         @media (max-width: 768px) {
-          .arv-app-section {
-            padding: 24px 0 32px;
-          }
           .arv-app-card {
             flex-direction: column;
             align-items: stretch;

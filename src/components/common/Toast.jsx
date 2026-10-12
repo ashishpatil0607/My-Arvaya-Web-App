@@ -46,8 +46,8 @@ const styles = `
   background: color-mix(in srgb, var(--toast-accent) 4%, #fff);
   border: 1px solid color-mix(in srgb, var(--toast-accent) 10%, transparent); border-radius: 12px;
   font-size: 13.5px; line-height: 1.55; color: var(--text-main, #152c36);
-  white-space: pre-line; overflow-wrap: anywhere; hyphens: auto;
-  text-align: justify; text-align-last: left;
+  white-space: pre-line; overflow-wrap: break-word;
+  text-align: left; text-wrap: pretty;
   max-height: min(240px, 40vh); overflow-y: auto; overscroll-behavior: contain;
   scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--toast-accent) 30%, transparent) transparent;
 }

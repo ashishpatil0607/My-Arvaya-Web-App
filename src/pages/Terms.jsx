@@ -251,7 +251,8 @@ export default function Terms() {
           background: var(--bg-app);
           font-family: var(--font-sans);
           color: var(--text-main);
-          padding-bottom: 72px;
+          padding-bottom: 40px;
+          min-height: 0;
         }
 
         .terms-progress {

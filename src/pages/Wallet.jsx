@@ -22,8 +22,7 @@ import {
   Loader2,
   Lock,
   Star,
-  Zap,
-  Heart,
+  Wallet as WalletIcon,
   CreditCard,
   UserPlus,
   FileText,
@@ -472,30 +471,30 @@ export default function Wallet() {
           <div className="wallet-hero-banner">
             <div className="wallet-hero-content">
               <div className="wallet-hero-icon" aria-hidden="true">
-                <Gift size={26} />
+                <WalletIcon size={26} />
               </div>
 
               <div>
                 <div className="wallet-hero-pill-tag">
-                  <Sparkles size={13} /> Arvaya Wallet &middot; Rewards & Cashback
+                  <Sparkles size={13} /> Arvaya Wallet &middot; Balance & Payments
                 </div>
 
                 <h1 className="wallet-hero-title">
-                  Earn rewards on every booking & redeem with ease.
+                  Your healthcare wallet, all in one place.
                 </h1>
                 <p className="wallet-hero-subtitle">
-                  Track your balance, unlock offers and save on your next consultation.
+                  Check your balance, collect cashback and pay for appointments and lab tests in a tap.
                 </p>
 
                 <div className="wallet-hero-badges">
                   <span className="wallet-hero-badge">
-                    <Star size={14} color="#fbbf24" /> Reward Points
+                    <CreditCard size={14} color="#67e8f9" /> Quick Payments
                   </span>
                   <span className="wallet-hero-badge">
-                    <Zap size={14} color="#67e8f9" /> Instant Redeem
+                    <Tag size={14} color="#fbbf24" /> Cashback & Offers
                   </span>
                   <span className="wallet-hero-badge">
-                    <Heart size={14} color="#fb923c" /> Healthcare Benefits
+                    <History size={14} color="#fb923c" /> Transaction History
                   </span>
                 </div>
               </div>
@@ -523,7 +522,7 @@ export default function Wallet() {
             <article className="wallet-balance-card">
               <div className="wallet-balance-head">
                 <div>
-                  <span className="wallet-eyebrow"><span className="wallet-eyebrow-badge"><Star size={13} /></span> Available reward balance</span>
+                  <span className="wallet-eyebrow"><span className="wallet-eyebrow-badge"><Star size={13} /></span> Available wallet balance</span>
                   <div className="wallet-balance-value" aria-label={`₹${rewardPoints} balance`}>
                     {loading ? <Loader2 size={34} className="animate-spin" /> : `₹ ${rewardPoints.toLocaleString()}`}
                   </div>

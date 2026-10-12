@@ -2,7 +2,7 @@ import {
   Search, ChevronRight, ChevronLeft, Activity, FlaskConical, Clock, Heart, ShieldCheck, 
   Sparkles, Droplets, Bone, Brain, Baby, Eye, Ribbon, Flame, Wind, Pill, Syringe, 
   Scissors, Apple, Zap, Users, Dumbbell, Beaker, Microscope, TestTube, Stethoscope, 
-  CalendarDays, MapPin, ArrowRight, CheckCircle2, Filter, X, Wallet, Home, Building2, User
+  CalendarDays, MapPin, ArrowRight, CheckCircle2, Filter, X, Wallet, Home, Building2, User, ClipboardList
 } from "lucide-react";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -439,7 +439,7 @@ function toTitleCase(str) {
       {/* Embedded Responsive Styling for Lab UI */}
       <style>{`
         .lab-container-custom {
-          padding: 32px 16px 40px 16px;
+          padding-block: 32px 40px;
         }
 
         .lab-hero-banner {
@@ -969,7 +969,7 @@ function toTitleCase(str) {
         /* Tablets & Laptops (641px to 1024px) */
         @media (max-width: 1024px) {
           .lab-container-custom {
-            padding: 24px 16px 48px 16px;
+            padding-block: 24px 48px;
           }
           .lab-hero-banner {
             padding: 20px 22px;
@@ -990,7 +990,7 @@ function toTitleCase(str) {
         /* Mobile Devices (320px to 640px) */
         @media (max-width: 640px) {
           .lab-container-custom {
-            padding: 16px 12px 36px 12px;
+            padding-block: 16px 36px;
           }
           .lab-hero-banner {
             flex-direction: column;
@@ -1155,7 +1155,7 @@ function toTitleCase(str) {
 
         .lab-hero-banner {
           min-height: 145px;
-          margin: 0 0 14px;
+          margin: 0;
           padding: 18px 28px;
           overflow: hidden;
           color: #fff;
@@ -1425,11 +1425,11 @@ function toTitleCase(str) {
         }
 
         .lab-container-custom {
-          padding: 28px 16px 40px;
+          padding-block: 22px 40px; /* 22px below hero, same as Rewards; sides come from .container */
         }
 
         .lab-container-custom > section {
-          margin-bottom: 44px !important;
+          margin-bottom: 22px !important; /* same card spacing as Rewards page */
         }
 
         .lab-container-custom > section:last-child {
@@ -1641,6 +1641,228 @@ function toTitleCase(str) {
           height: 4px;
           border-radius: 999px;
           background: linear-gradient(90deg, var(--primary), #34d3b4);
+        }
+
+        /* Separate panels for Lab Tests and Health Packages */
+        .lab-section-panel {
+          position: relative;
+          padding: 22px 24px 8px;
+          border-radius: 26px;
+          border: 1px solid rgba(8, 120, 125, 0.14);
+          box-shadow: 0 12px 30px rgba(5, 73, 78, 0.06);
+        }
+
+        .lab-section-panel--tests {
+          background: linear-gradient(180deg, #ffffff 0%, #f3fbf9 100%);
+        }
+
+        .lab-section-panel--packages {
+          background: linear-gradient(180deg, #ffffff 0%, #eef6fb 100%);
+          border-color: rgba(51, 120, 170, 0.16);
+        }
+
+        .lab-section-panel--orders {
+          background: linear-gradient(180deg, #ffffff 0%, #fdf6ee 100%);
+          border-color: rgba(217, 119, 6, 0.16);
+          padding-bottom: 22px;
+        }
+
+        .lab-section-panel--orders .lab-section-icon {
+          background: linear-gradient(135deg, #f59e0b, #d97706);
+          box-shadow: 0 8px 18px rgba(217, 119, 6, 0.22);
+        }
+
+        /* Why Book With Us: calm, centred benefits strip in brand teal */
+        .lab-why {
+          position: relative;
+          overflow: hidden;
+          padding: 32px 28px;
+          text-align: center;
+          background:
+            radial-gradient(circle at 50% 0%, rgba(52, 211, 180, 0.12), transparent 60%),
+            linear-gradient(180deg, #ffffff 0%, #f1f9f7 100%);
+          border: 1px solid rgba(8, 120, 125, 0.14);
+          border-radius: 26px;
+          box-shadow: 0 12px 30px rgba(5, 73, 78, 0.06);
+        }
+
+        .lab-why-head {
+          max-width: 520px;
+          margin: 0 auto 26px;
+        }
+
+        .lab-why-eyebrow {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 5px 12px;
+          color: var(--primary);
+          background: var(--primary-light);
+          border: 1px solid rgba(8, 120, 125, 0.14);
+          border-radius: 999px;
+          font-size: 10.5px;
+          font-weight: 800;
+          letter-spacing: 0.05em;
+          text-transform: uppercase;
+        }
+
+        .lab-why-title {
+          margin: 12px 0 6px;
+          color: var(--text-main);
+          font-family: var(--font-display);
+          font-size: 24px;
+          font-weight: 800;
+          letter-spacing: -0.025em;
+        }
+
+        .lab-why-sub {
+          margin: 0;
+          color: var(--text-muted);
+          font-size: 13px;
+          font-weight: 500;
+        }
+
+        .lab-why-grid {
+          display: grid;
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+        }
+
+        .lab-why-item {
+          padding: 6px 20px;
+        }
+
+        /* thin dividers between columns */
+        .lab-why-item + .lab-why-item {
+          border-left: 1px solid rgba(8, 120, 125, 0.12);
+        }
+
+        .lab-why-icon {
+          display: grid;
+          width: 52px;
+          height: 52px;
+          margin: 0 auto 14px;
+          place-items: center;
+          color: var(--primary);
+          background: #ffffff;
+          border: 1px solid rgba(8, 120, 125, 0.14);
+          border-radius: 16px;
+          box-shadow: 0 8px 18px rgba(5, 73, 78, 0.08);
+          transition: transform 0.25s ease, color 0.25s ease, background 0.25s ease;
+        }
+
+        .lab-why-item:hover .lab-why-icon {
+          color: #ffffff;
+          background: linear-gradient(135deg, #10a88e, #087b73);
+          transform: translateY(-3px);
+        }
+
+        .lab-why-item h4 {
+          margin: 0 0 4px;
+          color: var(--text-main);
+          font-family: var(--font-display);
+          font-size: 14.5px;
+          font-weight: 800;
+        }
+
+        .lab-why-item p {
+          margin: 0;
+          color: var(--text-muted);
+          font-size: 12px;
+          line-height: 1.45;
+        }
+
+        @media (max-width: 1024px) {
+          .lab-why-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            row-gap: 24px;
+          }
+          .lab-why-item:nth-child(odd) {
+            border-left: none;
+          }
+        }
+
+        @media (max-width: 640px) {
+          .lab-why {
+            padding: 24px 14px;
+            border-radius: 20px;
+          }
+          .lab-why-head {
+            margin-bottom: 20px;
+          }
+          .lab-why-title {
+            font-size: 19px;
+          }
+          .lab-why-item {
+            padding: 4px 10px;
+          }
+          .lab-why-icon {
+            width: 44px;
+            height: 44px;
+            margin-bottom: 10px;
+            border-radius: 13px;
+          }
+          .lab-why-item h4 {
+            font-size: 13px;
+          }
+          .lab-why-item p {
+            font-size: 11.5px;
+          }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .lab-why-icon {
+            transition: none;
+          }
+        }
+
+        .lab-section-heading {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          min-width: 0;
+        }
+
+        .lab-section-icon {
+          display: grid;
+          width: 42px;
+          height: 42px;
+          flex-shrink: 0;
+          place-items: center;
+          color: #fff;
+          border-radius: 13px;
+          background: linear-gradient(135deg, #10a88e, #087b73);
+          box-shadow: 0 8px 18px rgba(8, 123, 115, 0.22);
+        }
+
+        .lab-section-panel--packages .lab-section-icon {
+          background: linear-gradient(135deg, #3b9fd8, #1f6f9e);
+          box-shadow: 0 8px 18px rgba(31, 111, 158, 0.22);
+        }
+
+        .lab-section-subtitle {
+          margin: 6px 0 0;
+          color: var(--text-muted);
+          font-size: 12.5px;
+          font-weight: 500;
+        }
+
+        @media (max-width: 640px) {
+          .lab-section-panel {
+            padding: 16px 12px 4px;
+            border-radius: 20px;
+          }
+          .lab-section-panel--orders {
+            padding: 16px 12px;
+            border-radius: 20px;
+          }
+          .lab-section-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 11px;
+          }
+          .lab-section-subtitle {
+            font-size: 11.5px;
+          }
         }
 
         .lab-view-all-btn {
@@ -2398,7 +2620,7 @@ function toTitleCase(str) {
           }
 
           .lab-container-custom {
-            padding: 20px 12px 42px;
+            padding-block: 22px 42px;
           }
 
           .lab-section-title {
@@ -2445,6 +2667,107 @@ function toTitleCase(str) {
           .lab-card-body,
           .pkg-card-body {
             padding: 13px;
+          }
+        }
+
+        /* Lab Test & Health Package cards: no drop shadow (overrides global.css !important rules) */
+        .labs-page .lab-card,
+        .labs-page .lab-card:hover,
+        .labs-page .pkg-card,
+        .labs-page .pkg-card:hover {
+          box-shadow: none !important;
+        }
+
+        /* ── Uniform card spacing: Lab Test & Health Package cards share the same size and margins ── */
+        .lab-card,
+        .pkg-card {
+          width: 250px;
+        }
+
+        .lab-card .lab-card-img-container,
+        .pkg-card .pkg-card-img-container {
+          height: 150px;
+        }
+
+        .lab-card .lab-card-body,
+        .pkg-card .pkg-card-body {
+          display: flex;
+          flex: 1;
+          flex-direction: column;
+          gap: 10px;
+          padding: 16px;
+        }
+
+        .lab-card .lab-card-title,
+        .pkg-card .pkg-card-title {
+          min-height: 2.6em;
+          margin: 0;
+          font-size: 15px;
+          line-height: 1.3;
+        }
+
+        .lab-card .lab-card-sub,
+        .pkg-card .pkg-card-tests-badge {
+          margin: 0;
+          padding: 5px 11px;
+          font-size: 11px;
+        }
+
+        .lab-card .lab-card-footer,
+        .pkg-card .lab-card-footer {
+          display: block;
+          margin-top: auto;
+          padding-top: 12px;
+        }
+
+        .lab-card .lab-card-footer .lab-card-btn,
+        .pkg-card .lab-card-footer .pkg-card-btn {
+          width: 100%;
+          min-height: 40px;
+          padding: 10px 16px;
+          font-size: 13px;
+          border-radius: 13px;
+        }
+
+        @media (max-width: 1024px) {
+          .lab-card,
+          .pkg-card {
+            width: 230px;
+          }
+        }
+
+        @media (max-width: 640px) {
+          .lab-card,
+          .pkg-card {
+            width: 210px;
+          }
+
+          .lab-card .lab-card-img-container,
+          .pkg-card .pkg-card-img-container {
+            height: 126px;
+          }
+
+          .lab-card .lab-card-body,
+          .pkg-card .pkg-card-body {
+            gap: 8px;
+            padding: 13px;
+          }
+
+          .lab-card .lab-card-title,
+          .pkg-card .pkg-card-title {
+            font-size: 13.5px;
+          }
+
+          .lab-card .lab-card-footer,
+          .pkg-card .lab-card-footer {
+            padding-top: 10px;
+          }
+
+          .lab-card .lab-card-footer .lab-card-btn,
+          .pkg-card .lab-card-footer .pkg-card-btn {
+            min-height: 36px;
+            padding: 8px 12px;
+            font-size: 12px;
           }
         }
       `}</style>
@@ -2505,10 +2828,39 @@ function toTitleCase(str) {
       {/* Main Content Area */}
       <div className="container lab-container-custom">
 
+        {/* ── TRUST & QUALITY FEATURES (shown first) ── */}
+        <section className="lab-why">
+          <div className="lab-why-head">
+            <span className="lab-why-eyebrow"><ShieldCheck size={13} /> Our Promise</span>
+            <h2 className="lab-why-title">Why Book With Us</h2>
+            <p className="lab-why-sub">Accurate results, delivered with care and convenience.</p>
+          </div>
+          <div className="lab-why-grid">
+            {[
+              { icon: <ShieldCheck size={22} />, title: "Certified Labs", sub: "100% NABL & ISO accredited partners" },
+              { icon: <Clock size={22} />, title: "On-time Reports", sub: "Digital reports within 12 to 24 hours" },
+              { icon: <Microscope size={22} />, title: "Home Sample Collection", sub: "Safe & hygienic doorstep phlebotomist" },
+              { icon: <Stethoscope size={22} />, title: "Doctor Verified", sub: "Reviewed by expert clinical pathologists" },
+            ].map((feature) => (
+              <div key={feature.title} className="lab-why-item">
+                <div className="lab-why-icon" aria-hidden="true">{feature.icon}</div>
+                <h4>{feature.title}</h4>
+                <p>{feature.sub}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
         {/* ── SECTION 1: LAB TESTS ── */}
-        <section style={{ marginBottom: '48px' }}>
+        <section className="lab-section-panel lab-section-panel--tests">
           <div className="lab-section-header">
-            <h2 className="lab-section-title">Lab Tests</h2>
+            <div className="lab-section-heading">
+              <span className="lab-section-icon" aria-hidden="true"><TestTube size={20} /></span>
+              <div>
+                <h2 className="lab-section-title">Lab Tests</h2>
+                <p className="lab-section-subtitle">Individual tests for specific health checks</p>
+              </div>
+            </div>
             <button 
               className="lab-view-all-btn"
               onClick={() => go("/labs/all-tests")}
@@ -2578,9 +2930,15 @@ function toTitleCase(str) {
         </section>
 
         {/* ── SECTION 2: HEALTH PACKAGES ── */}
-        <section style={{ marginBottom: '48px' }}>
+        <section className="lab-section-panel lab-section-panel--packages">
           <div className="lab-section-header">
-            <h2 className="lab-section-title">Health Packages</h2>
+            <div className="lab-section-heading">
+              <span className="lab-section-icon" aria-hidden="true"><Stethoscope size={20} /></span>
+              <div>
+                <h2 className="lab-section-title">Health Packages</h2>
+                <p className="lab-section-subtitle">Bundled checkups covering multiple tests at a better price</p>
+              </div>
+            </div>
             <button 
               className="lab-view-all-btn"
               onClick={() => go("/labs/all-packages")}
@@ -2652,9 +3010,15 @@ function toTitleCase(str) {
         </section>
 
         {/* ── SECTION 3: MY ORDERS ── */}
-        <section style={{ marginBottom: '48px' }}>
+        <section className="lab-section-panel lab-section-panel--orders">
           <div className="lab-section-header">
-            <h2 className="lab-section-title">My Orders</h2>
+            <div className="lab-section-heading">
+              <span className="lab-section-icon" aria-hidden="true"><ClipboardList size={20} /></span>
+              <div>
+                <h2 className="lab-section-title">My Orders</h2>
+                <p className="lab-section-subtitle">Track your recent bookings, sample status and reports</p>
+              </div>
+            </div>
             <button className="lab-view-all-btn" onClick={() => go('/orders')}>
               View All <ArrowRight size={16} />
             </button>
@@ -2737,28 +3101,6 @@ function toTitleCase(str) {
               </div>
             </div>
           )}
-        </section>
-
-        {/* ── SECTION 4: TRUST & QUALITY FEATURES ── */}
-        <section className="trust-features-panel">
-          <div className="trust-features-grid">
-            {[
-              { icon: <ShieldCheck size={26} />, title: "Certified Labs", sub: "100% NABL & ISO accredited partners", color: "var(--primary)", bg: "var(--primary-light)" },
-              { icon: <Clock size={26} />, title: "On-time Reports", sub: "Digital reports within 12 to 24 hours", color: "#2563EB", bg: "#DBEAFE" },
-              { icon: <Microscope size={26} />, title: "Home Sample Collection", sub: "Safe & hygienic doorstep phlebotomist", color: "var(--accent)", bg: "#FEF0E2" },
-              { icon: <Stethoscope size={26} />, title: "Doctor Verified", sub: "Reviewed by expert clinical pathologists", color: "#DB2777", bg: "#FCE7F3" },
-            ].map((feature, i) => (
-              <div key={i} className="trust-feature-item" style={{ "--tf-color": feature.color, "--tf-bg": feature.bg }}>
-                <div className="trust-feature-icon" style={{ background: feature.bg, color: feature.color }}>
-                  {feature.icon}
-                </div>
-                <div>
-                  <h4>{feature.title}</h4>
-                  <p>{feature.sub}</p>
-                </div>
-              </div>
-            ))}
-          </div>
         </section>
 
       </div>

@@ -774,7 +774,7 @@ export default function Profile() {
   const inputStyle = !isEditing ? { background: 'var(--bg-app)', borderColor: 'transparent', color: 'var(--text-main)', padding: '12px 16px' } : { padding: '12px 16px' };
 
   return (
-    <main id="profile-page-main" className="page animate-fade-in-up" style={{ padding: 0, background: 'var(--bg-app)' }}>
+    <main id="profile-page-main" className="page animate-fade-in-up" style={{ padding: 0, minHeight: 0, background: 'var(--bg-app)' }}>
 
       {/* ── Internal Hero ── */}
       <div className="profile-hero-banner">
@@ -822,7 +822,7 @@ export default function Profile() {
         </div>
       </div>
 
-      <div className="container" style={{ paddingTop: '32px', paddingBottom: '60px' }}>
+      <div className="container" style={{ paddingTop: '32px', paddingBottom: '40px' }}>
         <div className="profile-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 320px) 1fr', gap: '32px', alignItems: 'start' }}>
 
           {/* Left Sticky Profile Card */}

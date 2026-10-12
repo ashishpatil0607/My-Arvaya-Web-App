@@ -1743,6 +1743,10 @@ export default function LiveAmbulanceTracker({
         isOpen={showCancelModal}
         onClose={() => setShowCancelModal(false)}
         requestId={requestId}
+        request={{
+          patientName: patientName || tracking?.patientName,
+          pickupAddress
+        }}
         onCancelled={handleModalCancelled}
       />
     </div>

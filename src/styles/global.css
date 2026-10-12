@@ -1781,8 +1781,8 @@ input[type="radio"]:focus-visible {
 
 /* ── Wallet page ─────────────────────────────────────────── */
 .wallet-page {
-  min-height: 100vh;
-  padding-bottom: 64px;
+  min-height: 0;
+  padding-bottom: 40px;
   background:
     radial-gradient(circle at 92% 10%, rgba(194, 241, 229, 0.72), transparent 26%),
     linear-gradient(180deg, #f5faf9 0%, #f8fbfb 52%, #f3f8f7 100%);
@@ -1845,8 +1845,8 @@ input[type="radio"]:focus-visible {
   font-size: 14px;
 }
 
-.wallet-shell {
-  padding-top: 30px;
+.container.wallet-shell {
+  padding-top: 22px;
 }
 
 .wallet-layout {
@@ -2989,8 +2989,8 @@ input[type="radio"]:focus-visible {
     font-size: 12px;
   }
 
-  .wallet-shell {
-    padding-top: 20px;
+  .container.wallet-shell {
+    padding-top: 22px;
   }
 
   .wallet-balance-card {
@@ -4065,8 +4065,8 @@ input[type="radio"]:focus-visible {
 
 /* ── Rewards page ────────────────────────────────────────── */
 .rewards-page {
-  min-height: 100vh;
-  padding-bottom: 64px;
+  min-height: 0;
+  padding-bottom: 40px;
   background:
     radial-gradient(circle at 94% 9%, rgba(194, 241, 229, 0.7), transparent 27%),
     linear-gradient(180deg, #f5faf9 0%, #f8fbfb 54%, #f3f8f7 100%);
@@ -4079,14 +4079,14 @@ input[type="radio"]:focus-visible {
   box-shadow: 0 8px 20px rgba(232, 115, 28, 0.1);
 }
 
-.rewards-shell {
-  padding-top: 30px;
+.container.rewards-shell {
+  padding-top: 22px;
 }
 
 .rewards-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 390px;
-  gap: 24px;
+  gap: 22px;
   align-items: stretch;
 }
 
@@ -4656,8 +4656,8 @@ input[type="radio"]:focus-visible {
     padding-bottom: 42px;
   }
 
-  .rewards-shell {
-    padding-top: 20px;
+  .container.rewards-shell {
+    padding-top: 22px;
   }
 
   .new-rewards-card {
@@ -6873,7 +6873,7 @@ body {
   bottom: 10rem;
 }
 
-main.page:not(.home-page):not(.wallet-page):not(.rewards-page):not(.ambulance-page):not(.confirmed-page):not(.about-page)>div:first-of-type {
+main.page:not(.home-page):not(.wallet-page):not(.rewards-page):not(.labs-page):not(.ambulance-page):not(.confirmed-page):not(.about-page)>div:first-of-type {
   background:
     radial-gradient(circle at 92% 12%, rgba(116, 228, 189, 0.28), transparent 15rem),
     linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(229, 247, 243, 0.92)) !important;
@@ -7245,9 +7245,26 @@ header.glass .header-secondary-nav a:focus-visible {
   }
 }
 
+/* Shared vertical rhythm for Home page sections */
+.home-page {
+  --home-section-y: 64px;
+  --home-heading-gap: 40px;
+}
+
+@media (max-width: 768px) {
+  .home-page {
+    --home-section-y: 48px;
+    --home-heading-gap: 32px;
+  }
+}
+
+.home-section-heading {
+  margin-bottom: var(--home-heading-gap);
+}
+
 .home-how-section {
   position: relative;
-  padding: 72px 16px 80px;
+  padding: var(--home-section-y) 16px;
   background:
     radial-gradient(ellipse 50% 60% at 0% 0%, rgba(8, 120, 125, 0.09), transparent 70%),
     radial-gradient(ellipse 45% 55% at 100% 100%, rgba(255, 131, 41, 0.07), transparent 70%),
@@ -7324,7 +7341,8 @@ header.glass .header-secondary-nav a:focus-visible {
 .home-how-heading {
   position: relative;
   z-index: 1;
-  margin-bottom: 64px;
+  /* step icons overhang the cards by 40px, so add that to keep the visible gap equal */
+  margin-bottom: calc(var(--home-heading-gap) + 40px);
   text-align: center;
 }
 
@@ -7768,18 +7786,12 @@ header.glass .header-secondary-nav a:focus-visible {
 /* Home: Featured Health Packages */
 .home-pkg-section {
   position: relative;
-  padding: 64px 0 64px;
+  padding: var(--home-section-y) 0;
   background:
     radial-gradient(ellipse 45% 55% at 100% 0%, rgba(8, 120, 125, 0.08), transparent 70%),
     radial-gradient(ellipse 40% 50% at 0% 100%, rgba(255, 131, 41, 0.06), transparent 70%),
     linear-gradient(180deg, #ffffff 0%, #f1f9f8 100%);
   border-top: 1px solid rgba(8, 120, 125, 0.1);
-}
-
-@media (max-width: 600px) {
-  .home-pkg-section {
-    padding: 44px 0 48px;
-  }
 }
 
 .packages-grid {
@@ -7941,7 +7953,7 @@ header.glass .header-secondary-nav a:focus-visible {
 /* Home: Testimonials */
 .home-reviews-section {
   position: relative;
-  padding: 60px 0;
+  padding: var(--home-section-y) 0;
   background:
     radial-gradient(circle at 8% 20%, rgba(99, 225, 181, 0.14), transparent 30%),
     radial-gradient(circle at 92% 85%, rgba(37, 131, 216, 0.08), transparent 32%),
@@ -7954,7 +7966,7 @@ header.glass .header-secondary-nav a:focus-visible {
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-bottom: 40px;
+  margin-bottom: var(--home-heading-gap);
   text-align: center;
 }
 
@@ -9959,7 +9971,6 @@ header.glass .header-secondary-nav a:focus-visible {
     margin-bottom: 18px !important;
   }
 
-  .ecosystem-grid,
   .specialties-grid,
   .packages-grid {
     display: flex !important;
@@ -9970,16 +9981,25 @@ header.glass .header-secondary-nav a:focus-visible {
     scrollbar-width: none;
   }
 
-  .ecosystem-grid::-webkit-scrollbar,
   .specialties-grid::-webkit-scrollbar,
   .packages-grid::-webkit-scrollbar {
     display: none;
   }
 
-  .ecosystem-grid>*,
   .packages-grid>* {
     flex: 0 0 min(82vw, 315px);
     scroll-snap-align: start;
+  }
+
+  /* ecosystem cards stack vertically; no scroll container so their shadows aren't clipped */
+  .ecosystem-grid {
+    flex-direction: column;
+    gap: 16px !important;
+  }
+
+  .ecosystem-grid>* {
+    flex: none;
+    max-width: none !important;
   }
 
   .specialties-grid>* {
@@ -9988,7 +10008,7 @@ header.glass .header-secondary-nav a:focus-visible {
   }
 
   .home-specialties-section {
-    padding: 44px 14px !important;
+    padding: var(--home-section-y) 14px !important;
   }
 
   .home-specialties-section .specialties-grid {
@@ -10044,15 +10064,11 @@ header.glass .header-secondary-nav a:focus-visible {
   }
 
   .home-how-section {
-    padding: 48px 12px 52px;
+    padding: var(--home-section-y) 12px;
   }
 
   .home-how-panel {
     padding: 0 4px !important;
-  }
-
-  .home-how-heading {
-    margin-bottom: 54px;
   }
 
   .home-how-card {
@@ -12850,6 +12866,81 @@ schedule-calendar-card {
   font-weight: 500;
 }
 
+/* Cancel Ambulance modal */
+.cancel-ambulance-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: #fee2e2;
+  color: #dc2626;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.cancel-ambulance-meta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.cancel-ambulance-meta span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cancel-ambulance-alert {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.cancel-reason-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.cancel-reason-chip {
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: #ffffff;
+  color: var(--text-main);
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+
+.cancel-reason-chip:hover:not(:disabled) {
+  border-color: var(--primary);
+  color: var(--primary-dark);
+}
+
+.cancel-reason-chip.selected {
+  background: var(--primary-light);
+  border-color: var(--primary);
+  color: var(--primary-dark);
+}
+
+.cancel-reason-chip:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 @media (max-width: 768px) {
   .reschedule-grid {
     grid-template-columns: 1fr;
@@ -15521,8 +15612,8 @@ schedule-calendar-card {
    ABOUT PAGE
    ═══════════════════════════════════════════════════════════ */
 .about-page {
-  min-height: calc(100vh - 120px);
-  padding: 24px 16px 64px;
+  min-height: 0;
+  padding: 24px 16px 40px;
   font-family: var(--font-sans);
 }
 

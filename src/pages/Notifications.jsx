@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Bell, Calendar, Activity, CreditCard, Gift, AlertCircle, Info, Trash2, CheckCircle2, ChevronRight, Clock } from "lucide-react";
+import { Bell, Calendar, Activity, CreditCard, Gift, AlertCircle, Info, ChevronRight, Clock } from "lucide-react";
 import { Link } from "react-router-dom";
 import { getNotifications } from "../services/dataService";
 
@@ -101,14 +101,6 @@ export default function Notifications() {
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  const markAllRead = () => {
-    setNotifications(notifications.map(n => ({ ...n, read: true })));
-  };
-
-  const deleteNotification = (id) => {
-    setNotifications(notifications.filter(n => n.id !== id));
-  };
-
   const filteredNotifications = notifications.filter(n => {
     if (filter === "all") return true;
     if (filter === "appointment") {
@@ -136,7 +128,7 @@ export default function Notifications() {
   });
 
   return (
-    <main className="page animate-fade-in-up" style={{ padding: 0, background: 'var(--bg-app)' }}>
+    <main className="page animate-fade-in-up" style={{ padding: 0, minHeight: 0, background: 'var(--bg-app)' }}>
       
       {/* ── Internal Hero Banner ── */}
       <div className="notif-hero-banner">
@@ -165,15 +157,6 @@ export default function Notifications() {
             </div>
 
             <div className="notif-hero-actions">
-              <button
-                type="button"
-                className="notif-mark-read-btn"
-                onClick={markAllRead}
-                disabled={unreadCount === 0}
-              >
-                <CheckCircle2 size={15} /> Mark all as read
-              </button>
-
               <div className="notif-hero-graphic" aria-hidden="true">
                 <svg className="notif-hero-svg" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
                   {/* Sparkles */}
@@ -196,7 +179,7 @@ export default function Notifications() {
         </div>
       </div>
 
-      <div className="container" style={{ paddingTop: '24px', paddingBottom: '28px' }}>
+      <div className="container" style={{ paddingTop: '24px', paddingBottom: '40px' }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(240px, 280px) minmax(0, 1fr)', gap: '24px', alignItems: 'start' }} className="notifications-grid">
           
           {/* Sidebar Filters */}
@@ -305,16 +288,6 @@ export default function Notifications() {
                         <span className="notif-card-tag">{TYPE_LABELS[notification.type] || "General"}</span>
                       </div>
                     </div>
-
-                    <button
-                      type="button"
-                      onClick={() => deleteNotification(notification.id)}
-                      className="notif-delete-btn"
-                      title="Delete"
-                      aria-label="Delete notification"
-                    >
-                      <Trash2 size={15} />
-                    </button>
                   </article>
                 ))}
               </div>
