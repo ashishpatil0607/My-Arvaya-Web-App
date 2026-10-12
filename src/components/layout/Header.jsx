@@ -1,4 +1,4 @@
-import { Search, MapPin, ChevronDown, ChevronRight, ChevronLeft, Users, User, LogOut, Smartphone, HelpCircle, Menu, X, ArrowRight, Check, Stethoscope, FlaskConical, Building2, Settings, Bell, Gift, Send, Mail, Copy, Share2, Shield, Home, Wallet, Truck, Phone, Siren, CalendarCheck, ShoppingBag, Info, MessageSquare } from "lucide-react";
+import { Search, MapPin, ChevronDown, ChevronRight, ChevronLeft, Users, User, LogOut, Smartphone, HelpCircle, Menu, X, ArrowRight, Check, FlaskConical, Bell, Gift, Send, Mail, Copy, Share2, Shield, Home, Wallet, Truck, Phone, Siren, CalendarCheck, ShoppingBag, Info, MessageSquare } from "lucide-react";
 import { Link, NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useState, useRef, useEffect, useMemo } from "react";
@@ -1021,6 +1021,17 @@ export default function Header() {
 
       </header>
 
+      {/* Floating SOS button — sits above the chat FAB on every page */}
+      <button
+        type="button"
+        className="sos-fab"
+        aria-label="SOS - Call Ambulance"
+        onClick={() => (user ? setShowAmbulanceModal(true) : setShowAmbulanceLoginPrompt(true))}
+      >
+        <Siren size={20} strokeWidth={2.4} />
+        SOS
+      </button>
+
       {showAmbulanceModal && (
         <AmbulanceRequestModal onClose={() => setShowAmbulanceModal(false)} />
       )}
@@ -1197,16 +1208,25 @@ export default function Header() {
                   {/* User Profile / Auth CTA */}
                   <div style={{ padding: '10px 12px', borderBottom: '1px solid var(--border)', background: 'linear-gradient(135deg, rgba(46, 102, 110, 0.04) 0%, rgba(46, 102, 110, 0.08) 100%)' }}>
                     {user ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', background: 'var(--bg-surface)', padding: '10px 12px', borderRadius: '12px', border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(18,51,58,0.04)' }}>
+                      <div style={{ background: 'var(--bg-surface)', borderRadius: '16px', border: '1px solid var(--border)', boxShadow: '0 6px 18px rgba(18,51,58,0.08)', overflow: 'hidden' }}>
 
-                        {/* Top row: Avatar + Name + Shield badge */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        {/* Hero band: Avatar + Name + Verified badge */}
+                        <div style={{
+                          position: 'relative', overflow: 'hidden',
+                          display: 'flex', alignItems: 'center', gap: '12px',
+                          padding: '14px',
+                          background: 'linear-gradient(135deg, #0f4c55 0%, #1b6b72 55%, #2a8a8f 100%)'
+                        }}>
+                          {/* Decorative circles */}
+                          <span aria-hidden="true" style={{ position: 'absolute', top: '-34px', right: '-24px', width: '110px', height: '110px', borderRadius: '50%', background: 'rgba(255,255,255,0.08)' }} />
+                          <span aria-hidden="true" style={{ position: 'absolute', bottom: '-40px', right: '56px', width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)' }} />
+
                           <div style={{
-                            width: '36px', height: '36px', borderRadius: '50%',
-                            background: 'linear-gradient(135deg, var(--primary), var(--primary-dark))',
+                            width: '48px', height: '48px', borderRadius: '50%',
+                            background: 'linear-gradient(135deg, #f59e0b, #f97316)',
                             color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontWeight: '700', fontSize: '15px', boxShadow: '0 2px 6px rgba(46,102,110,0.2)',
-                            overflow: 'hidden', position: 'relative', border: '1.5px solid white', flexShrink: 0
+                            fontWeight: '800', fontSize: '17px', boxShadow: '0 0 0 3px rgba(255,255,255,0.25), 0 4px 10px rgba(0,0,0,0.18)',
+                            overflow: 'hidden', position: 'relative', border: '2px solid white', flexShrink: 0
                           }}>
                             {headerAvatar ? (
                               <img
@@ -1220,18 +1240,20 @@ export default function Header() {
                             ) : null}
                             {displayInitial}
                           </div>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <span style={{ fontSize: '10px', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Logged in as</span>
-                            <b style={{ display: 'block', fontSize: '14px', fontWeight: '800', color: 'var(--text-main)', lineHeight: '1.3', wordBreak: 'break-word' }} title={displayName}>{displayName}</b>
-                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', background: 'rgba(34, 197, 94, 0.1)', color: '#15803d', fontSize: '9.5px', fontWeight: '700', padding: '1px 6px', borderRadius: '8px', marginTop: '2px' }}>
-                              <Shield size={9} /> Verified Patient
+                          <div style={{ flex: 1, minWidth: 0, position: 'relative' }}>
+                            <span style={{ fontSize: '10px', fontWeight: '600', color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Welcome back</span>
+                            <b style={{ display: 'block', fontSize: '16px', fontWeight: '800', color: '#ffffff', lineHeight: '1.25', wordBreak: 'break-word' }} title={displayName}>{displayName}</b>
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'rgba(255,255,255,0.16)', border: '1px solid rgba(255,255,255,0.22)', color: '#ffffff', fontSize: '10px', fontWeight: '700', padding: '2px 8px', borderRadius: '999px', marginTop: '5px' }}>
+                              <Shield size={10} style={{ color: '#86efac' }} /> Verified Patient
                             </div>
                           </div>
                         </div>
 
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '10px' }}>
+
                         {/* Single Switch Account Button in Mobile Drawer */}
                         {otherProfiles.length > 0 && (
-                          <div style={{ paddingTop: '6px', borderTop: '1px solid var(--border)' }}>
+                          <div>
                             <button
                               type="button"
                               onClick={() => setMobileDrawerTab("switch")}
@@ -1281,54 +1303,40 @@ export default function Header() {
                           </div>
                         )}
 
-                        {/* Action buttons: Profile, Settings, Logout in a single compact row */}
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '6px', paddingTop: '6px', borderTop: '1px solid var(--border)' }}>
-                          <button
-                            className="btn btn-primary"
-                            style={{
-                              padding: '6px 8px', fontSize: '12px', fontWeight: '700', borderRadius: '8px',
-                              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
-                              boxShadow: 'none'
-                            }}
-                            onClick={() => {
-                              setMobileDrawerOpen(false);
-                              go("/profile");
-                            }}
-                          >
-                            <User size={13} /> Profile
-                          </button>
-                          <button
-                            className="btn btn-secondary"
-                            style={{
-                              padding: '6px 8px', fontSize: '12px', fontWeight: '600', borderRadius: '8px',
-                              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
-                              background: 'var(--bg-app)', border: '1px solid var(--border)', color: 'var(--text-main)'
-                            }}
-                            onClick={() => {
-                              setMobileDrawerOpen(false);
-                              go("/settings");
-                            }}
-                          >
-                            <Settings size={13} /> Settings
-                          </button>
-                          <button
-                            onClick={() => {
-                              logout();
-                              setMobileDrawerOpen(false);
-                              go("/");
-                            }}
-                            style={{
-                              padding: '6px 10px', fontSize: '12px', fontWeight: '700',
-                              borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              gap: '4px', color: '#dc2626', background: 'rgba(220, 38, 38, 0.06)',
-                              border: '1px solid rgba(220, 38, 38, 0.18)', cursor: 'pointer'
-                            }}
-                            title="Logout"
-                          >
-                            <LogOut size={13} /> Logout
-                          </button>
+                        {/* Action buttons: Profile, Logout in a single compact row */}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
+                          {[
+                            {
+                              label: "Profile", Icon: User, color: '#1b6b72', tint: 'rgba(27, 107, 114, 0.1)',
+                              onClick: () => { setMobileDrawerOpen(false); go("/profile"); }
+                            },
+                            {
+                              label: "Logout", Icon: LogOut, color: '#dc2626', tint: 'rgba(220, 38, 38, 0.1)',
+                              onClick: () => { logout(); setMobileDrawerOpen(false); go("/"); }
+                            },
+                          ].map(({ label, Icon, color, tint, onClick }) => (
+                            <button
+                              key={label}
+                              type="button"
+                              onClick={onClick}
+                              title={label}
+                              style={{
+                                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                                padding: '10px 6px', borderRadius: '12px',
+                                background: 'var(--bg-app)', border: '1px solid var(--border)',
+                                fontSize: '11.5px', fontWeight: '700', color: label === "Logout" ? color : 'var(--text-main)',
+                                cursor: 'pointer', transition: 'transform 0.15s ease, box-shadow 0.15s ease'
+                              }}
+                            >
+                              <span style={{ width: '32px', height: '32px', borderRadius: '10px', background: tint, color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <Icon size={16} />
+                              </span>
+                              {label}
+                            </button>
+                          ))}
                         </div>
 
+                        </div>
                       </div>
                     ) : (
                       <div style={{ background: 'var(--bg-surface)', padding: '12px', borderRadius: '12px', border: '1px solid var(--border)' }}>
@@ -1415,11 +1423,45 @@ export default function Header() {
                     <div style={{ margin: '8px 0 4px', borderTop: '1px solid var(--border)' }} />
 
                     <span style={{ fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.05em', marginBottom: '3px', paddingLeft: '4px' }}>More Services</span>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px', color: 'var(--text-muted)', paddingLeft: '6px', paddingBottom: '16px' }}>
-                      <span className="flex items-center gap-2 cursor-pointer"><Smartphone size={13} /> Download Mobile App</span>
-                      <span className="flex items-center gap-2 cursor-pointer"><HelpCircle size={13} /> Help & Support</span>
-                      <span>For Healthcare Providers</span>
-                      <span>Corporate Wellness</span>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', paddingBottom: '16px' }}>
+                      {[
+                        ["Download App", "iOS & Android", Smartphone, "/#download-app"],
+                        ["Help & Support", "24/7 assistance", HelpCircle, "/support"],
+                        ["Feedback", "Share your thoughts", MessageSquare, null, () => window.dispatchEvent(new Event("arvaya_open_feedback"))],
+                        ["About", "Know about ARVAYA", Info, "/about"],
+                      ].map(([label, sub, Icon, path, action]) => (
+                        <button
+                          key={label}
+                          type="button"
+                          onClick={() => {
+                            if (!path && !action) return;
+                            setMobileDrawerOpen(false);
+                            if (action) action();
+                            else go(path);
+                          }}
+                          style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'flex-start',
+                            gap: '8px',
+                            padding: '10px',
+                            borderRadius: '10px',
+                            border: '1px solid var(--border)',
+                            background: 'var(--surface, #fff)',
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                            minWidth: 0
+                          }}
+                        >
+                          <span style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'var(--primary-light)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <Icon size={15} />
+                          </span>
+                          <span style={{ display: 'flex', flexDirection: 'column', gap: '1px', minWidth: 0 }}>
+                            <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-main)', lineHeight: 1.3 }}>{label}</span>
+                            <span style={{ fontSize: '10.5px', color: 'var(--text-muted)', lineHeight: 1.3 }}>{sub}</span>
+                          </span>
+                        </button>
+                      ))}
                     </div>
                   </div>
                 </div>
@@ -2043,9 +2085,11 @@ export default function Header() {
             display: none !important;
           }
           .header-login-btn {
-            width: 36px !important;
+            width: 34px !important;
             height: 34px !important;
+            min-height: 34px !important;
             padding: 0 !important;
+            border-radius: 50% !important;
             justify-content: center !important;
           }
         }
@@ -2126,10 +2170,14 @@ export default function Header() {
             display: none !important;
           }
           .header-login-btn {
-            padding: 4px 8px !important;
-            border-radius: 30px !important;
-            height: 32px !important;
-            gap: 4px !important;
+            width: 34px !important;
+            height: 34px !important;
+            min-width: 34px !important;
+            min-height: 34px !important;
+            padding: 0 !important;
+            border-radius: 50% !important;
+            flex-shrink: 0 !important;
+            gap: 0 !important;
             justify-content: center !important;
           }
           .header-profile-dropdown {

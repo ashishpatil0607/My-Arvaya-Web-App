@@ -761,6 +761,63 @@ export default function AmbulancePage() {
                     <Clock size={14} color="#60a5fa" /> Real-time Tracking
                   </span>
                 </div>
+
+                {!showModal && (
+                  <button
+                    type="button"
+                    onClick={requestAmbulance}
+                    className="amb-hero-sos"
+                    title="Emergency SOS: request an ambulance now"
+                  >
+                    <span className="amb-hero-sos-icon" aria-hidden="true">
+                      <AlertTriangle size={12} />
+                    </span>
+                    <span className="amb-hero-sos-text">
+                      <strong>SOS</strong> Request Ambulance
+                    </span>
+                  </button>
+                )}
+                <style>{`
+                  .amb-hero-sos {
+                    margin-top: 10px;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                    padding: 6px 12px 6px 6px;
+                    background: #dc2626;
+                    color: #fff;
+                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    border-radius: 999px;
+                    font-size: 11px;
+                    font-weight: 600;
+                    line-height: 1;
+                    white-space: nowrap;
+                    cursor: pointer;
+                    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.35);
+                    transition: transform 0.2s ease, background 0.2s ease;
+                    animation: amb-sos-pulse 2s ease-out infinite;
+                  }
+                  .amb-hero-sos:hover { background: #b91c1c; transform: translateY(-1px); }
+                  .amb-hero-sos:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+                  .amb-hero-sos-icon {
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    width: 20px;
+                    height: 20px;
+                    border-radius: 50%;
+                    background: rgba(255, 255, 255, 0.2);
+                  }
+                  .amb-hero-sos-text strong { font-weight: 800; letter-spacing: 0.06em; margin-right: 3px; }
+                  @keyframes amb-sos-pulse {
+                    0% { box-shadow: 0 4px 12px rgba(220, 38, 38, 0.35), 0 0 0 0 rgba(248, 113, 113, 0.5); }
+                    70% { box-shadow: 0 4px 12px rgba(220, 38, 38, 0.35), 0 0 0 7px rgba(248, 113, 113, 0); }
+                    100% { box-shadow: 0 4px 12px rgba(220, 38, 38, 0.35), 0 0 0 0 rgba(248, 113, 113, 0); }
+                  }
+                  @media (prefers-reduced-motion: reduce) {
+                    .amb-hero-sos { animation: none; }
+                  }
+                `}</style>
               </div>
             </div>
 
@@ -1123,7 +1180,7 @@ export default function AmbulancePage() {
                 100% { transform: scale(1.35); opacity: 0; }
               }
               @media (max-width: 560px) {
-                .amb-empty { padding: 24px 16px 22px; margin: 6px auto 24px; }
+                .amb-empty { padding: 24px 16px 22px; margin: 0 auto 24px; }
                 .amb-empty-btn { width: 100%; }
               }
               @media (prefers-reduced-motion: reduce) {
@@ -1726,8 +1783,8 @@ export default function AmbulancePage() {
                                 background: "#f8fafc",
                                 borderRadius: "16px",
                                 border: "1px solid #e2e8f0",
-                                padding: "16px 20px 34px",
-                                marginBottom: "18px",
+                                padding: "16px 20px",
+                                marginBottom: "14px",
                               }}
                             >
                               <div
@@ -1735,7 +1792,7 @@ export default function AmbulancePage() {
                                 style={{
                                   display: "flex",
                                   width: "100%",
-                                  padding: "0 8px",
+                                  padding: "0 8px 34px",
                                 }}
                               >
                                 {STATUS_FLOW.map((s, i) => {
@@ -1935,7 +1992,7 @@ export default function AmbulancePage() {
                                 border: "1px solid rgba(46, 102, 110, 0.18)",
                                 borderRadius: "14px",
                                 padding: "14px 18px",
-                                marginTop: "16px",
+                                marginTop: 0,
                                 marginBottom: "14px",
                                 display: "flex",
                                 alignItems: "center",
@@ -2915,8 +2972,8 @@ export default function AmbulancePage() {
               .ambulance-stepper-track {
                 display: flex;
                 width: 100%;
-                padding: 0 8px 30px 8px;
-                margin-bottom: 18px;
+                padding: 0 8px 34px 8px;
+                margin-bottom: 0;
               }
               .ambulance-step-item {
                 flex: 1;
@@ -3054,12 +3111,12 @@ export default function AmbulancePage() {
 
                 /* Prominent Stepper on Mobile (Kept Generous, Not Shrunk) */
                 .ambulance-stepper-card {
-                  padding: 14px 10px 42px !important;
-                  margin-bottom: 16px !important;
+                  padding: 14px 10px !important;
+                  margin-bottom: 12px !important;
                 }
                 .ambulance-stepper-track {
-                  padding: 0 4px 38px 4px !important;
-                  margin-bottom: 6px !important;
+                  padding: 0 4px 30px 4px !important;
+                  margin-bottom: 0 !important;
                 }
                 .ambulance-step-circle {
                   width: 32px !important;
@@ -3276,10 +3333,10 @@ export default function AmbulancePage() {
                   padding: 4px 7px !important;
                 }
                 .ambulance-stepper-card {
-                  padding: 12px 8px 38px !important;
+                  padding: 12px 8px !important;
                 }
                 .ambulance-stepper-track {
-                  padding: 0 2px 34px 2px !important;
+                  padding: 0 2px 28px 2px !important;
                 }
                 .ambulance-step-circle {
                   width: 29px !important;
@@ -3349,10 +3406,6 @@ export default function AmbulancePage() {
                   width: 100% !important;
                   justify-content: space-between !important;
                 }
-                .ambulance-fab-sos {
-                  bottom: 20px !important;
-                  right: 20px !important;
-                }
               }
 
               @media (max-width: 360px) {
@@ -3364,47 +3417,6 @@ export default function AmbulancePage() {
           </>
         )}
       </div>
-
-      {/* ── FAB SOS ── */}
-      {!showModal && (
-        <button
-          onClick={requestAmbulance}
-          className="ambulance-fab-sos"
-          style={{
-            position: "fixed",
-            bottom: "28px",
-            right: "28px",
-            width: "56px",
-            height: "56px",
-            borderRadius: "50%",
-            background: "#dc2626",
-            color: "#fff",
-            border: "none",
-            boxShadow: "0 8px 24px rgba(220,38,38,0.4)",
-            cursor: "pointer",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 990,
-            transition: "all 0.2s",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = "scale(1.08)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = "scale(1)";
-          }}
-          title="Emergency SOS"
-        >
-          <AlertTriangle size={20} />
-          <span
-            style={{ fontSize: "9px", fontWeight: "800", marginTop: "1px" }}
-          >
-            SOS
-          </span>
-        </button>
-      )}
 
       {/* ── Modal (Used in React) ── */}
       {showModal && (

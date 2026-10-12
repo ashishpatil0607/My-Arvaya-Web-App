@@ -472,7 +472,8 @@ export default function FeedbackModal() {
 
                 <textarea
                   value={review}
-                  onChange={(e) => setReview(e.target.value)}
+                  onChange={(e) => setReview(e.target.value.slice(0, 1000))}
+                  maxLength={1000}
                   placeholder="Share your feedback or suggestions with us."
                   rows={3}
                   style={{
@@ -498,6 +499,16 @@ export default function FeedbackModal() {
                     e.target.style.boxShadow = "none";
                   }}
                 />
+                <div
+                  style={{
+                    textAlign: "right",
+                    fontSize: "11px",
+                    marginTop: "4px",
+                    color: review.length >= 1000 ? "#dc2626" : "#94a3b8",
+                  }}
+                >
+                  {review.length}/1000
+                </div>
               </div>
 
               {errorMessage && (

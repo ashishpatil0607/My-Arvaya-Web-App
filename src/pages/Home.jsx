@@ -22,6 +22,7 @@ import {
   CalendarCheck,
   Stethoscope,
   Quote,
+  X,
   Sparkles,
   MapPin,
   Building2,
@@ -32,9 +33,11 @@ import {
   Smartphone,
   Download,
 } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
-import { useState, useEffect, useRef } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { fallbackHealthPackages, normalizeHealthPackage } from "../utils/healthPackages";
+import { getNameInitials } from "../utils/formatName";
 import AmbulanceRequestModal from "../components/ambulance/AmbulanceRequestModal";
 import AmbulanceLoginPrompt from "../components/ambulance/AmbulanceLoginPrompt";
 import {
@@ -46,9 +49,122 @@ import { getImageUrl, fetchImageBlob } from "../services/uploadService";
 import { useAuth } from "../context/AuthContext";
 import CardsSkeleton from "../components/labs/CardsSkeleton";
 
+// Clamps long review text to a few lines; "Read more" opens the full review
+function ReviewText({ text, onReadMore }) {
+  const textRef = useRef(null);
+  const [isLong, setIsLong] = useState(false);
+
+  useEffect(() => {
+    const el = textRef.current;
+    if (!el) return;
+    const check = () => setIsLong(el.scrollHeight > el.clientHeight + 1);
+    check();
+    // re-check whenever the card is laid out / resized (slider, fonts, viewport)
+    const observer = new ResizeObserver(check);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [text]);
+
+  return (
+    <div className="home-review-body">
+      <p ref={textRef} className="home-review-text clamped">
+        "{text}"
+      </p>
+      {isLong && (
+        <button type="button" className="home-review-more" onClick={onReadMore}>
+          Read more
+        </button>
+      )}
+    </div>
+  );
+}
+
+function ReviewModal({ review, accent, onClose }) {
+  useEffect(() => {
+    const onKey = (e) => e.key === "Escape" && onClose();
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [onClose]);
+
+  return createPortal(
+    <div className="review-modal-overlay" onClick={onClose}>
+      <div
+        className="review-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Review by ${review.name}`}
+        style={{ "--review-accent": accent }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="review-modal-header">
+          <Quote className="review-modal-header-quote" size={110} aria-hidden="true" />
+          <button
+            type="button"
+            className="review-modal-close"
+            onClick={onClose}
+            aria-label="Close review"
+          >
+            <X size={18} />
+          </button>
+          <div className="review-modal-avatar">{getNameInitials(review.name)}</div>
+          <div className="review-modal-person">
+            <b>{review.name}</b>
+            <span>
+              <ShieldCheck size={14} /> {review.role}
+            </span>
+          </div>
+        </div>
+
+        <div className="review-modal-body">
+          <div className="review-modal-rating">
+            <div className="home-review-stars" aria-label={`${review.rating} out of 5 stars`}>
+              {Array(5)
+                .fill(null)
+                .map((_, si) => (
+                  <Star
+                    key={si}
+                    size={20}
+                    fill={si < review.rating ? "#FBBF24" : "none"}
+                    color={si < review.rating ? "#FBBF24" : "#d6dde0"}
+                  />
+                ))}
+            </div>
+            <span className="review-modal-score">{review.rating} / 5</span>
+          </div>
+
+          <div className="review-modal-quote">
+            <Quote className="review-modal-quote-icon" size={22} aria-hidden="true" />
+            <p className="review-modal-text">{review.text}</p>
+          </div>
+
+          <button type="button" className="review-modal-done" onClick={onClose}>
+            Close
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+const REVIEW_ACCENTS = ["#08a57b", "#2583d8", "#f28a28", "#8e52ef"];
+
 export default function Home() {
   const go = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
+
+  // Scroll to a section when arriving with a hash (e.g. /#download-app)
+  useEffect(() => {
+    if (!location.hash) return;
+    const el = document.getElementById(location.hash.slice(1));
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [location.hash, location.key]);
   const reviewsScrollRef = useRef(null);
   // Auto-scroll pauses while a card or nav button is hovered/focused
   const reviewsHoverRef = useRef(false);
@@ -74,6 +190,8 @@ export default function Home() {
   };
   const [currentSlide, setCurrentSlide] = useState(0);
   const [showAmbulanceModal, setShowAmbulanceModal] = useState(false);
+  const [openReviewIndex, setOpenReviewIndex] = useState(null);
+  const closeReview = useCallback(() => setOpenReviewIndex(null), []);
   const [showAmbulanceLoginPrompt, setShowAmbulanceLoginPrompt] = useState(false);
   // Guests see the default packages; logged-in users start empty and wait for API data (avoids a flash of default items)
   const [apiPackages, setApiPackages] = useState(() => (user ? [] : fallbackHealthPackages.slice(0, 4)));
@@ -883,7 +1001,7 @@ export default function Home() {
                     tabIndex={0}
                     className="home-review-card animate-fade-in-up"
                     style={{
-                      "--review-accent": ["#08a57b", "#2583d8", "#f28a28", "#8e52ef"][i % 4],
+                      "--review-accent": REVIEW_ACCENTS[i % 4],
                       animationDelay: `${(i % 3) * 100}ms`,
                     }}
                   >
@@ -900,9 +1018,9 @@ export default function Home() {
                           />
                         ))}
                     </div>
-                    <p className="home-review-text">"{t.text}"</p>
+                    <ReviewText text={t.text} onReadMore={() => setOpenReviewIndex(i)} />
                     <div className="home-review-author">
-                      <div className="home-review-avatar">{t.name.charAt(0)}</div>
+                      <div className="home-review-avatar">{getNameInitials(t.name)}</div>
                       <div>
                         <b>{t.name}</b>
                         <span>{t.role}</span>
@@ -916,8 +1034,16 @@ export default function Home() {
         </div>
       </section>
 
+      {openReviewIndex !== null && reviews[openReviewIndex] && (
+        <ReviewModal
+          review={reviews[openReviewIndex]}
+          accent={REVIEW_ACCENTS[openReviewIndex % 4]}
+          onClose={closeReview}
+        />
+      )}
+
       {/* ── App Download CTA ── */}
-      <section className="arv-app-section">
+      <section id="download-app" className="arv-app-section">
         <div className="container">
           <div className="arv-app-card animate-fade-in-up">
             <div className="arv-app-overlay" aria-hidden="true" />
