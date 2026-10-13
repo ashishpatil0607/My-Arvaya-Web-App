@@ -2,7 +2,7 @@ import {
   Search, ChevronLeft, ChevronRight, ArrowLeft, FlaskConical, Clock, Heart, ShieldCheck, 
    Droplets, Beaker, Stethoscope, TestTube, MapPin, ArrowRight, X, Filter, Wallet, Home, User
 } from "lucide-react";
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { getDiagnosticTests, getWalletAmount, createLabOrder, verifyLabPayment, loadRazorpayScript } from "../services/dataService";
 import { useBooking } from "../context/BookingContext";
@@ -50,7 +50,6 @@ export default function AllLabTests() {
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
   const [appliedQuery, setAppliedQuery] = useState("");
-  const [selectedProfile, setSelectedProfile] = useState("All");
   const [selectedItem, setSelectedItem] = useState(null);
   const [visitType, setVisitType] = useState("home");
   const [walletBalance, setWalletBalance] = useState(0);
@@ -64,10 +63,14 @@ export default function AllLabTests() {
   const latestRequest = useRef(0);
 
   // Show one page of the static fallback tests (guest users)
-  const showFallbackPage = (page) => {
+  const showFallbackPage = (page, searchKeyword = "") => {
+    const keyword = searchKeyword.toLowerCase();
+    const matches = keyword
+      ? fallbackLabTests.filter(t => (t.title || "").toLowerCase().includes(keyword))
+      : fallbackLabTests;
     const start = (page - 1) * ITEMS_PER_PAGE;
-    setTests(fallbackLabTests.slice(start, start + ITEMS_PER_PAGE).map(normalizeFallbackTest));
-    setTotalCount(fallbackLabTests.length);
+    setTests(matches.slice(start, start + ITEMS_PER_PAGE).map(normalizeFallbackTest));
+    setTotalCount(matches.length);
   };
 
   // Fetch one page of tests from API and apply filter upon response
@@ -78,11 +81,9 @@ export default function AllLabTests() {
     setCurrentPage(page);
 
     const payload = {
-      pageIndex: page,
-      pageSize: ITEMS_PER_PAGE,
-      search: searchKeyword,
-      q: searchKeyword,
-      filter: searchKeyword ? ` AND (service_name LIKE '%${searchKeyword}%' OR name LIKE '%${searchKeyword}%' OR profile_name LIKE '%${searchKeyword}%')` : ""
+      page,
+      limit: ITEMS_PER_PAGE,
+      searchQuery: searchKeyword
     };
 
     getDiagnosticTests(payload)
@@ -92,7 +93,7 @@ export default function AllLabTests() {
 
         // Not logged in → API returns 401 (empty list), show the same tests as Labs
         if (!user && (!Array.isArray(apiTests) || apiTests.length === 0)) {
-          showFallbackPage(page);
+          showFallbackPage(page, searchKeyword);
         } else if (Array.isArray(apiTests)) {
           const offset = (page - 1) * ITEMS_PER_PAGE;
           const normalized = apiTests.map((t, i) => {
@@ -123,7 +124,7 @@ export default function AllLabTests() {
       .catch((err) => {
         if (requestId !== latestRequest.current) return;
         console.error("AllLabTests fetch error:", err);
-        if (!user) showFallbackPage(page);
+        if (!user) showFallbackPage(page, searchKeyword);
         setLoading(false);
       });
   };
@@ -144,32 +145,6 @@ export default function AllLabTests() {
       fetchTestsFromApi("");
     }
   }, [q, appliedQuery]);
-
-  // Extract unique profiles/categories for filter chips
-  const profileList = useMemo(() => {
-    const set = new Set();
-    tests.forEach(t => {
-      if (t.category) set.add(t.category);
-    });
-    return ["All", ...Array.from(set)];
-  }, [tests]);
-
-  // Filtered list applied in UI ONLY after API triggers
-  const filteredTests = useMemo(() => {
-    return tests.filter(item => {
-      if (appliedQuery) {
-        const queryLower = appliedQuery.toLowerCase();
-        const matchQ = (item.title || "").toLowerCase().includes(queryLower) || 
-                       (item.category || "").toLowerCase().includes(queryLower) ||
-                       (item.rawTitle || "").toLowerCase().includes(queryLower);
-        if (!matchQ) return false;
-      }
-      if (selectedProfile !== "All") {
-        return (item.category || "").toLowerCase() === selectedProfile.toLowerCase();
-      }
-      return true;
-    });
-   }, [tests, appliedQuery, selectedProfile]);
 
   // Server-side Pagination - 10 cards per page.
   // If the API doesn't send a total count, allow "Next" while a full page comes back.
@@ -1040,7 +1015,7 @@ export default function AllLabTests() {
         {/* Results Bar */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
           <span style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-muted)' }}>
-            Showing {totalCount ?? filteredTests.length} {(totalCount ?? filteredTests.length) === 1 ? 'Lab Test' : 'Lab Tests'}
+            Showing {totalCount ?? tests.length} {(totalCount ?? tests.length) === 1 ? 'Lab Test' : 'Lab Tests'}
           </span>
         </div>
 
@@ -1056,7 +1031,7 @@ export default function AllLabTests() {
               </div>
             ))}
           </div>
-        ) : filteredTests.length === 0 ? (
+        ) : tests.length === 0 ? (
           <div style={{ padding: '60px 0', textAlign: 'center', color: 'var(--text-muted)' }}>
             <FlaskConical size={48} style={{ opacity: 0.25, marginBottom: '12px' }} />
             <h3 style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text-main)', marginBottom: '4px' }}>No lab tests found</h3>
@@ -1064,7 +1039,7 @@ export default function AllLabTests() {
           </div>
         ) : (
           <div className="all-tests-grid">
-            {filteredTests.map((test) => (
+            {tests.map((test) => (
               <div className="all-tests-card" key={test.id}>
                 <div className="all-tests-card-img-container">
                   <div className="all-tests-card-visual"><LabItemIcon item={test} size={43} /></div>
@@ -1085,7 +1060,7 @@ export default function AllLabTests() {
         )}
 
         {/* Server-side Pagination Controls for 10 cards per page */}
-        {!loading && filteredTests.length > 0 && (
+        {!loading && tests.length > 0 && (
           <div className="all-tests-pagination-bar">
             <span className="pagination-info-text">
               Showing{" "}

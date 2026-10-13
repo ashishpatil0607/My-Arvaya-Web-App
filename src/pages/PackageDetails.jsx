@@ -8,7 +8,7 @@ import { useNavigate, useLocation, useParams, Link } from "react-router-dom";
 import { getDiagnosticPackages } from "../services/dataService";
 import { useBooking } from "../context/BookingContext";
 import { useAuth } from "../context/AuthContext";
-import SelectSlotUI from "../components/doctors/SelectSlotUI";
+// import SelectSlotUI from "../components/doctors/SelectSlotUI"; // re-enable with package booking
 import Modal from "../components/common/Modal";
 
 // Rich fallback items for demonstration if API subitems are missing
@@ -1208,7 +1208,114 @@ export default function PackageDetails() {
           </div>
         </div>
 
-        <SelectSlotUI onConfirm={confirmBooking} type="lab" />
+        {/* Booking is not live yet — restore when ready:
+            <SelectSlotUI onConfirm={confirmBooking} type="lab" /> */}
+        <style>{`
+          @keyframes csPulse {
+            0% { box-shadow: 0 0 0 0 rgba(45, 212, 191, 0.45); }
+            70% { box-shadow: 0 0 0 16px rgba(45, 212, 191, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(45, 212, 191, 0); }
+          }
+          @keyframes csFloat {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-4px); }
+          }
+          @keyframes csShimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+          }
+          .cs-feature { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+          .cs-feature:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(17, 53, 58, 0.08); }
+        `}</style>
+
+        <div style={{
+          position: "relative",
+          overflow: "hidden",
+          textAlign: "center",
+          padding: "32px 24px 26px",
+          borderRadius: "20px",
+          background: "radial-gradient(circle at 15% 0%, #ccfbf1 0%, transparent 45%), radial-gradient(circle at 90% 100%, #e0f2fe 0%, transparent 45%), #f8fffe",
+          border: "1px solid #ccfbf1"
+        }}>
+          {/* Decorative sparkles */}
+          <Sparkles size={16} color="#5eead4" style={{ position: "absolute", top: "22px", left: "28px", opacity: 0.8 }} />
+          <Sparkles size={12} color="#7dd3fc" style={{ position: "absolute", bottom: "28px", right: "34px", opacity: 0.8 }} />
+
+          <div style={{
+            width: "68px",
+            height: "68px",
+            margin: "0 auto",
+            borderRadius: "50%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "linear-gradient(135deg, #2dd4bf 0%, #0f766e 100%)",
+            color: "#fff",
+            animation: "csPulse 2.2s infinite, csFloat 3s ease-in-out infinite"
+          }}>
+            <Calendar size={30} />
+          </div>
+
+          <span style={{
+            display: "inline-block",
+            marginTop: "18px",
+            padding: "5px 14px",
+            borderRadius: "999px",
+            fontSize: "11px",
+            fontWeight: "800",
+            letterSpacing: "0.12em",
+            textTransform: "uppercase",
+            color: "#0f766e",
+            background: "linear-gradient(90deg, #ccfbf1 0%, #f0fdfa 50%, #ccfbf1 100%)",
+            backgroundSize: "200% 100%",
+            animation: "csShimmer 2.5s linear infinite",
+            border: "1px solid #99f6e4"
+          }}>
+            Coming Soon
+          </span>
+
+          <h3 style={{ margin: "12px 0 0", fontSize: "22px", fontWeight: "800", color: "#11353a", letterSpacing: "-0.01em" }}>
+            Online booking is almost here
+          </h3>
+          <p style={{ margin: "8px auto 0", maxWidth: "440px", fontSize: "14px", lineHeight: 1.6, color: "#475569" }}>
+            We're putting the finishing touches on instant package scheduling. Until then, our care team will be happy to book this package for you.
+          </p>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "10px", marginTop: "22px" }}>
+            {[
+              { icon: <Calendar size={16} />, label: "Pick your own slot" },
+              { icon: <Clock size={16} />, label: "Instant confirmation" },
+              { icon: <ShieldCheck size={16} />, label: "Secure payments" }
+            ].map((f) => (
+              <div key={f.label} className="cs-feature" style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "8px",
+                padding: "10px 12px",
+                borderRadius: "12px",
+                background: "#ffffff",
+                border: "1px solid #e2f3f1",
+                fontSize: "13px",
+                fontWeight: "700",
+                color: "#1b4d54"
+              }}>
+                <span style={{ color: "#14b8a6", display: "flex" }}>{f.icon}</span>
+                {f.label}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ paddingTop: "18px", display: "flex", justifyContent: "flex-end" }}>
+          <button
+            className="btn btn-primary"
+            onClick={() => setShowBookingModal(false)}
+            style={{ padding: "12px 28px", fontSize: "15px", display: "flex", alignItems: "center", gap: "8px" }}
+          >
+            Got it <ArrowRight size={16} />
+          </button>
+        </div>
       </Modal>
 
     </main>

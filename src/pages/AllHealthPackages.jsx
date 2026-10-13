@@ -2,7 +2,7 @@ import {
   Search, ChevronLeft, ChevronRight, ArrowLeft, FlaskConical, Clock, Heart, ShieldCheck, 
   Droplets, Beaker, Stethoscope, TestTube, MapPin, ArrowRight, X, Sparkles 
 } from "lucide-react";
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { getDiagnosticPackages } from "../services/dataService";
 import { fallbackHealthPackages } from "../utils/healthPackages";
@@ -22,7 +22,6 @@ export default function AllHealthPackages() {
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
   const [appliedQuery, setAppliedQuery] = useState("");
-  const [selectedFilter, setSelectedFilter] = useState("All");
   const [selectedItem, setSelectedItem] = useState(null);
   const [visitType, setVisitType] = useState("home");
   const [currentPage, setCurrentPage] = useState(1);
@@ -38,11 +37,9 @@ export default function AllHealthPackages() {
     setCurrentPage(page);
 
     const payload = {
-      pageIndex: page,
-      pageSize: ITEMS_PER_PAGE,
-      search: searchKeyword,
-      q: searchKeyword,
-      filter: searchKeyword ? ` AND (package_name LIKE '%${searchKeyword}%' OR name LIKE '%${searchKeyword}%')` : ""
+      page,
+      limit: ITEMS_PER_PAGE,
+      searchQuery: searchKeyword
     };
 
     getDiagnosticPackages(payload)
@@ -52,9 +49,13 @@ export default function AllHealthPackages() {
 
         // Not logged in → API returns 401 (empty list), show the same packages as Home & Labs
         if (!user && (!Array.isArray(apiPkgs) || apiPkgs.length === 0)) {
+          const keyword = searchKeyword.toLowerCase();
+          const matches = keyword
+            ? fallbackHealthPackages.filter(p => (p.title || "").toLowerCase().includes(keyword))
+            : fallbackHealthPackages;
           const start = (page - 1) * ITEMS_PER_PAGE;
-          setPackages(fallbackHealthPackages.slice(start, start + ITEMS_PER_PAGE));
-          setTotalCount(fallbackHealthPackages.length);
+          setPackages(matches.slice(start, start + ITEMS_PER_PAGE));
+          setTotalCount(matches.length);
         } else if (Array.isArray(apiPkgs)) {
           const offset = (page - 1) * ITEMS_PER_PAGE;
           const normalized = apiPkgs.map((p, i) => {
@@ -108,23 +109,6 @@ export default function AllHealthPackages() {
       fetchPackagesFromApi("");
     }
   }, [q, appliedQuery]);
-
-  // Filtered list applied in UI ONLY after API triggers
-  const filteredPackages = useMemo(() => {
-    return packages.filter(item => {
-      if (appliedQuery) {
-        const queryLower = appliedQuery.toLowerCase();
-        const matchQ = (item.title || "").toLowerCase().includes(queryLower) || 
-                       (item.category || "").toLowerCase().includes(queryLower);
-        if (!matchQ) return false;
-      }
-      if (selectedFilter !== "All") {
-        return (item.title || "").toLowerCase().includes(selectedFilter.toLowerCase()) ||
-               (item.category || "").toLowerCase().includes(selectedFilter.toLowerCase());
-      }
-      return true;
-    });
-  }, [packages, appliedQuery, selectedFilter]);
 
   // Server-side Pagination - 10 cards per page.
   // If the API doesn't send a total count, allow "Next" while a full page comes back.
@@ -675,7 +659,7 @@ export default function AllHealthPackages() {
         {/* Results Bar */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
           <span style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-muted)' }}>
-            Showing {totalCount ?? filteredPackages.length} {(totalCount ?? filteredPackages.length) === 1 ? 'Health Package' : 'Health Packages'}
+            Showing {totalCount ?? packages.length} {(totalCount ?? packages.length) === 1 ? 'Health Package' : 'Health Packages'}
           </span>
         </div>
 
@@ -691,7 +675,7 @@ export default function AllHealthPackages() {
               </div>
             ))}
           </div>
-        ) : filteredPackages.length === 0 ? (
+        ) : packages.length === 0 ? (
           <div style={{ padding: '60px 0', textAlign: 'center', color: 'var(--text-muted)' }}>
             <Stethoscope size={48} style={{ opacity: 0.25, marginBottom: '12px' }} />
             <h3 style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text-main)', marginBottom: '4px' }}>No health packages found</h3>
@@ -699,7 +683,7 @@ export default function AllHealthPackages() {
           </div>
         ) : (
           <div className="all-pkg-grid">
-            {filteredPackages.map((pkg) => (
+            {packages.map((pkg) => (
               <div className="all-pkg-card" key={pkg.id}>
                 <div className="all-pkg-card-img-container">
                   <img src={pkg.img} alt={pkg.title} className="all-pkg-card-img" />
@@ -721,7 +705,7 @@ export default function AllHealthPackages() {
         )}
 
         {/* Frontend Pagination Controls for 10 cards per page */}
-        {!loading && filteredPackages.length > 0 && (
+        {!loading && packages.length > 0 && (
           <div className="all-pkg-pagination-bar">
             <span className="pagination-info-text">
               Showing{" "}

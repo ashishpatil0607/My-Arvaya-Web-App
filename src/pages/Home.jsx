@@ -5,7 +5,8 @@ import {
   ArrowUpRight,
   Activity,
   Heart,
-  Eye,
+  Hand,
+  HeartPulse,
   Brain,
   Bone,
   Baby,
@@ -823,7 +824,7 @@ export default function Home() {
           {[
             {
               name: "Cardiology",
-              icon: <Heart size={28} strokeWidth={1.7} />,
+              icon: <HeartPulse size={28} strokeWidth={1.7} />,
               consults: "2.5k+",
               color: "#ff8a1f",
               soft: "#fff5e8",
@@ -851,14 +852,14 @@ export default function Home() {
             },
             {
               name: "General Medicine",
-              icon: <Activity size={28} strokeWidth={1.7} />,
+              icon: <Stethoscope size={28} strokeWidth={1.7} />,
               consults: "5.1k+",
               color: "#ef4054",
               soft: "#fff0f2",
             },
             {
               name: "Dermatology",
-              icon: <Eye size={28} strokeWidth={1.7} />,
+              icon: <Hand size={28} strokeWidth={1.7} />,
               consults: "2.1k+",
               color: "#05a9c4",
               soft: "#eafafd",
