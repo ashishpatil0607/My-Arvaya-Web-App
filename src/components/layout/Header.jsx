@@ -1427,9 +1427,9 @@ export default function Header() {
                       {[
                         ["Download App", "iOS & Android", Smartphone, "/#download-app"],
                         ["Help & Support", "24/7 assistance", HelpCircle, "/support"],
-                        ["Feedback", "Share your thoughts", MessageSquare, null, () => window.dispatchEvent(new Event("arvaya_open_feedback"))],
+                        user && ["Feedback", "Share your thoughts", MessageSquare, null, () => window.dispatchEvent(new Event("arvaya_open_feedback"))],
                         ["About", "Know about ARVAYA", Info, "/about"],
-                      ].map(([label, sub, Icon, path, action]) => (
+                      ].filter(Boolean).map(([label, sub, Icon, path, action]) => (
                         <button
                           key={label}
                           type="button"

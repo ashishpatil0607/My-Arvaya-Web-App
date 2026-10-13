@@ -189,6 +189,15 @@ export default function Home() {
       });
     }
   };
+  // Show each nav button only when there are cards hidden on that side
+  const [canScrollReviewsLeft, setCanScrollReviewsLeft] = useState(false);
+  const [canScrollReviewsRight, setCanScrollReviewsRight] = useState(false);
+  const updateReviewsNav = () => {
+    const el = reviewsScrollRef.current;
+    if (!el) return;
+    setCanScrollReviewsLeft(el.scrollLeft > 5);
+    setCanScrollReviewsRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 5);
+  };
   const [currentSlide, setCurrentSlide] = useState(0);
   const [showAmbulanceModal, setShowAmbulanceModal] = useState(false);
   const [openReviewIndex, setOpenReviewIndex] = useState(null);
@@ -388,6 +397,12 @@ export default function Home() {
     }, 4000);
 
     return () => clearInterval(interval);
+  }, [reviews]);
+
+  useEffect(() => {
+    updateReviewsNav();
+    window.addEventListener("resize", updateReviewsNav);
+    return () => window.removeEventListener("resize", updateReviewsNav);
   }, [reviews]);
 
   const tickerItems = [
@@ -625,18 +640,6 @@ export default function Home() {
                 iconColor: "#087b9c",
               },
               {
-                title: "Arvaya Rewards",
-                sub: "Earn points on every booking and redeem exclusive offers",
-                icon: <Gift size={29} strokeWidth={1.8} />,
-                bgIcon: <Gift size={150} strokeWidth={1.2} />,
-                badge: "Earn & Save",
-                features: ["Points on bookings", "Exclusive offers"],
-                link: "/rewards",
-                start: "#aa56f3",
-                end: "#7d2be8",
-                iconColor: "#7d2be8",
-              },
-              {
                 title: "Digital Wallet",
                 sub: "Fast, secure payments with instant refunds guaranteed",
                 icon: <Wallet size={29} strokeWidth={1.8} />,
@@ -647,6 +650,18 @@ export default function Home() {
                 start: "#12bca0",
                 end: "#087f74",
                 iconColor: "#087b73",
+              },
+              {
+                title: "Arvaya Rewards",
+                sub: "Earn points on every booking and redeem exclusive offers",
+                icon: <Gift size={29} strokeWidth={1.8} />,
+                bgIcon: <Gift size={150} strokeWidth={1.2} />,
+                badge: "Earn & Save",
+                features: ["Points on bookings", "Exclusive offers"],
+                link: "/rewards",
+                start: "#aa56f3",
+                end: "#7d2be8",
+                iconColor: "#7d2be8",
               },
               // {
               //   title: "Health Records",
@@ -993,22 +1008,30 @@ export default function Home() {
             }}
             onTouchStart={() => (reviewsLastInteractionRef.current = Date.now())}
           >
-            <button
-              className="review-nav-btn left"
-              onClick={() => scrollReviews("left")}
-              aria-label="Previous reviews"
-            >
-              <ChevronLeft size={20} />
-            </button>
-            <button
-              className="review-nav-btn right"
-              onClick={() => scrollReviews("right")}
-              aria-label="Next reviews"
-            >
-              <ChevronRight size={20} />
-            </button>
+            {canScrollReviewsLeft && (
+              <button
+                className="review-nav-btn left"
+                onClick={() => scrollReviews("left")}
+                aria-label="Previous reviews"
+              >
+                <ChevronLeft size={20} />
+              </button>
+            )}
+            {canScrollReviewsRight && (
+              <button
+                className="review-nav-btn right"
+                onClick={() => scrollReviews("right")}
+                aria-label="Next reviews"
+              >
+                <ChevronRight size={20} />
+              </button>
+            )}
 
-            <div className="testimonials-slider" ref={reviewsScrollRef}>
+            <div
+              className="testimonials-slider"
+              ref={reviewsScrollRef}
+              onScroll={updateReviewsNav}
+            >
               {reviews.map((t, i) => (
                 <div key={i} className="testimonial-card-wrap">
                   <article
