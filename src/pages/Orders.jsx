@@ -144,6 +144,8 @@ export default function Orders() {
               <nav aria-label="Breadcrumb" className="orders-hero-breadcrumb">
                 <Link to="/" className="orders-breadcrumb-link">Home</Link>
                 <ChevronRight size={13} className="orders-breadcrumb-sep" />
+                <Link to="/labs" className="orders-breadcrumb-link">Lab Tests</Link>
+                <ChevronRight size={13} className="orders-breadcrumb-sep" />
                 <span>My Orders</span>
               </nav>
 

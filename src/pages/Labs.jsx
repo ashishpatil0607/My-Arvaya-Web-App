@@ -56,6 +56,38 @@ const mockLabAppointments = [
   { id: 4, date: "July 20, 2026", status: "Upcoming", name: "Vitamin D & B12 Panel", lab: "HealthFirst Labs", time: "11:00 AM" },
 ];
 
+// Tracks whether a horizontal carousel has hidden cards to its left/right, so arrows only show when useful
+const useScrollArrows = (ref, deps) => {
+  const [arrows, setArrows] = useState({ left: false, right: false });
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) {
+      setArrows({ left: false, right: false });
+      return;
+    }
+    // Tolerance absorbs the few px scroll-snap offsets the row by (row padding), so arrows don't show at the edges
+    const EDGE = 12;
+    const update = () => {
+      setArrows({
+        left: el.scrollLeft > EDGE,
+        right: el.scrollLeft + el.clientWidth < el.scrollWidth - EDGE,
+      });
+    };
+    update();
+    el.addEventListener("scroll", update, { passive: true });
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    return () => {
+      el.removeEventListener("scroll", update);
+      observer.disconnect();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, deps);
+
+  return arrows;
+};
+
 export default function Labs({ forceModalOpen = false }) {
   const go = useNavigate();
   const location = useLocation();
@@ -303,6 +335,9 @@ function toTitleCase(str) {
       return true;
     });
   }, [healthPackages, q, selectedFilter]);
+
+  const testsArrows = useScrollArrows(testsScrollRef, [filteredTests, loadingTests, showAllTests]);
+  const packagesArrows = useScrollArrows(packagesScrollRef, [filteredPackages, loadingPackages, showAllPackages]);
 
   const confirmBooking = async (slotData) => {
     if (!user) {
@@ -2898,10 +2933,12 @@ function toTitleCase(str) {
             </div>
           ) : (
             <div className="lab-scroll-wrapper">
-              <button className="lab-scroll-arrow left" onClick={() => scrollContainer(testsScrollRef, "left")}>
-                <ChevronLeft size={20} />
-              </button>
-              
+              {testsArrows.left && (
+                <button className="lab-scroll-arrow left" onClick={() => scrollContainer(testsScrollRef, "left")}>
+                  <ChevronLeft size={20} />
+                </button>
+              )}
+
               <div className="lab-scroll-row" ref={testsScrollRef}>
                 {filteredTests.map((test, index) => (
                   <div className={`lab-card lab-theme-${index % 6}`} key={test.id}>
@@ -2922,9 +2959,11 @@ function toTitleCase(str) {
                 ))}
               </div>
 
-              <button className="lab-scroll-arrow right" onClick={() => scrollContainer(testsScrollRef, "right")}>
-                <ChevronRight size={20} />
-              </button>
+              {testsArrows.right && (
+                <button className="lab-scroll-arrow right" onClick={() => scrollContainer(testsScrollRef, "right")}>
+                  <ChevronRight size={20} />
+                </button>
+              )}
             </div>
           )}
         </section>
@@ -2977,9 +3016,11 @@ function toTitleCase(str) {
             </div>
           ) : (
             <div className="lab-scroll-wrapper">
-              <button className="lab-scroll-arrow left" onClick={() => scrollContainer(packagesScrollRef, "left")}>
-                <ChevronLeft size={20} />
-              </button>
+              {packagesArrows.left && (
+                <button className="lab-scroll-arrow left" onClick={() => scrollContainer(packagesScrollRef, "left")}>
+                  <ChevronLeft size={20} />
+                </button>
+              )}
 
               <div className="lab-scroll-row" ref={packagesScrollRef}>
                 {filteredPackages.map((pkg, index) => (
@@ -3002,9 +3043,11 @@ function toTitleCase(str) {
                 ))}
               </div>
 
-              <button className="lab-scroll-arrow right" onClick={() => scrollContainer(packagesScrollRef, "right")}>
-                <ChevronRight size={20} />
-              </button>
+              {packagesArrows.right && (
+                <button className="lab-scroll-arrow right" onClick={() => scrollContainer(packagesScrollRef, "right")}>
+                  <ChevronRight size={20} />
+                </button>
+              )}
             </div>
           )}
         </section>
