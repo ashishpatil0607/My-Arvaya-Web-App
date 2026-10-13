@@ -2814,7 +2814,7 @@ function toTitleCase(str) {
             {/* Right Graphic/Illustration (Desktop & Tablet) */}
             <div className="lab-hero-img-col">
               <div className="lab-hero-img-wrap" aria-hidden="true">
-                <img src="/images/lab-tests.png" alt="" className="lab-hero-img-photo" />
+                <img src="/images/lab-test-hero.svg" alt="" className="lab-hero-img-photo" />
                 <div className="lab-hero-stat-badge">
                   <CheckCircle2 size={14} />
                   <span>4.9 Pathologist Rating</span>
@@ -3316,7 +3316,7 @@ function toTitleCase(str) {
               You're one step away from booking this {selectedItem?.tests ? "package" : "test"}
             </h3>
             <p className="lab-guest-text">
-              Sign in to pick a convenient slot and get your reports delivered straight to your account.
+              Sign in to your account to continue with your booking.
             </p>
 
             <div className="lab-guest-perks">

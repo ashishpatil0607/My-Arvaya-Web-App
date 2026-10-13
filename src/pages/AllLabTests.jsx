@@ -1347,7 +1347,7 @@ export default function AllLabTests() {
               You're one step away from booking this {selectedItem?.tests ? "package" : "test"}
             </h3>
             <p className="lab-guest-text">
-              Sign in to pick a convenient slot and get your reports delivered straight to your account.
+              Sign in to your account to continue with your booking.
             </p>
 
             <div className="lab-guest-perks">

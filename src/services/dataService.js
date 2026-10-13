@@ -421,15 +421,16 @@ export async function getLabPackages(filters = {}) {
 
 export async function getDiagnosticTests(filters = {}) {
   try {
+    const { pageIndex, pageSize, page, limit, ...rest } = filters;
     const payload = {
-      pageIndex: filters.pageIndex || 1,
-      pageSize: filters.pageSize || 300,
+      page: page || pageIndex || 1,
+      limit: limit || pageSize || 300,
       sortKey: filters.sortKey || "id",
       sortValue: filters.sortValue || "desc",
       filter: filters.filter || "",
       search: filters.search || filters.q || "",
       q: filters.q || filters.search || "",
-      ...filters
+      ...rest
     };
     const res = await api.post("/api/diagnostic/getTests", payload);
     const list = res?.data || res?.tests || res?.list || res?.result || res || [];
@@ -456,15 +457,16 @@ export async function getDiagnosticTests(filters = {}) {
 
 export async function getDiagnosticPackages(filters = {}) {
   try {
+    const { pageIndex, pageSize, page, limit, ...rest } = filters;
     const payload = {
-      pageIndex: filters.pageIndex || 1,
-      pageSize: filters.pageSize || 200,
+      page: page || pageIndex || 1,
+      limit: limit || pageSize || 200,
       sortKey: filters.sortKey || "id",
       sortValue: filters.sortValue || "desc",
       filter: filters.filter || "",
       search: filters.search || filters.q || "",
       q: filters.q || filters.search || "",
-      ...filters
+      ...rest
     };
     const res = await api.post("/api/diagnostic/getPackages", payload);
     const list = res?.data || res?.packages || res?.list || res?.result || res || [];
