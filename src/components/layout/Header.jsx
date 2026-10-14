@@ -404,6 +404,60 @@ export default function Header() {
     (p) => String(p.id) !== String(currentUserId)
   );
 
+  // Resolve profile photos for the Switch Account list (same approach as ChooseProfile in Login.jsx)
+  const [profileAvatars, setProfileAvatars] = useState({});
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadProfileAvatars() {
+      if (!linkedProfiles || linkedProfiles.length === 0) return;
+
+      let patientsList = [];
+      try {
+        const mobile = linkedProfiles[0]?.mobile_number || userPhone || "";
+        if (mobile) {
+          const res = await getPatients([{ column: "mobile_number", operator: "=", value: mobile }]);
+          patientsList = Array.isArray(res) ? res : (res && typeof res === "object" ? [res] : []);
+        }
+      } catch (err) {
+        console.warn("Could not query patients for switch account avatars:", err);
+      }
+
+      const avatarsMap = {};
+      await Promise.all(
+        linkedProfiles.map(async (p) => {
+          try {
+            const matched = patientsList.find(
+              (item) => String(item.id || item.user_id || item.app_user_id) === String(p.id)
+            );
+            const pathStr = String(
+              matched?.profile_image || matched?.profileImage || matched?.photo ||
+              p?.profile_image || p?.profileImage || p?.photo || p?.image || ""
+            ).trim();
+            if (!pathStr) return;
+
+            if (/^(https?:|data:|blob:)/.test(pathStr)) {
+              avatarsMap[p.id] = pathStr;
+            } else {
+              avatarsMap[p.id] = (await fetchImageBlob(pathStr, "patientProfileImage")) || getImageUrl(pathStr, "patientProfileImage");
+            }
+          } catch (e) {
+            console.error("Failed to load avatar for profile", p.id, e);
+          }
+        })
+      );
+
+      if (isMounted) setProfileAvatars(avatarsMap);
+    }
+
+    loadProfileAvatars();
+    window.addEventListener("arvaya_profile_updated", loadProfileAvatars);
+    return () => {
+      isMounted = false;
+      window.removeEventListener("arvaya_profile_updated", loadProfileAvatars);
+    };
+  }, [linkedProfiles]);
+
 
 
   // Click outside listener for search & location popovers
@@ -847,6 +901,8 @@ export default function Header() {
                                 onMouseOut={e => e.currentTarget.style.background = 'transparent'}
                               >
                                 <div style={{
+                                  position: 'relative',
+                                  overflow: 'hidden',
                                   width: '32px',
                                   height: '32px',
                                   borderRadius: '50%',
@@ -859,6 +915,14 @@ export default function Header() {
                                   fontWeight: '700',
                                   flexShrink: 0
                                 }}>
+                                  {profileAvatars[p.id] && (
+                                    <img
+                                      src={profileAvatars[p.id]}
+                                      alt={stripTitle(p.name)}
+                                      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+                                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                    />
+                                  )}
                                   {pInitials}
                                 </div>
                                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -1100,6 +1164,8 @@ export default function Header() {
                       border: '1.5px solid #1b6b72',
                     }}>
                       <div style={{
+                        position: 'relative',
+                        overflow: 'hidden',
                         width: '32px',
                         height: '32px',
                         borderRadius: '50%',
@@ -1112,6 +1178,14 @@ export default function Header() {
                         fontWeight: '700',
                         flexShrink: 0
                       }}>
+                        {headerAvatar && (
+                          <img
+                            src={headerAvatar}
+                            alt={displayName}
+                            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                          />
+                        )}
                         {displayInitial}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
@@ -1161,6 +1235,8 @@ export default function Header() {
                             }}
                           >
                             <div style={{
+                              position: 'relative',
+                              overflow: 'hidden',
                               width: '32px',
                               height: '32px',
                               borderRadius: '50%',
@@ -1173,6 +1249,14 @@ export default function Header() {
                               fontWeight: '700',
                               flexShrink: 0
                             }}>
+                              {profileAvatars[p.id] && (
+                                <img
+                                  src={profileAvatars[p.id]}
+                                  alt={stripTitle(p.name)}
+                                  style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+                                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                />
+                              )}
                               {pInitials}
                             </div>
                             <div style={{ flex: 1, minWidth: 0 }}>

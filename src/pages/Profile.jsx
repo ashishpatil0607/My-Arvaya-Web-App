@@ -875,7 +875,7 @@ export default function Profile() {
                       }}
                     />
                   ) : null}
-                  {profile.name.charAt(0).toUpperCase()}
+                  {getInitials(profile.name)}
                 </div>
                 <button
                   onClick={() => userImageInputRef.current?.click()}
