@@ -1,16 +1,20 @@
-import { Brain, HeartPulse, Activity, ChevronRight, ShieldCheck, FileText, ActivitySquare, AlertCircle } from "lucide-react";
+import { Brain, HeartPulse, Activity, ChevronRight, ShieldCheck, FileText, ActivitySquare, AlertCircle, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useState } from "react";
+import { useState, useRef } from "react";
 
 export default function AIAssistant() {
   const [symptom, setSymptom] = useState("");
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState(null);
+  // Synchronous lock so a fast double-click can't queue a second analysis
+  const analyzeLockRef = useRef(false);
 
   const handleAnalyze = () => {
-    if (!symptom.trim()) return;
+    if (analyzeLockRef.current || !symptom.trim()) return;
+    analyzeLockRef.current = true;
     setAnalyzing(true);
     setTimeout(() => {
+      analyzeLockRef.current = false;
       setAnalyzing(false);
       setResult({
         condition: "Viral Infection (Possible)",
@@ -149,12 +153,12 @@ export default function AIAssistant() {
             ></textarea>
 
             <button 
-              className="btn btn-accent flex items-center justify-center gap-2" 
+              className="btn btn-accent flex items-center justify-center gap-2 ai-analyze-btn" 
               style={{ padding: '14px', fontSize: '15px' }}
               onClick={handleAnalyze}
               disabled={analyzing}
             >
-              {analyzing ? <span className="pulse-dot" style={{ background: 'white' }}></span> : <Brain size={18} />}
+              {analyzing ? <Loader2 size={18} className="animate-spin" /> : <Brain size={18} />}
               {analyzing ? 'Analyzing Symptoms...' : 'Analyze Symptoms'}
             </button>
 
@@ -183,6 +187,13 @@ export default function AIAssistant() {
         </div>
       </div>
       <style dangerouslySetInnerHTML={{__html: `
+        .ai-analyze-btn:disabled,
+        .ai-analyze-btn:disabled:hover {
+          opacity: 0.6;
+          cursor: default;
+          transform: none;
+          box-shadow: none;
+        }
         .ai-hero-banner {
           position: relative;
           overflow: hidden;

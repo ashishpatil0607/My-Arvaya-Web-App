@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import ReactDOM from "react-dom";
 import { X, MapPin, Phone, User, AlertTriangle, ArrowRight, CheckCircle2, Ambulance, Shield, Loader2, ChevronDown, Navigation, HeartPulse, Car, Wind, Baby, Flame, Brain, HelpCircle, Check } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
@@ -215,7 +215,7 @@ function FieldError({ msg }) {
 }
 
 function Btn({ children, onClick, disabled, variant = "accent", fullWidth = true, type = "button" }) {
-  const base = { width: fullWidth ? "100%" : "auto", padding: "14px 24px", borderRadius: "10px", fontSize: "15px", fontWeight: "600", cursor: disabled ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", transition: "all 0.2s", border: "none", fontFamily: "var(--font-sans)" };
+  const base = { width: fullWidth ? "100%" : "auto", padding: "14px 24px", borderRadius: "10px", fontSize: "15px", fontWeight: "600", cursor: disabled ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", transition: "all 0.2s", border: "none", fontFamily: "var(--font-sans)" };
   const styles = {
     accent: { background: disabled ? "var(--border)" : "var(--accent)", color: disabled ? "var(--text-muted)" : "#fff", boxShadow: disabled ? "none" : "0 2px 12px rgba(251,145,63,0.25)" },
     primary: { background: disabled ? "var(--border)" : "var(--primary)", color: disabled ? "var(--text-muted)" : "#fff", boxShadow: disabled ? "none" : "0 2px 12px rgba(46,102,110,0.25)" },
@@ -249,6 +249,9 @@ export default function AmbulanceRequestModal({ onClose, onSuccess }) {
   const [err, setErr]                 = useState("");
   const [result, setResult]           = useState(null);
   const [fieldErrors, setFieldErrors] = useState({});
+  // Synchronous locks so a fast double-click can't fire duplicate requests
+  const submitLockRef = useRef(false);
+  const locateLockRef = useRef(false);
 
   const clearFieldError = (field) => {
     setFieldErrors(prev => {
@@ -274,19 +277,25 @@ export default function AmbulanceRequestModal({ onClose, onSuccess }) {
   };
 
   const handleLocate = () => {
+    if (locateLockRef.current) return;
     if (!navigator.geolocation) { setErr("Geolocation is not supported by your browser."); return; }
+    locateLockRef.current = true;
     setLocating(true); setErr("");
     navigator.geolocation.getCurrentPosition(
       async pos => {
-        const lat = pos.coords.latitude;
-        const lng = pos.coords.longitude;
-        setPickupLat(lat);
-        setPickupLng(lng);
-        const addr = await reverseGeocode(lat, lng);
-        setPickup(addr);
-        setLocating(false);
+        try {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          setPickupLat(lat);
+          setPickupLng(lng);
+          const addr = await reverseGeocode(lat, lng);
+          setPickup(addr);
+        } finally {
+          locateLockRef.current = false;
+          setLocating(false);
+        }
       },
-      () => { setErr("Unable to fetch location. Please enter manually."); setLocating(false); },
+      () => { setErr("Unable to fetch location. Please enter manually."); locateLockRef.current = false; setLocating(false); },
       { enableHighAccuracy: true, timeout: 10000 }
     );
   };
@@ -297,6 +306,7 @@ export default function AmbulanceRequestModal({ onClose, onSuccess }) {
   }, []);
 
   const handleSubmit = async () => {
+    if (submitLockRef.current) return;
     if (!patientName.trim()) { setErr("Patient name is required."); return; }
     if (!contactNumber.trim() || contactNumber.length < 10) {
       const msg = "Please enter a valid 10-digit contact number.";
@@ -317,6 +327,7 @@ export default function AmbulanceRequestModal({ onClose, onSuccess }) {
       setErr(msg);
       return;
     }
+    submitLockRef.current = true;
     setErr(""); setBusy(true);
 
     let locationKey = globalLocation?.entitylocation || globalLocation?.location_key || "";
@@ -360,8 +371,11 @@ export default function AmbulanceRequestModal({ onClose, onSuccess }) {
       // Ambulance page via route state so it can show it immediately
       go("/ambulance", { state: { bookedRequest: { res, submitted, at: Date.now() } } });
     } catch (e) { setErr(e.message || "Failed to submit request. Please try again."); }
-    finally { setBusy(false); }
+    finally { submitLockRef.current = false; setBusy(false); }
   };
+
+  // Don't let the modal be dismissed mid-request
+  const handleClose = () => { if (!busy) onClose(); };
 
   /* ── Left Panel ──────────────────────────────────────────────────────── */
   const leftPanel = (
@@ -429,11 +443,11 @@ export default function AmbulanceRequestModal({ onClose, onSuccess }) {
       <div style={{ marginBottom: "18px" }}>
         <label style={{ fontSize: "12px", fontWeight: "700", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.07em", display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px", flexWrap: "wrap", gap: "6px" }}>
           <span>Pickup Location *</span>
-          <button type="button" onClick={handleLocate} disabled={locating}
-            style={{ background: "var(--primary-light)", color: "var(--primary)", border: "1px solid var(--primary-soft)", borderRadius: "6px", padding: "4px 10px", fontSize: "11px", fontWeight: "700", cursor: locating ? "wait" : "pointer", display: "flex", alignItems: "center", gap: "4px", transition: "all 0.2s" }}
-            onMouseEnter={e => { if (!locating) e.currentTarget.style.background = "var(--primary-soft)"; }}
+          <button type="button" onClick={handleLocate} disabled={locating || busy}
+            style={{ background: "var(--primary-light)", color: "var(--primary)", border: "1px solid var(--primary-soft)", borderRadius: "6px", padding: "4px 10px", fontSize: "11px", fontWeight: "700", cursor: locating || busy ? "default" : "pointer", opacity: locating || busy ? 0.6 : 1, display: "flex", alignItems: "center", gap: "4px", transition: "all 0.2s" }}
+            onMouseEnter={e => { if (!locating && !busy) e.currentTarget.style.background = "var(--primary-soft)"; }}
             onMouseLeave={e => { e.currentTarget.style.background = "var(--primary-light)"; }}>
-            {locating ? <><Loader2 size={12} style={{ animation: "spin 1s linear infinite" }} /> Locating…</> : <><Navigation size={12} /> Use My Location</>}
+            {locating ? <><Loader2 size={12} className="animate-spin" /> Locating…</> : <><Navigation size={12} /> Use My Location</>}
           </button>
         </label>
 
@@ -501,9 +515,9 @@ export default function AmbulanceRequestModal({ onClose, onSuccess }) {
   );
 
   return (
-    <Overlay onClose={onClose}>
+    <Overlay onClose={handleClose}>
       {/* Close button anchored to the (non-scrolling) card frame so it stays in the top-right corner */}
-      <button onClick={onClose} aria-label="Close" style={{ position: "absolute", top: "16px", right: "16px", background: "var(--bg-app)", border: "1px solid var(--border)", width: "34px", height: "34px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", transition: "all 0.2s", zIndex: 40, boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }} onMouseEnter={e => e.currentTarget.style.background="var(--border)"} onMouseLeave={e => e.currentTarget.style.background="var(--bg-app)"}>
+      <button onClick={handleClose} disabled={busy} aria-label="Close" style={{ position: "absolute", top: "16px", right: "16px", background: "var(--bg-app)", border: "1px solid var(--border)", width: "34px", height: "34px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1, transition: "all 0.2s", zIndex: 40, boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }} onMouseEnter={e => { if (!busy) e.currentTarget.style.background="var(--border)"; }} onMouseLeave={e => e.currentTarget.style.background="var(--bg-app)"}>
         <X size={16} color="var(--text-muted)" />
       </button>
       <div className="ambulance-modal-card">
@@ -526,7 +540,7 @@ export default function AmbulanceRequestModal({ onClose, onSuccess }) {
           {step === 1 && (
             <div className="ambulance-modal-footer">
               <Btn variant="danger" disabled={busy} onClick={handleSubmit}>
-                {busy ? <><Loader2 size={18} style={{ animation: "spin 1s linear infinite" }} /> Submitting…</> : <><Ambulance size={18} /> Call Ambulance</>}
+                {busy ? <><Loader2 size={18} className="animate-spin" /> Requesting…</> : <><Ambulance size={18} /> Call Ambulance</>}
               </Btn>
             </div>
           )}

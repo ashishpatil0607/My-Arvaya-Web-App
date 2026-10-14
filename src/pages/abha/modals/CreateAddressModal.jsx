@@ -72,18 +72,28 @@ export function CreateAddressModal({ abhaData, profileInfo, user, onClose }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const otpRefs = useRef([]);
+  // Synchronous lock so a fast double-click can't fire the same request twice
+  const requestLockRef = useRef(false);
+
+  // Block closing the modal while a request is in flight
+  const handleClose = () => {
+    if (requestLockRef.current) return;
+    onClose();
+  };
 
   const mobileNumber = user?.mobile_number || user?.phone || user?.mobile || localStorage.getItem("mobile_number") || "";
   const maskedMobile = mobileNumber ? `${mobileNumber.slice(0, 2)}******${mobileNumber.slice(-2)}` : "your registered number";
 
   // ── STEP 1: Send OTP ──
   const handleSendOtp = async () => {
+    if (requestLockRef.current) return;
     if (!mobileNumber) {
       const msg = "Mobile number not found. Please login again.";
       setErr(msg);
       if (showToast) showToast(msg, "error");
       return;
     }
+    requestLockRef.current = true;
     setErr(""); setBusy(true);
     try {
       const res = await abhaCreateRequestOtp(mobileNumber);
@@ -102,11 +112,13 @@ export function CreateAddressModal({ abhaData, profileInfo, user, onClose }) {
       if (showToast) showToast(msg, "error");
     } finally {
       setBusy(false);
+      requestLockRef.current = false;
     }
   };
 
   // ── STEP 2: Verify OTP ──
   const handleVerifyOtp = async () => {
+    if (requestLockRef.current) return;
     const otpValue = otp.join("");
     if (otpValue.length < 6) {
       const msg = "Please enter the full 6-digit OTP.";
@@ -114,6 +126,7 @@ export function CreateAddressModal({ abhaData, profileInfo, user, onClose }) {
       if (showToast) showToast(msg, "error");
       return;
     }
+    requestLockRef.current = true;
     setErr(""); setBusy(true);
     try {
       const verifyRes = await abhaCreateVerifyOtp(otpValue, txnId);
@@ -126,6 +139,9 @@ export function CreateAddressModal({ abhaData, profileInfo, user, onClose }) {
       setErr(msg);
       if (showToast) showToast(msg, "error");
       setBusy(false);
+    } finally {
+      // fetchSuggestions clears `busy`; release the lock once the whole chain settles
+      requestLockRef.current = false;
     }
   };
 
@@ -154,12 +170,14 @@ export function CreateAddressModal({ abhaData, profileInfo, user, onClose }) {
 
   // ── STEP 3: Create Address ──
   const handleCreateAddress = async () => {
+    if (requestLockRef.current) return;
     const finalAddress = selectedAddr || (customPrefix ? `${customPrefix}@abdm` : "");
     if (!finalAddress) { setErr("Please select or enter an ABHA address."); return; }
     if (customPrefix && !selectedAddr) {
       if (customPrefix.length < 4) { setErr("ABHA address must be at least 4 characters."); return; }
       if (!/^[a-zA-Z0-9._]+$/.test(customPrefix)) { setErr("Only letters, numbers, dots and underscores allowed."); return; }
     }
+    requestLockRef.current = true;
     setErr(""); setBusy(true);
     try {
       // Mock success as API is unavailable
@@ -170,6 +188,7 @@ export function CreateAddressModal({ abhaData, profileInfo, user, onClose }) {
       setErr(error?.message || "Failed to create address. Please try again.");
     } finally {
       setBusy(false);
+      requestLockRef.current = false;
     }
   };
 
@@ -255,7 +274,7 @@ export function CreateAddressModal({ abhaData, profileInfo, user, onClose }) {
 
   // ── MAIN MODAL ──
   return (
-    <Overlay onClose={onClose}>
+    <Overlay onClose={handleClose}>
       <div style={{
         background: '#fff', borderRadius: '28px', width: '100%', maxWidth: '500px',
         boxShadow: '0 30px 60px -12px rgba(0,0,0,0.25)', overflow: 'hidden',
@@ -266,11 +285,11 @@ export function CreateAddressModal({ abhaData, profileInfo, user, onClose }) {
         <div style={{ padding: '24px 32px', borderBottom: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(10px)', zIndex: 10 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             {step !== "send_otp" && (
-              <button onClick={() => { setErr(""); setStep(step === "select_address" ? "verify_otp" : "send_otp"); }} style={{
-                background: '#f3f4f6', border: 'none', cursor: 'pointer', padding: '6px', borderRadius: '50%',
-                display: 'flex', alignItems: 'center', transition: 'background 0.2s'
+              <button onClick={() => { setErr(""); setStep(step === "select_address" ? "verify_otp" : "send_otp"); }} disabled={busy} style={{
+                background: '#f3f4f6', border: 'none', cursor: busy ? 'default' : 'pointer', padding: '6px', borderRadius: '50%',
+                display: 'flex', alignItems: 'center', transition: 'background 0.2s', opacity: busy ? 0.6 : 1
               }}
-                onMouseEnter={e => e.currentTarget.style.background = '#e5e7eb'} onMouseLeave={e => e.currentTarget.style.background = '#f3f4f6'}>
+                onMouseEnter={e => !busy && (e.currentTarget.style.background = '#e5e7eb')} onMouseLeave={e => e.currentTarget.style.background = '#f3f4f6'}>
                 <ArrowLeft size={18} color="var(--text-main)" />
               </button>
             )}
@@ -284,8 +303,8 @@ export function CreateAddressModal({ abhaData, profileInfo, user, onClose }) {
               <p style={{ margin: '2px 0 0', fontSize: '12px', color: 'var(--text-muted)', fontWeight: '500' }}>ABHA Digital Health Mission</p>
             </div>
           </div>
-          <button onClick={onClose} style={{ background: '#f9fafb', border: '1px solid #e5e7eb', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0, transition: 'all 0.2s' }}
-            onMouseEnter={e => { e.currentTarget.style.background = '#f3f4f6'; e.currentTarget.style.transform = 'rotate(90deg)'; }}
+          <button onClick={handleClose} disabled={busy} style={{ background: '#f9fafb', border: '1px solid #e5e7eb', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: busy ? 'default' : 'pointer', flexShrink: 0, transition: 'all 0.2s', opacity: busy ? 0.6 : 1 }}
+            onMouseEnter={e => { if (busy) return; e.currentTarget.style.background = '#f3f4f6'; e.currentTarget.style.transform = 'rotate(90deg)'; }}
             onMouseLeave={e => { e.currentTarget.style.background = '#f9fafb'; e.currentTarget.style.transform = 'rotate(0deg)'; }}>
             <X size={16} color="#6b7280" />
           </button>
@@ -330,12 +349,13 @@ export function CreateAddressModal({ abhaData, profileInfo, user, onClose }) {
                   width: '100%', background: busy ? '#e5e7eb' : 'linear-gradient(135deg, var(--primary) 0%, #1a4a50 100%)',
                   color: busy ? '#9ca3af' : '#fff', border: 'none', padding: '16px',
                   borderRadius: '14px', fontSize: '15px', fontWeight: '700',
-                  cursor: busy ? 'not-allowed' : 'pointer', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  cursor: busy ? 'default' : 'pointer', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                   boxShadow: busy ? 'none' : '0 8px 20px rgba(46,102,110,0.25)',
+                  transform: busy ? 'none' : undefined,
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px'
                 }}
                 onMouseEnter={e => !busy && (e.currentTarget.style.transform = 'translateY(-2px)')}
-                onMouseLeave={e => !busy && (e.currentTarget.style.transform = 'translateY(0)')}
+                onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; }}
               >
                 {busy ? <><Loader2 size={18} style={{ animation: 'spin 1s linear infinite' }} /> Sending OTP...</> : <>Send OTP <ArrowRight size={18} /></>}
               </button>
@@ -386,12 +406,13 @@ export function CreateAddressModal({ abhaData, profileInfo, user, onClose }) {
                   width: '100%', background: busy || otp.join("").length < 6 ? '#e5e7eb' : 'linear-gradient(135deg, var(--primary) 0%, #1a4a50 100%)',
                   color: busy || otp.join("").length < 6 ? '#9ca3af' : '#fff',
                   border: 'none', padding: '16px', borderRadius: '14px', fontSize: '15px', fontWeight: '700',
-                  cursor: busy || otp.join("").length < 6 ? 'not-allowed' : 'pointer', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  cursor: busy || otp.join("").length < 6 ? 'default' : 'pointer', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                   boxShadow: busy || otp.join("").length < 6 ? 'none' : '0 8px 20px rgba(46,102,110,0.25)',
+                  transform: busy ? 'none' : undefined,
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px'
                 }}
                 onMouseEnter={e => !(busy || otp.join("").length < 6) && (e.currentTarget.style.transform = 'translateY(-2px)')}
-                onMouseLeave={e => !(busy || otp.join("").length < 6) && (e.currentTarget.style.transform = 'translateY(0)')}
+                onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; }}
               >
                 {busy ? <><Loader2 size={18} style={{ animation: 'spin 1s linear infinite' }} /> Verifying...</> : <>Verify OTP <ArrowRight size={18} /></>}
               </button>
@@ -399,7 +420,7 @@ export function CreateAddressModal({ abhaData, profileInfo, user, onClose }) {
                 <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Didn't receive the code? </span>
                 <button onClick={handleSendOtp} disabled={busy} style={{
                   background: 'none', border: 'none', color: 'var(--primary)',
-                  fontSize: '13.5px', fontWeight: '700', cursor: busy ? 'not-allowed' : 'pointer', padding: '4px', opacity: busy ? 0.5 : 1
+                  fontSize: '13.5px', fontWeight: '700', cursor: busy ? 'default' : 'pointer', padding: '4px', opacity: busy ? 0.6 : 1
                 }}>
                   Resend OTP
                 </button>
@@ -423,18 +444,19 @@ export function CreateAddressModal({ abhaData, profileInfo, user, onClose }) {
                     {suggestions.map(addr => {
                       const isSelected = selectedAddr === addr;
                       return (
-                        <button key={addr} onClick={() => { setSelectedAddr(addr); setCustomPrefix(""); setErr(""); }}
+                        <button key={addr} disabled={busy} onClick={() => { setSelectedAddr(addr); setCustomPrefix(""); setErr(""); }}
                           style={{
                             padding: '16px 20px', borderRadius: '14px', textAlign: 'left',
                             border: isSelected ? '2px solid var(--primary)' : '1.5px solid #e5e7eb',
                             background: isSelected ? 'var(--primary-light)' : '#fff',
                             color: isSelected ? 'var(--primary-dark)' : 'var(--text-main)',
                             fontSize: '15px', fontFamily: 'monospace', fontWeight: isSelected ? '700' : '600',
-                            cursor: 'pointer', transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                            cursor: busy ? 'default' : 'pointer', transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                            opacity: busy && !isSelected ? 0.6 : 1,
                             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                             boxShadow: isSelected ? '0 4px 12px rgba(46,102,110,0.1)' : '0 2px 6px rgba(0,0,0,0.02)'
                           }}
-                          onMouseEnter={e => !isSelected && (e.currentTarget.style.borderColor = '#d1d5db')}
+                          onMouseEnter={e => !isSelected && !busy && (e.currentTarget.style.borderColor = '#d1d5db')}
                           onMouseLeave={e => !isSelected && (e.currentTarget.style.borderColor = '#e5e7eb')}
                         >
                           <span style={{ letterSpacing: '0.02em' }}>{addr}</span>
@@ -470,7 +492,7 @@ export function CreateAddressModal({ abhaData, profileInfo, user, onClose }) {
                   <div style={{ padding: '16px 14px 16px 20px', display: 'flex', alignItems: 'center', color: '#9ca3af' }}>
                     <FileText size={18} />
                   </div>
-                  <input type="text" value={customPrefix}
+                  <input type="text" value={customPrefix} disabled={busy}
                     onChange={e => { setCustomPrefix(e.target.value.replace(/[^a-zA-Z0-9._]/g, "").toLowerCase()); setSelectedAddr(""); }}
                     placeholder="e.g. rahul.sharma"
                     style={{ flex: 1, padding: '16px 0', border: 'none', outline: 'none', fontSize: '16px', fontFamily: 'monospace', color: 'var(--text-main)', fontWeight: '600', background: 'transparent', letterSpacing: '0.02em' }} />
@@ -491,13 +513,14 @@ export function CreateAddressModal({ abhaData, profileInfo, user, onClose }) {
                   background: busy || (!selectedAddr && !customPrefix.trim()) ? '#e5e7eb' : 'linear-gradient(135deg, var(--accent) 0%, #ea580c 100%)',
                   color: busy || (!selectedAddr && !customPrefix.trim()) ? '#9ca3af' : '#fff',
                   border: 'none', padding: '16px', borderRadius: '14px', fontSize: '15px', fontWeight: '700',
-                  cursor: busy || (!selectedAddr && !customPrefix.trim()) ? 'not-allowed' : 'pointer',
+                  cursor: busy || (!selectedAddr && !customPrefix.trim()) ? 'default' : 'pointer',
                   transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                   boxShadow: busy || (!selectedAddr && !customPrefix.trim()) ? 'none' : '0 8px 24px rgba(234,88,12,0.3)',
+                  transform: busy ? 'none' : undefined,
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px'
                 }}
                 onMouseEnter={e => !(busy || (!selectedAddr && !customPrefix.trim())) && (e.currentTarget.style.transform = 'translateY(-2px)')}
-                onMouseLeave={e => !(busy || (!selectedAddr && !customPrefix.trim())) && (e.currentTarget.style.transform = 'translateY(0)')}
+                onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; }}
               >
                 {busy ? <><Loader2 size={18} style={{ animation: 'spin 1s linear infinite' }} /> Processing...</> : <>Complete Setup <ArrowRight size={18} /></>}
               </button>

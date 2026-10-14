@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { MessageSquare, X, Send, Bot, FileText, User, Calendar, MapPin, Activity, List } from "lucide-react";
+import { MessageSquare, X, Send, Bot, FileText, User, Calendar, MapPin, Activity, List, Loader2 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 
 // Simple ID generator for sessions
@@ -23,6 +23,8 @@ export default function ChatBot() {
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const bodyRef = useRef(null);
+  // Synchronous lock so Enter + click (or a fast double-click) can't send the same query twice
+  const sendLockRef = useRef(false);
 
   // Auto-scroll to bottom when new messages appear
   useEffect(() => {
@@ -32,7 +34,7 @@ export default function ChatBot() {
   }, [messages, isTyping]);
 
   const handleSend = async () => {
-    if (!input.trim()) return;
+    if (sendLockRef.current || !input.trim()) return;
 
     const userQuery = input.trim();
     const userMsg = {
@@ -43,6 +45,7 @@ export default function ChatBot() {
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
 
+    sendLockRef.current = true;
     setMessages(prev => [...prev, userMsg]);
     setInput("");
     setIsTyping(true);
@@ -121,6 +124,7 @@ export default function ChatBot() {
         }
       ]);
     } finally {
+      sendLockRef.current = false;
       setIsTyping(false);
     }
   };
@@ -316,8 +320,8 @@ export default function ChatBot() {
           onKeyDown={(e) => e.key === 'Enter' && handleSend()}
           autoFocus
         />
-        <button className="chat-send-btn" onClick={handleSend} disabled={!input.trim()}>
-          <Send size={18} />
+        <button className="chat-send-btn" onClick={handleSend} disabled={isTyping || !input.trim()} aria-busy={isTyping}>
+          {isTyping ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
         </button>
       </div>
     </div>

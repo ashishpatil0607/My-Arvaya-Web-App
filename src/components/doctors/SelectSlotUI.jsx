@@ -1,5 +1,5 @@
-import { ChevronLeft, ChevronRight, ChevronDown, CalendarX2, Calendar } from "lucide-react";
-import { useState } from "react";
+import { ChevronLeft, ChevronRight, ChevronDown, CalendarX2, Calendar, Loader2 } from "lucide-react";
+import { useState, useRef } from "react";
 
 export default function SelectSlotUI({ doctor, onConfirm, type = "doctor", submitting = false }) {
   const today = new Date();
@@ -8,6 +8,8 @@ export default function SelectSlotUI({ doctor, onConfirm, type = "doctor", submi
   const [currentMonth, setCurrentMonth] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
   const [selectedDateObj, setSelectedDateObj] = useState(today);
   const [selectedTime, setSelectedTime] = useState(type === "lab" ? "10:00 AM" : null);
+  // Synchronous guard so a fast double-click can't call onConfirm twice
+  const confirmLockRef = useRef(false);
 
   const startOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
   const endOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
@@ -21,6 +23,16 @@ export default function SelectSlotUI({ doctor, onConfirm, type = "doctor", submi
   
   const formatDateForDisplay = (date) => {
     return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+  };
+
+  const handleConfirm = async () => {
+    if (confirmLockRef.current || submitting || !selectedTime) return;
+    confirmLockRef.current = true;
+    try {
+      await onConfirm({ date: formatDateForDisplay(selectedDateObj), time: selectedTime });
+    } finally {
+      confirmLockRef.current = false;
+    }
   };
 
   return (
@@ -50,9 +62,9 @@ export default function SelectSlotUI({ doctor, onConfirm, type = "doctor", submi
 
           <div className="full-calendar-card">
             <div className="fc-header">
-              <button className="icon-btn" onClick={prevMonth}><ChevronLeft size={16} /></button>
+              <button className="icon-btn" onClick={prevMonth} disabled={submitting}><ChevronLeft size={16} /></button>
               <span className="fc-month">{monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}</span>
-              <button className="icon-btn" onClick={nextMonth}><ChevronRight size={16} /></button>
+              <button className="icon-btn" onClick={nextMonth} disabled={submitting}><ChevronRight size={16} /></button>
             </div>
             <div className="fc-grid">
               {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
@@ -75,7 +87,7 @@ export default function SelectSlotUI({ doctor, onConfirm, type = "doctor", submi
                     key={`day-${day}`}
                     className={`fc-date ${isSelected ? 'active' : ''}`}
                     onClick={() => setSelectedDateObj(date)}
-                    disabled={isPast}
+                    disabled={isPast || submitting}
                     style={{ 
                       opacity: isPast ? 0.3 : 1, 
                       cursor: isPast ? 'not-allowed' : 'pointer',
@@ -105,6 +117,7 @@ export default function SelectSlotUI({ doctor, onConfirm, type = "doctor", submi
                 key={time}
                 className={`time-slot-btn ${selectedTime === time ? 'active' : ''}`}
                 onClick={() => setSelectedTime(time)}
+                disabled={submitting}
               >
                 {time}
               </button>
@@ -119,11 +132,18 @@ export default function SelectSlotUI({ doctor, onConfirm, type = "doctor", submi
         <button
           className="btn btn-primary"
           disabled={!selectedTime || submitting}
-          onClick={() => onConfirm({ date: formatDateForDisplay(selectedDateObj), time: selectedTime })}
-          style={{ padding: '12px 24px', fontSize: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+          onClick={handleConfirm}
+          aria-busy={submitting}
+          style={{
+            padding: '12px 24px', fontSize: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+            ...((!selectedTime || submitting) && { opacity: 0.6, cursor: 'default', transform: 'none', boxShadow: 'none' })
+          }}
         >
           {submitting ? (
-            <div className="spinner" style={{ width: '16px', height: '16px', borderTopColor: '#fff', border: '2px solid rgba(255,255,255,0.2)', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+            <>
+              <Loader2 size={18} className="animate-spin" />
+              {type === "lab" ? "Scheduling..." : "Booking..."}
+            </>
           ) : (
             <>
               <Calendar size={18} style={{ marginRight: '8px' }} />

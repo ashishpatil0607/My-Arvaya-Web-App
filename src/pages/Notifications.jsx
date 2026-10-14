@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Bell, Calendar, Activity, CreditCard, Gift, AlertCircle, Info, ChevronRight, Clock } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Bell, Calendar, Activity, CreditCard, Gift, AlertCircle, Info, ChevronRight, Clock, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { getNotifications } from "../services/dataService";
 
@@ -59,6 +59,8 @@ export default function Notifications() {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
+  // Synchronous lock so rapid category clicks can't start overlapping fetches
+  const categoryLockRef = useRef(false);
 
   useEffect(() => {
     fetchNotifications("all");
@@ -95,8 +97,14 @@ export default function Notifications() {
   };
 
   const handleCategoryClick = async (catId) => {
-    setFilter(catId);
-    await fetchNotifications(catId);
+    if (categoryLockRef.current) return;
+    categoryLockRef.current = true;
+    try {
+      setFilter(catId);
+      await fetchNotifications(catId);
+    } finally {
+      categoryLockRef.current = false;
+    }
   };
 
   const unreadCount = notifications.filter(n => !n.read).length;
@@ -198,9 +206,14 @@ export default function Notifications() {
                       className={`notif-cat-btn ${active ? "active" : ""}`}
                       style={{ "--cat-color": cat.color }}
                       onClick={() => handleCategoryClick(cat.id)}
+                      disabled={loading}
+                      aria-busy={active && loading}
                     >
                       <span className="notif-cat-icon"><cat.icon size={16} /></span>
                       <span className="notif-cat-label">{cat.label}</span>
+                      {active && loading && (
+                        <Loader2 size={14} className="animate-spin notif-cat-spinner" />
+                      )}
                       {active && !loading && (
                         <span className="notif-cat-count">{filteredNotifications.length}</span>
                       )}
@@ -258,7 +271,7 @@ export default function Notifications() {
                 </p>
 
                 {filter !== "all" && (
-                  <button type="button" className="notif-empty-btn" onClick={() => handleCategoryClick("all")}>
+                  <button type="button" className="notif-empty-btn" onClick={() => handleCategoryClick("all")} disabled={loading}>
                     <Bell size={14} /> View all notifications
                   </button>
                 )}
@@ -413,7 +426,7 @@ export default function Notifications() {
         }
         .notif-mark-read-btn:disabled {
           opacity: 0.55;
-          cursor: not-allowed;
+          cursor: default;
         }
         .notif-hero-graphic {
           display: flex;
@@ -626,9 +639,19 @@ export default function Notifications() {
           cursor: pointer;
           transition: background 0.2s ease, color 0.2s ease;
         }
-        .notif-cat-btn:hover {
+        .notif-cat-btn:not(:disabled):hover {
           background: var(--bg-app);
           color: #0b2545;
+        }
+        .notif-cat-btn:disabled {
+          cursor: default;
+        }
+        .notif-cat-btn:disabled:not(.active) {
+          opacity: 0.6;
+        }
+        .notif-cat-spinner {
+          flex-shrink: 0;
+          color: #0d9488;
         }
         .notif-cat-btn:focus-visible {
           outline: 2px solid rgba(13, 148, 136, 0.45);
@@ -804,7 +827,11 @@ export default function Notifications() {
           cursor: pointer;
           transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
         }
-        .notif-empty-btn:hover {
+        .notif-empty-btn:disabled {
+          opacity: 0.6;
+          cursor: default;
+        }
+        .notif-empty-btn:not(:disabled):hover {
           background: #ffffff;
           box-shadow: 0 6px 16px rgba(13, 148, 136, 0.12);
           transform: translateY(-1px);

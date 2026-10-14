@@ -57,6 +57,8 @@ export default function AllLabTests() {
   const [walletAppliedAmount, setWalletAppliedAmount] = useState(0);
   const [loadingWallet, setLoadingWallet] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  // Synchronous lock so a fast double-click can't create two lab orders.
+  const submitLockRef = useRef(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(null);
   const isInitialMount = useRef(true);
@@ -214,6 +216,8 @@ export default function AllLabTests() {
       openLoginModal("/confirmed");
       return;
     }
+    if (submitLockRef.current) return;
+    submitLockRef.current = true;
     setSubmitting(true);
     try {
       const patient_id = user?.id || user?.user_id || user?.patient_id || "";
@@ -284,6 +288,7 @@ export default function AllLabTests() {
       const res = await loadRazorpayScript();
       if (!res) {
         alert("Razorpay SDK failed to load. Are you offline?");
+        submitLockRef.current = false;
         setSubmitting(false);
         return;
       }
@@ -309,6 +314,7 @@ export default function AllLabTests() {
           } catch (err) {
             console.error("Payment verification failed", err);
             alert("Payment verification failed. Please contact support.");
+            submitLockRef.current = false;
             setSubmitting(false);
           }
         },
@@ -321,6 +327,7 @@ export default function AllLabTests() {
         },
         modal: {
           ondismiss: function() {
+            submitLockRef.current = false;
             setSubmitting(false);
           }
         }
@@ -336,6 +343,7 @@ export default function AllLabTests() {
       } else {
         alert("Booking failed. Please try again.");
       }
+      submitLockRef.current = false;
       setSubmitting(false);
     }
   };
@@ -1114,7 +1122,7 @@ export default function AllLabTests() {
       {/* Booking Modal */}
       <Modal
         isOpen={!!selectedItem}
-        onClose={() => { setSelectedItem(null); setApplyWallet(false); setWalletAppliedAmount(0); }}
+        onClose={() => { if (submitting) return; setSelectedItem(null); setApplyWallet(false); setWalletAppliedAmount(0); }}
         title="Schedule Lab Test"
         maxWidth="680px"
       >
@@ -1159,7 +1167,7 @@ export default function AllLabTests() {
              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border)', paddingTop: '16px' }}>
                <span style={{ color: 'var(--text-main)', fontSize: '14px', fontWeight: '500' }}>Apply wallet balance</span>
                <div 
-                 onClick={() => { if(walletBalance > 0) setApplyWallet(!applyWallet) }}
+                 onClick={() => { if(walletBalance > 0 && !submitting) setApplyWallet(!applyWallet) }}
                  style={{
                    width: '40px',
                    height: '22px',

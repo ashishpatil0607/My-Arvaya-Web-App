@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { User, Phone, Calendar, ArrowRight, Droplet, Building, ChevronDown, CheckCircle2, Search } from "lucide-react";
+import { User, Phone, Calendar, ArrowRight, Droplet, Building, ChevronDown, CheckCircle2, Search, Loader2 } from "lucide-react";
 import { getLocations } from "../services/dataService";
 
 export default function Signup() {
@@ -24,6 +24,8 @@ export default function Signup() {
   const dropdownRef = useRef(null);
 
   const fetchedRef = useRef(false);
+  // Synchronous guard so a fast double-click can't submit registration twice
+  const submitLockRef = useRef(false);
 
   useEffect(() => {
     if (fetchedRef.current) return;
@@ -54,6 +56,7 @@ export default function Signup() {
 
   async function handleSubmit(e) {
     e.preventDefault();
+    if (submitLockRef.current) return;
     if (!firstName.trim()) {
       const msg = "Please enter your First Name";
       setError(msg);
@@ -94,16 +97,21 @@ export default function Signup() {
     const genderCode = gender === "Female" ? "F" : gender === "Male" ? "M" : "O";
     const tempTitle = title.includes(".") ? title.replace(".", "") : title;
 
-    const ok = await register({
-      title: tempTitle,
-      name: `${firstName.trim()} ${lastName.trim()}`,
-      gender: genderCode,
-      date_of_birth: dob,
-      mobile_number: phone.trim(),
-      blood_group: bloodGroup,
-      entitylocation: selectedBranch
-    });
-    if (ok) go(location.state?.from || "/");
+    submitLockRef.current = true;
+    try {
+      const ok = await register({
+        title: tempTitle,
+        name: `${firstName.trim()} ${lastName.trim()}`,
+        gender: genderCode,
+        date_of_birth: dob,
+        mobile_number: phone.trim(),
+        blood_group: bloodGroup,
+        entitylocation: selectedBranch
+      });
+      if (ok) go(location.state?.from || "/");
+    } finally {
+      submitLockRef.current = false;
+    }
   }
 
   const inputWrap = {
@@ -421,12 +429,12 @@ export default function Signup() {
           <button type="submit" disabled={loading} style={{
             background: "linear-gradient(135deg, #2e666e, #1f474d)",
             color: "#ffffff", border: "none", padding: "14px", borderRadius: "12px",
-            fontSize: "15px", fontWeight: "700", cursor: loading ? "wait" : "pointer",
+            fontSize: "15px", fontWeight: "700", cursor: loading ? "default" : "pointer",
             display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
-            opacity: loading ? 0.7 : 1, transition: "all 0.25s", marginTop: "6px",
-            boxShadow: "0 6px 18px rgba(46, 102, 110, 0.3)", width: "100%"
+            opacity: loading ? 0.6 : 1, transition: "all 0.25s", marginTop: "6px",
+            boxShadow: loading ? "none" : "0 6px 18px rgba(46, 102, 110, 0.3)", width: "100%"
           }}>
-            {loading ? "Creating Account..." : <span style={{ color: "#ffffff", display: "flex", alignItems: "center", gap: "8px", fontWeight: "700" }}>Complete Registration <ArrowRight size={17} color="#ffffff" /></span>}
+            {loading ? <><Loader2 size={17} className="animate-spin" /> Creating Account...</> : <span style={{ color: "#ffffff", display: "flex", alignItems: "center", gap: "8px", fontWeight: "700" }}>Complete Registration <ArrowRight size={17} color="#ffffff" /></span>}
           </button>
         </form>
 

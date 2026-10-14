@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { 
   ChevronRight, 
@@ -77,6 +77,8 @@ export default function Rewards() {
   const [maxRedeemPoints, setMaxRedeemPoints] = useState(null);
   const [loadingPoints, setLoadingPoints] = useState(true);
   const [isRedeeming, setIsRedeeming] = useState(false);
+  // Synchronous lock so a fast double-click can't fire two redeem requests.
+  const redeemLockRef = useRef(false);
   const [showMoreEarn, setShowMoreEarn] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
   const [earnTasks, setEarnTasks] = useState(defaultEarnTasks);
@@ -331,7 +333,7 @@ export default function Rewards() {
   };
 
   const handleRedeemTabClick = async () => {
-    if (isRedeeming) return;
+    if (isRedeeming || redeemLockRef.current) return;
 
     const storedUser = localStorage.getItem("arvaya_user");
     let parsedUser = user;
@@ -345,6 +347,7 @@ export default function Rewards() {
     const patient_id = parsedUser?.id || parsedUser?.user_id || parsedUser?.patient_id || parsedUser?.app_user_id || 20546;
     const points_to_redeem = maxRedeemPoints || 30;
 
+    redeemLockRef.current = true;
     setIsRedeeming(true);
     try {
       const res = await redeemLoyaltyPoints(patient_id, points_to_redeem);
@@ -381,6 +384,7 @@ export default function Rewards() {
       console.error("Redemption failed:", err);
       showToast(err.message || "Failed to redeem points. Please try again.");
     } finally {
+      redeemLockRef.current = false;
       setIsRedeeming(false);
     }
   };
@@ -526,9 +530,9 @@ export default function Rewards() {
                 </div>
                 <div className="rewards-balance-action">
                   {canRedeem ? (
-                    <button type="button" onClick={handleRedeemTabClick} disabled={isRedeeming}>
+                    <button type="button" className="rewards-redeem-btn" onClick={handleRedeemTabClick} disabled={isRedeeming}>
                       {isRedeeming ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
-                      {isRedeeming ? "Redeeming" : `Redeem ${redeemThreshold} points`}
+                      {isRedeeming ? "Redeeming..." : `Redeem ${redeemThreshold} points`}
                     </button>
                   ) : (
                     <span className="rewards-redeem-badge"><TrendingUp size={15} /> {redeemThreshold} points to redeem</span>
@@ -635,6 +639,14 @@ export default function Rewards() {
           )}
         </div>
       </div>
+      <style>{`
+        .new-rewards-card .rewards-balance-action button.rewards-redeem-btn:disabled {
+          opacity: 0.6;
+          cursor: default;
+          transform: none !important;
+          box-shadow: none !important;
+        }
+      `}</style>
     </main>
   );
 }

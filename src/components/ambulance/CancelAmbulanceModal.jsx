@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { AlertCircle, Ambulance, Clock, Loader2, MapPin } from "lucide-react";
 import Modal from "../common/Modal";
 import { updateAmbulanceStatus } from "../../services/ambulanceService";
@@ -23,6 +23,8 @@ export default function CancelAmbulanceModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [touched, setTouched] = useState(false);
+  // Synchronous lock so a fast double-click can't fire two cancel requests
+  const submitLockRef = useRef(false);
 
   // Reset form state each time the modal is opened
   useEffect(() => {
@@ -45,6 +47,7 @@ export default function CancelAmbulanceModal({
 
   const handleSubmit = async (e) => {
     e?.preventDefault();
+    if (submitLockRef.current) return;
     setTouched(true);
 
     if (!isValid) {
@@ -52,6 +55,7 @@ export default function CancelAmbulanceModal({
       return;
     }
 
+    submitLockRef.current = true;
     setIsSubmitting(true);
     setError(null);
 
@@ -72,6 +76,7 @@ export default function CancelAmbulanceModal({
         "Failed to cancel ambulance request. Please try again."
       );
     } finally {
+      submitLockRef.current = false;
       setIsSubmitting(false);
     }
   };
@@ -174,7 +179,13 @@ export default function CancelAmbulanceModal({
             <span className="reschedule-summary-hint" style={{ whiteSpace: "nowrap" }}>This action cannot be undone</span>
           </div>
           <div className="reschedule-buttons">
-            <button type="button" className="btn btn-secondary" onClick={handleClose} disabled={isSubmitting}>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={handleClose}
+              disabled={isSubmitting}
+              style={isSubmitting ? { opacity: 0.6, cursor: "default" } : undefined}
+            >
               Keep Request
             </button>
             <button
@@ -189,7 +200,7 @@ export default function CancelAmbulanceModal({
                 alignItems: "center",
                 gap: "8px",
                 opacity: !isValid || isSubmitting ? 0.6 : 1,
-                cursor: !isValid || isSubmitting ? "not-allowed" : "pointer"
+                cursor: !isValid || isSubmitting ? "default" : "pointer"
               }}
             >
               {isSubmitting ? (

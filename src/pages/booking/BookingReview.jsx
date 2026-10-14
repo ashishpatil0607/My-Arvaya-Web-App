@@ -14,7 +14,8 @@ import {
   CreditCard, 
   ChevronLeft, 
   Check,
-  Timer
+  Timer,
+  Loader2
 } from "lucide-react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
@@ -147,6 +148,8 @@ export default function BookingReview() {
   const razorpayRef = useRef(null);
   const scrollStylesRef = useRef(null);
   const [paymentOpen, setPaymentOpen] = useState(false);
+  // Synchronous guard so a fast double-click can't fire two bookings
+  const submitLockRef = useRef(false);
 
   useEffect(() => {
     async function loadData() {
@@ -307,6 +310,7 @@ export default function BookingReview() {
   }, []);
 
   const handleBack = () => {
+    if (submitting) return;
     releaseHeldSlot();
     navigate(-1);
   };
@@ -369,9 +373,10 @@ export default function BookingReview() {
       openLoginModal("/doctors/review");
       return;
     }
-    if (slotConflict) {
+    if (slotConflict || submitLockRef.current) {
       return;
     }
+    submitLockRef.current = true;
     setSubmitting(true);
     try {
       const patient_id = user?.id || user?.user_id || user?.patient_id || "";
@@ -521,6 +526,8 @@ export default function BookingReview() {
         alert("Booking failed. Please try again.");
       }
       setSubmitting(false);
+    } finally {
+      submitLockRef.current = false;
     }
   };
 
@@ -741,15 +748,17 @@ export default function BookingReview() {
                       <div 
                         role="switch"
                         aria-checked={applyWallet}
-                        tabIndex={walletBalance > 0 ? 0 : -1}
-                        onClick={() => { if (walletBalance > 0) setApplyWallet(!applyWallet); }}
+                        aria-disabled={submitting || walletBalance <= 0}
+                        tabIndex={walletBalance > 0 && !submitting ? 0 : -1}
+                        onClick={() => { if (walletBalance > 0 && !submitting) setApplyWallet(!applyWallet); }}
                         onKeyDown={(e) => {
-                          if ((e.key === "Enter" || e.key === " ") && walletBalance > 0) {
+                          if ((e.key === "Enter" || e.key === " ") && walletBalance > 0 && !submitting) {
                             e.preventDefault();
                             setApplyWallet(!applyWallet);
                           }
                         }}
                         className={`wallet-switch-track ${applyWallet ? "active" : ""} ${walletBalance <= 0 ? "disabled" : ""}`}
+                        style={submitting ? { opacity: 0.6, cursor: 'default' } : undefined}
                         title={walletBalance <= 0 ? "Zero balance in wallet" : "Toggle wallet balance"}
                       >
                         <div className="wallet-switch-thumb" />
@@ -766,6 +775,7 @@ export default function BookingReview() {
                               className="wallet-amount-input"
                               value={walletAppliedAmount} 
                               onChange={handleWalletInputChange}
+                              disabled={submitting}
                               min="0"
                               max={maxWalletApplicable}
                               aria-label="Wallet amount to apply"
@@ -818,7 +828,9 @@ export default function BookingReview() {
                         <button 
                           type="button"
                           onClick={handleBack}
+                          disabled={submitting}
                           className="btn-review-back"
+                          style={submitting ? { opacity: 0.6, cursor: 'default' } : undefined}
                         >
                           <ChevronLeft size={16} /> Back
                         </button>
@@ -827,10 +839,12 @@ export default function BookingReview() {
                           onClick={confirm}
                           disabled={submitting}
                           className="btn-review-confirm"
+                          aria-busy={submitting}
+                          style={submitting ? { cursor: 'default', boxShadow: 'none' } : undefined}
                         >
                           {submitting ? (
                             <>
-                              <div className="spinner" style={{ width: '15px', height: '15px', borderTopColor: '#fff', border: '2px solid rgba(255,255,255,0.25)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }}></div>
+                              <Loader2 size={16} className="animate-spin" />
                               <span>Processing...</span>
                             </>
                           ) : (

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import {
   ChevronRight, QrCode, CreditCard, User, Users, Plus, LogOut,
   Download, X, Shield, Clock, CheckCircle2, XCircle, AlertCircle,
-  Info, ArrowLeft, MapPin, ShieldCheck, Copy, FileText, Building2, Phone, Calendar, UserCircle
+  Info, ArrowLeft, MapPin, ShieldCheck, Copy, FileText, Building2, Phone, Calendar, UserCircle, Loader2
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { Link } from "react-router-dom";
@@ -131,6 +131,21 @@ export default function ABHA() {
 function AbhaTab({ abhaData, onShowQr, onLogout, onSwitch, onCreate }) {
   const [cardView, setCardView] = useState("card");
   const [copied, setCopied]     = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
+  // Synchronous lock so a fast double-click can't fire logout twice
+  const logoutLockRef = useRef(false);
+
+  const handleLogoutClick = async () => {
+    if (logoutLockRef.current) return;
+    logoutLockRef.current = true;
+    setLoggingOut(true);
+    try {
+      await onLogout?.();
+    } finally {
+      logoutLockRef.current = false;
+      setLoggingOut(false);
+    }
+  };
 
   const copyAbhaNumber = () => {
     navigator.clipboard.writeText(abhaData.abhaNumber).then(() => {
@@ -318,11 +333,13 @@ function AbhaTab({ abhaData, onShowQr, onLogout, onSwitch, onCreate }) {
         <QuickServiceBtn icon={Plus}  label="Create Another Address"       onClick={onCreate} />
         
         {/* Logout ABHA Profile */}
-        <button onClick={onLogout} style={{
+        <button onClick={handleLogoutClick} disabled={loggingOut} aria-busy={loggingOut} style={{
           background: "linear-gradient(145deg, rgba(254,226,226,0.7) 0%, rgba(254,226,226,0.2) 100%)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: "20px", padding: "16px",
-          display: "flex", alignItems: "center", gap: "16px", cursor: "pointer", transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)", textAlign: "left", width: "100%"
+          display: "flex", alignItems: "center", gap: "16px", cursor: loggingOut ? "default" : "pointer", transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)", textAlign: "left", width: "100%",
+          opacity: loggingOut ? 0.6 : 1, transform: loggingOut ? "none" : undefined,
         }}
         onMouseEnter={e => {
+          if (loggingOut) return;
           e.currentTarget.style.transform = "translateY(-2px)";
           e.currentTarget.style.boxShadow = "0 10px 20px -10px rgba(239,68,68,0.3)";
           e.currentTarget.style.background = "linear-gradient(145deg, rgba(254,226,226,0.9) 0%, rgba(254,226,226,0.4) 100%)";
@@ -334,10 +351,10 @@ function AbhaTab({ abhaData, onShowQr, onLogout, onSwitch, onCreate }) {
         }}
         >
           <div style={{ background: "linear-gradient(135deg, #f87171 0%, #dc2626 100%)", color: "#fff", width: "44px", height: "44px", borderRadius: "14px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxShadow: "0 4px 10px rgba(220,38,38,0.2)" }}>
-            <LogOut size={20} />
+            {loggingOut ? <Loader2 size={20} className="animate-spin" /> : <LogOut size={20} />}
           </div>
           <div>
-            <div style={{ fontSize: "14px", fontWeight: "800", color: "#b91c1c", marginBottom: "4px" }}>Logout Profile</div>
+            <div style={{ fontSize: "14px", fontWeight: "800", color: "#b91c1c", marginBottom: "4px" }}>{loggingOut ? "Logging out..." : "Logout Profile"}</div>
             <div style={{ fontSize: "12px", color: "#dc2626", fontWeight: "500" }}>Unlink session</div>
           </div>
         </button>
@@ -555,6 +572,14 @@ function SwitchProfileModal({ onClose }) {
   const [canResend, setCanResend]     = useState(false);
   const [switchedProfile, setSwitchedProfile] = useState(null);
   const otpRefs = useRef([]);
+  // Synchronous lock so a fast double-click can't fire the same request twice
+  const requestLockRef = useRef(false);
+
+  // Block closing the modal while a request is in flight
+  const handleClose = () => {
+    if (requestLockRef.current) return;
+    onClose();
+  };
 
   /* ── Countdown timer (step 2) ── */
   useEffect(() => {
@@ -567,7 +592,9 @@ function SwitchProfileModal({ onClose }) {
 
   /* ── Step 1: Send OTP to mobile ── */
   const handleSendOtp = async () => {
+    if (requestLockRef.current) return;
     if (mobile.length < 10) { setErr("Enter a valid 10-digit mobile number."); return; }
+    requestLockRef.current = true;
     setErr(""); setBusy(true);
     try {
       const res = await abhaSendOtp(mobile);
@@ -575,12 +602,14 @@ function SwitchProfileModal({ onClose }) {
       setOtp(""); setCountdown(120); setCanResend(false);
       setStep(2);
     } catch (e) { setErr(e.message || "Failed to send OTP. Please try again."); }
-    finally { setBusy(false); }
+    finally { setBusy(false); requestLockRef.current = false; }
   };
 
   /* ── Step 2: Verify OTP ── */
   const handleVerifyOtp = async () => {
+    if (requestLockRef.current) return;
     if (otp.length < 6) { setErr("Enter the 6-digit OTP."); return; }
+    requestLockRef.current = true;
     setErr(""); setBusy(true);
     try {
       const res = await abhaVerifyOtp(otp, txnId);
@@ -594,12 +623,14 @@ function SwitchProfileModal({ onClose }) {
       setSelected(list[0]?.address || list[0]?.id || "");
       setStep(3);
     } catch (e) { setErr(e.message || "Invalid OTP. Please try again."); }
-    finally { setBusy(false); }
+    finally { setBusy(false); requestLockRef.current = false; }
   };
 
   /* ── Step 3: Confirm address & switch ── */
   const handleConfirm = async () => {
+    if (requestLockRef.current) return;
     if (!selected) { setErr("Please select an ABHA address."); return; }
+    requestLockRef.current = true;
     setErr(""); setBusy(true);
     try {
       const res = await abhaConfirmAddress(selected, "", txnId);
@@ -607,7 +638,7 @@ function SwitchProfileModal({ onClose }) {
       setSwitchedProfile(selected);
       setStep(4);
     } catch (e) { setErr(e.message || "Could not switch profile. Please try again."); }
-    finally { setBusy(false); }
+    finally { setBusy(false); requestLockRef.current = false; }
   };
 
   /* ── OTP input grid ── */
@@ -635,7 +666,7 @@ function SwitchProfileModal({ onClose }) {
   const stepLabels = ["Mobile Number", "Verify OTP", "Select Address", "Done"];
 
   return (
-    <Overlay onClose={onClose}>
+    <Overlay onClose={handleClose}>
       <div style={{
         background: "#fff", borderRadius: "24px", width: "100%", maxWidth: "520px",
         position: "relative", boxShadow: "0 30px 60px -12px rgba(0,0,0,0.4)",
@@ -644,7 +675,7 @@ function SwitchProfileModal({ onClose }) {
 
         {/* ── Header ── */}
         <div style={{ background: "linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%)", padding: "24px 28px" }}>
-          <button onClick={onClose} style={{ position: "absolute", top: "16px", right: "16px", background: "rgba(255,255,255,0.15)", border: "none", cursor: "pointer", color: "#fff", width: "32px", height: "32px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <button onClick={handleClose} disabled={busy} style={{ position: "absolute", top: "16px", right: "16px", background: "rgba(255,255,255,0.15)", border: "none", cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1, color: "#fff", width: "32px", height: "32px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <X size={18} />
           </button>
           <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "20px" }}>
@@ -707,11 +738,11 @@ function SwitchProfileModal({ onClose }) {
                 width: "100%", padding: "15px", background: busy || mobile.length < 10 ? "var(--border)" : "var(--accent)",
                 color: busy || mobile.length < 10 ? "var(--text-muted)" : "#fff",
                 border: "none", borderRadius: "12px", fontSize: "15px", fontWeight: "700",
-                cursor: busy || mobile.length < 10 ? "not-allowed" : "pointer", transition: "all 0.2s",
+                cursor: busy || mobile.length < 10 ? "default" : "pointer", transition: "all 0.2s",
                 boxShadow: busy || mobile.length < 10 ? "none" : "0 4px 14px rgba(251,145,63,0.35)",
                 display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
               }}>
-                <Phone size={16} />{busy ? "Sending OTP..." : "Send OTP"}
+                {busy ? <><Loader2 size={16} className="animate-spin" /> Sending OTP...</> : <><Phone size={16} /> Send OTP</>}
               </button>
             </div>
           )}
@@ -720,7 +751,7 @@ function SwitchProfileModal({ onClose }) {
           {step === 2 && (
             <div style={{ animation: "fadeIn 0.3s ease-in-out" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "6px" }}>
-                <button onClick={() => { setStep(1); setErr(""); }} style={{ background: "var(--bg-app)", border: "none", cursor: "pointer", width: "30px", height: "30px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <button onClick={() => { setStep(1); setErr(""); }} disabled={busy} style={{ background: "var(--bg-app)", border: "none", cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1, width: "30px", height: "30px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <ArrowLeft size={16} color="var(--text-main)" />
                 </button>
                 <h3 style={{ fontSize: "18px", fontWeight: "800", color: "var(--text-main)", margin: 0 }}>Verify OTP</h3>
@@ -760,8 +791,8 @@ function SwitchProfileModal({ onClose }) {
                   {canResend ? "Didn't receive the code?" : `Resend in ${fmt(countdown)}`}
                 </span>
                 {canResend && (
-                  <button onClick={() => { setOtp(""); setCountdown(120); setCanResend(false); handleSendOtp(); }}
-                    style={{ color: "var(--primary)", fontWeight: "700", fontSize: "13px", background: "none", border: "none", cursor: "pointer" }}>
+                  <button disabled={busy} onClick={() => { if (requestLockRef.current) return; setOtp(""); setCountdown(120); setCanResend(false); handleSendOtp(); }}
+                    style={{ color: "var(--primary)", fontWeight: "700", fontSize: "13px", background: "none", border: "none", cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1 }}>
                     Resend OTP
                   </button>
                 )}
@@ -772,10 +803,11 @@ function SwitchProfileModal({ onClose }) {
                 background: busy || otp.length < 6 ? "var(--border)" : "var(--primary)",
                 color: busy || otp.length < 6 ? "var(--text-muted)" : "#fff",
                 border: "none", borderRadius: "12px", fontSize: "15px", fontWeight: "700",
-                cursor: busy || otp.length < 6 ? "not-allowed" : "pointer", transition: "all 0.2s",
+                cursor: busy || otp.length < 6 ? "default" : "pointer", transition: "all 0.2s",
                 boxShadow: busy || otp.length < 6 ? "none" : "0 4px 14px rgba(46,102,110,0.28)",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
               }}>
-                {busy ? "Verifying..." : "Verify OTP"}
+                {busy ? <><Loader2 size={16} className="animate-spin" /> Verifying...</> : "Verify OTP"}
               </button>
             </div>
           )}
@@ -784,7 +816,7 @@ function SwitchProfileModal({ onClose }) {
           {step === 3 && (
             <div style={{ animation: "fadeIn 0.3s ease-in-out" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "6px" }}>
-                <button onClick={() => { setStep(2); setErr(""); }} style={{ background: "var(--bg-app)", border: "none", cursor: "pointer", width: "30px", height: "30px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <button onClick={() => { setStep(2); setErr(""); }} disabled={busy} style={{ background: "var(--bg-app)", border: "none", cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1, width: "30px", height: "30px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <ArrowLeft size={16} color="var(--text-main)" />
                 </button>
                 <h3 style={{ fontSize: "18px", fontWeight: "800", color: "var(--text-main)", margin: 0 }}>Select ABHA Address</h3>
@@ -798,11 +830,12 @@ function SwitchProfileModal({ onClose }) {
                   const val = addr.address || addr.id || addr;
                   const isSel = selected === val;
                   return (
-                    <button key={i} onClick={() => setSelected(val)} style={{
+                    <button key={i} onClick={() => setSelected(val)} disabled={busy} style={{
                       display: "flex", alignItems: "center", gap: "12px", padding: "14px 16px",
                       borderRadius: "12px", border: isSel ? "2px solid var(--primary)" : "1.5px solid var(--border)",
                       background: isSel ? "var(--primary-light)" : "var(--bg-app)",
-                      cursor: "pointer", textAlign: "left", transition: "all 0.2s", width: "100%",
+                      cursor: busy ? "default" : "pointer", textAlign: "left", transition: "all 0.2s", width: "100%",
+                      opacity: busy && !isSel ? 0.6 : 1,
                     }}>
                       <div style={{ width: "18px", height: "18px", borderRadius: "50%", border: isSel ? "5px solid var(--primary)" : "2px solid var(--border)", transition: "all 0.2s", background: "white", flexShrink: 0 }} />
                       <div style={{ flex: 1 }}>
@@ -820,11 +853,11 @@ function SwitchProfileModal({ onClose }) {
                 background: busy || !selected ? "var(--border)" : "var(--accent)",
                 color: busy || !selected ? "var(--text-muted)" : "#fff",
                 border: "none", borderRadius: "12px", fontSize: "15px", fontWeight: "700",
-                cursor: busy || !selected ? "not-allowed" : "pointer", transition: "all 0.2s",
+                cursor: busy || !selected ? "default" : "pointer", transition: "all 0.2s",
                 boxShadow: busy || !selected ? "none" : "0 4px 14px rgba(251,145,63,0.35)",
                 display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
               }}>
-                <Users size={17} />{busy ? "Switching..." : "Switch to This Profile"}
+                {busy ? <><Loader2 size={17} className="animate-spin" /> Switching...</> : <><Users size={17} /> Switch to This Profile</>}
               </button>
             </div>
           )}
@@ -869,6 +902,14 @@ function CreateAddressModal({ abhaData, onClose }) {
   const [busy, setBusy]       = useState(false);
   const [err, setErr]         = useState("");
   const [created, setCreated] = useState("");
+  // Synchronous lock so a fast double-click can't fire the request twice
+  const createLockRef = useRef(false);
+
+  // Block closing the modal while the request is in flight
+  const handleClose = () => {
+    if (createLockRef.current) return;
+    onClose();
+  };
 
   const suggestions = [
     `${abhaData.name.split(" ")[0].toLowerCase()}2@abdm`,
@@ -877,19 +918,25 @@ function CreateAddressModal({ abhaData, onClose }) {
   ];
 
   const handleCreate = async () => {
+    if (createLockRef.current) return;
     if (!form.prefix.trim()) { setErr("Please enter a valid ABHA address prefix."); return; }
     if (form.prefix.length < 4) { setErr("ABHA address must be at least 4 characters."); return; }
     if (!/^[a-zA-Z0-9._]+$/.test(form.prefix)) { setErr("Only letters, numbers, dots and underscores allowed."); return; }
+    createLockRef.current = true;
     setErr(""); setBusy(true);
-    await new Promise(r => setTimeout(r, 1400));
-    setCreated(`${form.prefix.toLowerCase()}${form.suffix}`);
-    setBusy(false);
-    setStep(2);
+    try {
+      await new Promise(r => setTimeout(r, 1400));
+      setCreated(`${form.prefix.toLowerCase()}${form.suffix}`);
+      setStep(2);
+    } finally {
+      setBusy(false);
+      createLockRef.current = false;
+    }
   };
 
   return (
-    <Overlay onClose={onClose}>
-      <ModalShell title="Create Another ABHA Address" onClose={onClose} width={460}>
+    <Overlay onClose={handleClose}>
+      <ModalShell title="Create Another ABHA Address" onClose={handleClose} closeDisabled={busy} width={460}>
         {step === 1 ? (
           <>
             <p style={{ fontSize: "14px", color: "var(--text-muted)", marginBottom: "20px", lineHeight: "1.6" }}>
@@ -903,13 +950,13 @@ function CreateAddressModal({ abhaData, onClose }) {
               <div style={{ fontSize: "12px", fontWeight: "600", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "8px" }}>Suggestions</div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
                 {suggestions.map(s => (
-                  <button key={s} onClick={() => setForm(f => ({ ...f, prefix: s.replace("@abdm", "") }))} style={{
+                  <button key={s} disabled={busy} onClick={() => setForm(f => ({ ...f, prefix: s.replace("@abdm", "") }))} style={{
                     padding: "6px 12px", border: "1.5px solid var(--border)", borderRadius: "8px",
                     background: "var(--bg-app)", fontSize: "13px", fontFamily: "monospace",
-                    color: "var(--primary)", cursor: "pointer", transition: "all 0.2s",
-                    fontWeight: "600",
+                    color: "var(--primary)", cursor: busy ? "default" : "pointer", transition: "all 0.2s",
+                    fontWeight: "600", opacity: busy ? 0.6 : 1,
                   }}
-                    onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--primary)"; e.currentTarget.style.background = "var(--primary-light)"; }}
+                    onMouseEnter={e => { if (busy) return; e.currentTarget.style.borderColor = "var(--primary)"; e.currentTarget.style.background = "var(--primary-light)"; }}
                     onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border)";   e.currentTarget.style.background = "var(--bg-app)"; }}
                   >{s}</button>
                 ))}
@@ -922,6 +969,7 @@ function CreateAddressModal({ abhaData, onClose }) {
               <div style={{ display: "flex", border: "1.5px solid var(--border)", borderRadius: "12px", overflow: "hidden", background: "var(--bg-app)", transition: "all 0.2s" }}>
                 <input
                   type="text"
+                  disabled={busy}
                   value={form.prefix}
                   onChange={e => setForm(f => ({ ...f, prefix: e.target.value.replace(/[^a-zA-Z0-9._]/g, "").toLowerCase() }))}
                   placeholder="yourname"
@@ -938,10 +986,11 @@ function CreateAddressModal({ abhaData, onClose }) {
               width: "100%", padding: "14px", background: busy || !form.prefix.trim() ? "var(--border)" : "var(--accent)",
               color: busy || !form.prefix.trim() ? "var(--text-muted)" : "#fff",
               border: "none", borderRadius: "12px", fontSize: "15px", fontWeight: "700",
-              cursor: busy ? "wait" : "pointer", transition: "all 0.2s",
+              cursor: busy || !form.prefix.trim() ? "default" : "pointer", transition: "all 0.2s",
               boxShadow: busy || !form.prefix.trim() ? "none" : "0 4px 16px rgba(251,145,63,0.35)",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
             }}>
-              {busy ? "Creating Address..." : "Create ABHA Address"}
+              {busy ? <><Loader2 size={16} className="animate-spin" /> Creating Address...</> : "Create ABHA Address"}
             </button>
           </>
         ) : (
@@ -1079,10 +1128,10 @@ function Overlay({ children, onClose }) {
   );
 }
 
-function ModalShell({ title, subtitle, onClose, width = 480, children }) {
+function ModalShell({ title, subtitle, onClose, closeDisabled = false, width = 480, children }) {
   return (
     <div style={{ background: "#fff", borderRadius: "24px", padding: "32px", width: "100%", maxWidth: `${width}px`, position: "relative", boxShadow: "0 30px 60px -12px rgba(0,0,0,0.4)", animation: "modalIn 0.35s var(--ease-out) forwards" }}>
-      <button onClick={onClose} style={{ position: "absolute", top: "16px", right: "16px", background: "var(--bg-app)", border: "1px solid var(--border)", width: "32px", height: "32px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+      <button onClick={onClose} disabled={closeDisabled} style={{ position: "absolute", top: "16px", right: "16px", background: "var(--bg-app)", border: "1px solid var(--border)", width: "32px", height: "32px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", cursor: closeDisabled ? "default" : "pointer", opacity: closeDisabled ? 0.6 : 1 }}>
         <X size={18} color="var(--text-muted)" />
       </button>
       <div style={{ marginBottom: "20px", paddingRight: "40px" }}>

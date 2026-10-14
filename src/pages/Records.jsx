@@ -46,6 +46,12 @@ export default function Records() {
   let go = useNavigate();
   let fileInputRef = useRef(null);
   let uploadCancelledRef = useRef(false);
+  // Synchronous locks so a fast double-click can't fire the same request twice
+  const uploadLockRef = useRef(false);
+  const downloadLockRef = useRef(false);
+  const viewLockRef = useRef(false);
+  const loadMoreLockRef = useRef(false);
+  const searchLockRef = useRef(false);
 
   let [records, setRecords] = useState([]);
   let [count, setCount] = useState(0);
@@ -148,8 +154,9 @@ export default function Records() {
     }
   }, [activeTab, isAbhaLinked]);
 
-  // Download State
+  // Download / View State (id of the record currently in flight)
   let [downloadingId, setDownloadingId] = useState(null);
+  let [viewingId, setViewingId] = useState(null);
 
   const fetchRecords = async (page = 1, query = searchQuery) => {
     if (page === 1) setLoading(true);
@@ -196,10 +203,21 @@ export default function Records() {
     }
   };
 
+  // Explicit search (submit / Enter / clear) guarded against double-firing
+  const runSearch = async (query) => {
+    if (searchLockRef.current) return;
+    searchLockRef.current = true;
+    try {
+      await fetchRecords(1, query);
+    } finally {
+      searchLockRef.current = false;
+    }
+  };
+
   const handleSearchKeyDown = (e) => {
     if (e.key === "Enter") {
       e.preventDefault();
-      fetchRecords(1, searchQuery);
+      runSearch(searchQuery);
     }
   };
 
@@ -244,6 +262,8 @@ export default function Records() {
   }, [showUploadModal]);
 
   const handleCancelUpload = () => {
+    // Keep the modal open while the save request is in flight
+    if (uploadLockRef.current) return;
     uploadCancelledRef.current = true;
     setUploadingFile(false);
     setUploading(false);
@@ -308,6 +328,9 @@ export default function Records() {
       return;
     }
 
+    if (viewLockRef.current) return;
+    viewLockRef.current = true;
+    setViewingId(rec.id);
     try {
       const resolvedBlob = await fetchImageBlob(targetFile, 'HealthRecords');
       const finalUrl = resolvedBlob || getImageUrl(targetFile, 'HealthRecords');
@@ -333,6 +356,9 @@ export default function Records() {
       setTimeout(() => {
         try { document.body.removeChild(link); } catch(err) {}
       }, 100);
+    } finally {
+      viewLockRef.current = false;
+      setViewingId(null);
     }
   };
 
@@ -344,6 +370,8 @@ export default function Records() {
       return;
     }
 
+    if (downloadLockRef.current) return;
+    downloadLockRef.current = true;
     setDownloadingId(rec.id);
     try {
       const blobUrl = await fetchImageBlob(targetFile, 'HealthRecords');
@@ -377,12 +405,14 @@ export default function Records() {
       link.click();
       document.body.removeChild(link);
     } finally {
+      downloadLockRef.current = false;
       setDownloadingId(null);
     }
   };
 
   const handleUploadSubmit = async (e) => {
     if (e) e.preventDefault();
+    if (uploadLockRef.current) return;
 
     if (!selectedFile && !uploadedFileName) {
       showToast("Please select a file to upload.", "error");
@@ -400,6 +430,7 @@ export default function Records() {
     }
 
     uploadCancelledRef.current = false;
+    uploadLockRef.current = true;
     setUploading(true);
     try {
       let finalFileName = uploadedFileName;
@@ -480,6 +511,7 @@ export default function Records() {
       console.error("Upload & Save error:", err);
       showToast("Failed to save health record. Please try again.", "error");
     } finally {
+      uploadLockRef.current = false;
       if (!uploadCancelledRef.current) {
         setUploading(false);
       }
@@ -581,7 +613,7 @@ export default function Records() {
               <CloudUpload size={17} /> Upload Record
             </button>
 
-            <form onSubmit={(e) => { e.preventDefault(); fetchRecords(1, searchQuery); }} className="vault-search-form">
+            <form onSubmit={(e) => { e.preventDefault(); runSearch(searchQuery); }} className="vault-search-form">
               <div className="vault-search-box">
                 <input
                   type="text"
@@ -594,22 +626,25 @@ export default function Records() {
                 {searchQuery && (
                   <button
                     type="button"
+                    disabled={loading}
                     onClick={() => {
+                      if (searchLockRef.current) return;
                       setSearchQuery("");
-                      fetchRecords(1, "");
+                      runSearch("");
                     }}
                     title="Clear search"
-                    style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--muted)', padding: '0 4px', display: 'flex', alignItems: 'center' }}
+                    style={{ background: 'transparent', border: 'none', cursor: loading ? 'default' : 'pointer', color: 'var(--muted)', padding: '0 4px', display: 'flex', alignItems: 'center', opacity: loading ? 0.6 : 1 }}
                   >
                     <X size={15} />
                   </button>
                 )}
                 <button
                   type="submit"
-                  title="Search records"
-                  style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: searchQuery ? 'var(--primary)' : 'var(--muted)', padding: 0, display: 'flex', alignItems: 'center', marginLeft: '4px' }}
+                  disabled={loading}
+                  title={loading ? "Searching..." : "Search records"}
+                  style={{ background: 'transparent', border: 'none', cursor: loading ? 'default' : 'pointer', color: searchQuery ? 'var(--primary)' : 'var(--muted)', padding: 0, display: 'flex', alignItems: 'center', marginLeft: '4px' }}
                 >
-                  <Search size={16} />
+                  {loading ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
                 </button>
               </div>
             </form>
@@ -675,6 +710,17 @@ export default function Records() {
           .vault-search-form {
             margin: 0;
             padding-bottom: 0;
+          }
+
+          /* Async action buttons: faded, no hover lift while a request runs */
+          .vault-async-btn:disabled {
+            cursor: default !important;
+            opacity: 0.6;
+          }
+
+          .vault-async-btn:disabled:hover {
+            transform: none;
+            box-shadow: none;
           }
 
           .vault-search-box {
@@ -784,8 +830,8 @@ export default function Records() {
                             </div>
                             <div className="record-item-actions" style={{ display: 'flex', gap: '12px' }}>
                               <button 
-                                className="btn hover-glow" 
-                                disabled={!hasFile}
+                                className="btn hover-glow vault-async-btn"
+                                disabled={!hasFile || viewingId === rec.id}
                                 title={hasFile ? "View Record" : "No document file available"}
                                 style={{ 
                                   background: hasFile ? 'var(--primary-light)' : 'var(--bg)', 
@@ -795,32 +841,32 @@ export default function Records() {
                                   borderRadius: '10px', 
                                   fontSize: '14px', 
                                   fontWeight: '600', 
-                                  cursor: hasFile ? 'pointer' : 'not-allowed', 
-                                  opacity: hasFile ? 1 : 0.5,
-                                  display: 'flex', 
-                                  alignItems: 'center', 
-                                  gap: '6px' 
-                                }} 
+                                  cursor: hasFile && viewingId !== rec.id ? 'pointer' : 'default',
+                                  opacity: hasFile ? (viewingId === rec.id ? 0.6 : 1) : 0.5,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '6px'
+                                }}
                                 onClick={(e) => hasFile && handleViewRecord(rec, e)}
                               >
-                                View
+                                {viewingId === rec.id ? <><Loader2 size={14} className="animate-spin" /> Opening...</> : "View"}
                               </button>
                               <button 
-                                className="btn btn-secondary hover-glow" 
-                                disabled={!hasFile || downloadingId === rec.id}
-                                title={hasFile ? "Download Record" : "No document file available"}
-                                style={{ 
-                                  padding: '10px', 
-                                  borderRadius: '10px', 
-                                  cursor: hasFile ? 'pointer' : 'not-allowed', 
-                                  opacity: hasFile ? 1 : 0.5,
+                                className="btn btn-secondary hover-glow vault-async-btn"
+                                disabled={!hasFile || downloadingId !== null}
+                                title={hasFile ? (downloadingId === rec.id ? "Downloading..." : "Download Record") : "No document file available"}
+                                style={{
+                                  padding: '10px',
+                                  borderRadius: '10px',
+                                  cursor: hasFile && downloadingId === null ? 'pointer' : 'default',
+                                  opacity: hasFile ? (downloadingId !== null ? 0.6 : 1) : 0.5,
                                   display: 'flex', 
                                   alignItems: 'center', 
                                   justifyContent: 'center' 
                                 }}
                                 onClick={(e) => hasFile && handleDownloadRecord(rec, e)}
                               >
-                                <Download size={18} />
+                                {downloadingId === rec.id ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
                               </button>
                             </div>
                           </article>
@@ -894,8 +940,8 @@ export default function Records() {
                           {/* Actions */}
                           <div className="record-item-actions" style={{ display: 'flex', gap: '12px' }}>
                             <button 
-                              className="btn hover-glow" 
-                              disabled={!hasFile}
+                              className="btn hover-glow vault-async-btn"
+                              disabled={!hasFile || viewingId === rec.id}
                               title={hasFile ? "View Record" : "No document file available"}
                               style={{ 
                                 background: hasFile ? 'var(--primary-light)' : 'var(--bg)', 
@@ -905,25 +951,25 @@ export default function Records() {
                                 borderRadius: '10px', 
                                 fontSize: '14px', 
                                 fontWeight: '600', 
-                                cursor: hasFile ? 'pointer' : 'not-allowed', 
-                                opacity: hasFile ? 1 : 0.5,
-                                display: 'flex', 
-                                alignItems: 'center', 
-                                gap: '6px' 
-                              }} 
+                                cursor: hasFile && viewingId !== rec.id ? 'pointer' : 'default',
+                                opacity: hasFile ? (viewingId === rec.id ? 0.6 : 1) : 0.5,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px'
+                              }}
                               onClick={(e) => hasFile && handleViewRecord(rec, e)}
                             >
-                              View
+                              {viewingId === rec.id ? <><Loader2 size={14} className="animate-spin" /> Opening...</> : "View"}
                             </button>
                             <button 
-                              className="btn btn-secondary hover-glow" 
-                              disabled={!hasFile || downloadingId === rec.id}
-                              title={hasFile ? "Download Record" : "No document file available"}
-                              style={{ 
-                                padding: '10px', 
-                                borderRadius: '10px', 
-                                cursor: hasFile ? 'pointer' : 'not-allowed', 
-                                opacity: hasFile ? 1 : 0.5,
+                              className="btn btn-secondary hover-glow vault-async-btn"
+                              disabled={!hasFile || downloadingId !== null}
+                              title={hasFile ? (downloadingId === rec.id ? "Downloading..." : "Download Record") : "No document file available"}
+                              style={{
+                                padding: '10px',
+                                borderRadius: '10px',
+                                cursor: hasFile && downloadingId === null ? 'pointer' : 'default',
+                                opacity: hasFile ? (downloadingId !== null ? 0.6 : 1) : 0.5,
                                 display: 'flex', 
                                 alignItems: 'center', 
                                 justifyContent: 'center', 
@@ -944,15 +990,22 @@ export default function Records() {
                 {records.length < count && !loading && (
                   <div style={{ textAlign: 'center', marginTop: '40px' }}>
                     <button
-                      className="btn hover-glow"
-                      onClick={() => {
+                      className="btn hover-glow vault-async-btn"
+                      disabled={loadingMore}
+                      onClick={async () => {
+                        if (loadMoreLockRef.current) return;
+                        loadMoreLockRef.current = true;
                         const nextPage = pageIndex + 1;
                         setPageIndex(nextPage);
-                        fetchRecords(nextPage);
+                        try {
+                          await fetchRecords(nextPage);
+                        } finally {
+                          loadMoreLockRef.current = false;
+                        }
                       }}
                       style={{ background: 'transparent', color: 'var(--primary)', border: '2px solid var(--primary)', padding: '12px 32px', borderRadius: '12px', fontWeight: '700', cursor: 'pointer', fontSize: '15px' }}
                     >
-                      {loadingMore ? "Loading..." : "Load Older Records"}
+                      {loadingMore ? <><Loader2 size={16} className="animate-spin" /> Loading...</> : "Load Older Records"}
                     </button>
                   </div>
                 )}
@@ -979,10 +1032,11 @@ export default function Records() {
               <h3 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
                 <CloudUpload size={18} color="var(--primary)" /> Upload Medical Record
               </h3>
-              <button 
+              <button
                 type="button"
-                onClick={handleCancelUpload} 
-                style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--muted)', padding: '2px', borderRadius: '50%' }}
+                onClick={handleCancelUpload}
+                disabled={uploading}
+                style={{ background: 'transparent', border: 'none', cursor: uploading ? 'default' : 'pointer', color: 'var(--muted)', padding: '2px', borderRadius: '50%', opacity: uploading ? 0.6 : 1 }}
               >
                 <X size={18} />
               </button>
@@ -994,9 +1048,12 @@ export default function Records() {
               {/* File Dropzone / Selector */}
               <div 
                 onClick={() => {
+                  // Don't allow swapping the file while an upload/save is running
+                  if (uploading || uploadingFile) return;
                   setFocusedField('file');
                   fileInputRef.current?.click();
                 }}
+                aria-disabled={uploading || uploadingFile}
                 tabIndex={0}
                 onFocus={() => setFocusedField('file')}
                 onBlur={() => setFocusedField(null)}
@@ -1010,9 +1067,9 @@ export default function Records() {
                   borderRadius: '10px', 
                   padding: '10px 12px', 
                   textAlign: 'center', 
-                  background: 'var(--bg-app)', 
-                  cursor: 'pointer', 
-                  marginBottom: '10px', 
+                  background: 'var(--bg-app)',
+                  cursor: uploading || uploadingFile ? 'default' : 'pointer',
+                  marginBottom: '10px',
                   transition: 'all 0.2s ease',
                   outline: 'none'
                 }}
@@ -1151,17 +1208,18 @@ export default function Records() {
 
               {/* Footer Actions */}
               <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   onClick={handleCancelUpload}
-                  style={{ padding: '6px 14px', borderRadius: '8px', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-main)', cursor: 'pointer', fontWeight: '600', fontSize: '12px' }}
+                  disabled={uploading}
+                  style={{ padding: '6px 14px', borderRadius: '8px', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-main)', cursor: uploading ? 'default' : 'pointer', fontWeight: '600', fontSize: '12px', opacity: uploading ? 0.6 : 1 }}
                 >
                   Cancel
                 </button>
                 <button 
                   type="submit" 
                   disabled={uploading || uploadingFile || uploadSuccess}
-                  className="btn btn-accent hover-glow"
+                  className="btn btn-accent hover-glow vault-async-btn"
                   style={{ padding: '6px 18px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '600', fontSize: '12px' }}
                 >
                   {uploading ? (

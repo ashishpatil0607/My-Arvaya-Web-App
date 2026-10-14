@@ -63,6 +63,8 @@ export default function Login({ forceOpen = false, modalHost = false }) {
   const [phone, setPhone] = useState("");
   const [isAbhaFlow, setIsAbhaFlow] = useState(false);
   const [busy, setBusy] = useState(false);
+  // Synchronous guard against double-clicks firing duplicate auth requests
+  const actionLockRef = useRef(false);
   const [err, setErr] = useState("");
   // Multiple Profiles state
   const [profilesData, setProfilesData] = useState([]);
@@ -157,6 +159,8 @@ export default function Login({ forceOpen = false, modalHost = false }) {
       return;
     }
     setPhone(cleanMobile);
+    if (actionLockRef.current) return;
+    actionLockRef.current = true;
     setErr("");
     setBusy(true);
     try {
@@ -206,10 +210,13 @@ export default function Login({ forceOpen = false, modalHost = false }) {
       }
     } finally {
       setBusy(false);
+      actionLockRef.current = false;
     }
   };
 
   const doVerify = async (otp) => {
+    if (actionLockRef.current) return;
+    actionLockRef.current = true;
     setErr("");
     setBusy(true);
     try {
@@ -449,11 +456,14 @@ export default function Login({ forceOpen = false, modalHost = false }) {
       if (showToast) showToast(errMsg, "error");
     } finally {
       setBusy(false);
+      actionLockRef.current = false;
     }
   };
 
   /* ── Select Profile Continue Handler ── */
   const handleSelectProfileContinue = async (profile, allSelectedProfiles = []) => {
+    if (actionLockRef.current) return;
+    actionLockRef.current = true;
     setErr("");
     setBusy(true);
     try {
@@ -559,6 +569,7 @@ export default function Login({ forceOpen = false, modalHost = false }) {
       if (showToast) showToast(errMsg, "error");
     } finally {
       setBusy(false);
+      actionLockRef.current = false;
     }
   };
 
@@ -572,6 +583,8 @@ export default function Login({ forceOpen = false, modalHost = false }) {
       return;
     }
     setAbhaMobile(cleanMobile);
+    if (actionLockRef.current) return;
+    actionLockRef.current = true;
     setErr("");
     setBusy(true);
     try {
@@ -595,10 +608,13 @@ export default function Login({ forceOpen = false, modalHost = false }) {
       if (showToast) showToast(errMsg, "error");
     } finally {
       setBusy(false);
+      actionLockRef.current = false;
     }
   };
 
   const doAbhaVerifyOtp = async (otp) => {
+    if (actionLockRef.current) return;
+    actionLockRef.current = true;
     setErr("");
     setBusy(true);
     try {
@@ -659,10 +675,13 @@ export default function Login({ forceOpen = false, modalHost = false }) {
       if (showToast) showToast(errMsg, "error");
     } finally {
       setBusy(false);
+      actionLockRef.current = false;
     }
   };
 
   const doAbhaConfirm = async (address, dob) => {
+    if (actionLockRef.current) return;
+    actionLockRef.current = true;
     setErr("");
     setBusy(true);
     try {
@@ -789,6 +808,7 @@ export default function Login({ forceOpen = false, modalHost = false }) {
       if (showToast) showToast(errMsg, "error");
     } finally {
       setBusy(false);
+      actionLockRef.current = false;
     }
   };
 
@@ -974,13 +994,15 @@ export default function Login({ forceOpen = false, modalHost = false }) {
         {/* ── Close Button ── */}
         <button
           onClick={handleClose}
+          disabled={busy}
           style={{
             position: "absolute",
             top: "16px",
             right: "16px",
             background: "rgba(255,255,255,0.9)",
             border: "1px solid var(--border)",
-            cursor: "pointer",
+            cursor: busy ? "default" : "pointer",
+            opacity: busy ? 0.6 : 1,
             color: "var(--text-muted)",
             width: "34px",
             height: "34px",
@@ -993,6 +1015,7 @@ export default function Login({ forceOpen = false, modalHost = false }) {
             boxShadow: "var(--shadow-sm)",
           }}
           onMouseEnter={(e) => {
+            if (e.currentTarget.disabled) return;
             e.currentTarget.style.background = "var(--primary-light)";
             e.currentTarget.style.color = "var(--primary)";
           }}
@@ -1370,6 +1393,7 @@ function Landing({ onAbha, onMobile, showToast }) {
   const [referralCode, setReferralCode] = useState("");
   const [isCheckingReferral, setIsCheckingReferral] = useState(false);
   const [isReferralApplied, setIsReferralApplied] = useState(false);
+  const referralLockRef = useRef(false);
 
   return (
     <div
@@ -1487,6 +1511,8 @@ function Landing({ onAbha, onMobile, showToast }) {
           <button
             onClick={async () => {
               if (referralCode.trim()) {
+                if (referralLockRef.current) return;
+                referralLockRef.current = true;
                 setIsCheckingReferral(true);
                 try {
                   const BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://p8rhkmb7-8867.inc1.devtunnels.ms/";
@@ -1516,6 +1542,7 @@ function Landing({ onAbha, onMobile, showToast }) {
                   if (showToast) showToast("Failed to verify referral code", "error");
                 } finally {
                   setIsCheckingReferral(false);
+                  referralLockRef.current = false;
                 }
               } else {
                 setShowReferralInput(false);
@@ -1530,9 +1557,14 @@ function Landing({ onAbha, onMobile, showToast }) {
               borderRadius: '12px',
               fontSize: '15px',
               fontWeight: '600',
-              cursor: isCheckingReferral ? 'not-allowed' : 'pointer'
+              cursor: isCheckingReferral ? 'default' : 'pointer',
+              opacity: isCheckingReferral ? 0.6 : 1,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
             }}
           >
+            {isCheckingReferral && <Loader2 size={16} className="animate-spin" />}
             {isCheckingReferral ? 'Applying...' : 'Apply'}
           </button>
         </div>
@@ -1630,10 +1662,12 @@ function Mobile({ onBack, onSend, busy, err }) {
       >
         <button
           onClick={onBack}
+          disabled={busy}
           style={{
             background: "var(--bg-app)",
             border: "none",
-            cursor: "pointer",
+            cursor: busy ? "default" : "pointer",
+            opacity: busy ? 0.6 : 1,
             color: "var(--text-main)",
             width: "32px",
             height: "32px",
@@ -1737,13 +1771,13 @@ function Mobile({ onBack, onSend, busy, err }) {
               ? "var(--border)"
               : "var(--primary)",
           color: busy || m.length >= 10 ? "#fff" : "var(--text-muted)",
-          opacity: busy ? 0.85 : 1,
+          opacity: busy ? 0.6 : 1,
           border: "none",
           padding: "16px",
           borderRadius: "12px",
           fontSize: "15px",
           fontWeight: "600",
-          cursor: busy ? "wait" : m.length < 10 ? "not-allowed" : "pointer",
+          cursor: busy || m.length < 10 ? "default" : "pointer",
           transition: "all 0.2s",
           boxShadow:
             busy || m.length < 10 ? "none" : "0 4px 12px rgba(46,102,110,0.28)",
@@ -1798,11 +1832,13 @@ function Otp({ phone, onBack, onVerify, onResend, busy, err }) {
       >
         <button
           onClick={onBack}
+          disabled={busy}
           className="otp-back-btn"
           style={{
             background: "var(--bg-app)",
             border: "none",
-            cursor: "pointer",
+            cursor: busy ? "default" : "pointer",
+            opacity: busy ? 0.6 : 1,
             color: "var(--text-main)",
             width: "30px",
             height: "30px",
@@ -1850,13 +1886,15 @@ function Otp({ phone, onBack, onVerify, onResend, busy, err }) {
         {canResend ? (
           <button
             onClick={handleResend}
+            disabled={busy}
             style={{
               color: "var(--primary)",
               fontWeight: "700",
               fontSize: "13px",
               background: "transparent",
               border: "none",
-              cursor: "pointer",
+              cursor: busy ? "default" : "pointer",
+              opacity: busy ? 0.6 : 1,
             }}
           >
             Resend OTP
@@ -1893,13 +1931,13 @@ function Otp({ phone, onBack, onVerify, onResend, busy, err }) {
               ? "var(--border)"
               : "var(--primary)",
           color: busy || o.length >= 6 ? "#fff" : "var(--text-muted)",
-          opacity: busy ? 0.85 : 1,
+          opacity: busy ? 0.6 : 1,
           border: "none",
           padding: "13px 16px",
           borderRadius: "12px",
           fontSize: "14.5px",
           fontWeight: "700",
-          cursor: busy ? "wait" : o.length < 6 ? "not-allowed" : "pointer",
+          cursor: busy || o.length < 6 ? "default" : "pointer",
           transition: "all 0.2s",
           boxShadow:
             busy || o.length < 6 ? "none" : "0 4px 12px rgba(46,102,110,0.28)",
@@ -1958,10 +1996,12 @@ function AbhaMobile({ onBack, onSend, onCreateNow, busy, err }) {
       >
         <button
           onClick={onBack}
+          disabled={busy}
           style={{
             background: "var(--bg-app)",
             border: "none",
-            cursor: "pointer",
+            cursor: busy ? "default" : "pointer",
+            opacity: busy ? 0.6 : 1,
             color: "var(--text-main)",
             width: "32px",
             height: "32px",
@@ -2072,13 +2112,15 @@ function AbhaMobile({ onBack, onSend, onCreateNow, busy, err }) {
         </span>
         <button
           onClick={onCreateNow}
+          disabled={busy}
           style={{
             color: "var(--primary)",
             fontWeight: "700",
             fontSize: "13px",
             background: "transparent",
             border: "none",
-            cursor: "pointer",
+            cursor: busy ? "default" : "pointer",
+            opacity: busy ? 0.6 : 1,
             padding: 0,
           }}
         >
@@ -2098,13 +2140,19 @@ function AbhaMobile({ onBack, onSend, onCreateNow, busy, err }) {
           borderRadius: "12px",
           fontSize: "14px",
           fontWeight: "700",
-          cursor: busy || m.length < 10 ? "not-allowed" : "pointer",
+          cursor: busy || m.length < 10 ? "default" : "pointer",
+          opacity: busy ? 0.6 : 1,
           transition: "all 0.25s",
           boxShadow:
             busy || m.length < 10 ? "none" : "0 4px 16px rgba(251,145,63,0.38)",
           letterSpacing: "0.01em",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: "8px",
         }}
       >
+        {busy && <Loader2 size={18} className="animate-spin" />}
         {busy ? "Sending OTP..." : "Send OTP"}
       </button>
 
@@ -2179,10 +2227,12 @@ function AbhaOtp({ mobile, onBack, onVerify, onResend, busy, err }) {
       >
         <button
           onClick={onBack}
+          disabled={busy}
           style={{
             background: "var(--bg-app)",
             border: "none",
-            cursor: "pointer",
+            cursor: busy ? "default" : "pointer",
+            opacity: busy ? 0.6 : 1,
             color: "var(--text-main)",
             width: "32px",
             height: "32px",
@@ -2246,13 +2296,15 @@ function AbhaOtp({ mobile, onBack, onVerify, onResend, busy, err }) {
         {canResend ? (
           <button
             onClick={handleResend}
+            disabled={busy}
             style={{
               color: "var(--primary)",
               fontWeight: "700",
               fontSize: "13px",
               background: "transparent",
               border: "none",
-              cursor: "pointer",
+              cursor: busy ? "default" : "pointer",
+              opacity: busy ? 0.6 : 1,
             }}
           >
             Resend OTP
@@ -2284,12 +2336,18 @@ function AbhaOtp({ mobile, onBack, onVerify, onResend, busy, err }) {
           borderRadius: "12px",
           fontSize: "15px",
           fontWeight: "700",
-          cursor: busy || o.length < 6 ? "not-allowed" : "pointer",
+          cursor: busy || o.length < 6 ? "default" : "pointer",
+          opacity: busy ? 0.6 : 1,
           transition: "all 0.25s",
           boxShadow:
             busy || o.length < 6 ? "none" : "0 4px 16px rgba(251,145,63,0.38)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: "8px",
         }}
       >
+        {busy && <Loader2 size={18} className="animate-spin" />}
         {busy ? "Verifying..." : "Verify OTP"}
       </button>
     </div>
@@ -2349,10 +2407,12 @@ function AbhaSelectAddress({
       >
         <button
           onClick={onBack}
+          disabled={busy}
           style={{
             background: "var(--bg-app)",
             border: "none",
-            cursor: "pointer",
+            cursor: busy ? "default" : "pointer",
+            opacity: busy ? 0.6 : 1,
             color: "var(--text-main)",
             width: "32px",
             height: "32px",
@@ -2563,7 +2623,8 @@ function AbhaSelectAddress({
           borderRadius: "12px",
           fontSize: "15px",
           fontWeight: "700",
-          cursor: busy || !selected ? "not-allowed" : "pointer",
+          cursor: busy || !selected ? "default" : "pointer",
+          opacity: busy ? 0.6 : 1,
           transition: "all 0.25s",
           boxShadow:
             busy || !selected ? "none" : "0 4px 16px rgba(251,145,63,0.38)",
@@ -2574,7 +2635,9 @@ function AbhaSelectAddress({
         }}
       >
         {busy ? (
-          "Logging in..."
+          <>
+            <Loader2 size={18} className="animate-spin" /> Logging in...
+          </>
         ) : (
           <>
             Continue and login <ChevronRight size={18} />
@@ -2604,6 +2667,9 @@ function AbhaCreate({
   const [otp, setOtp] = useState("");
   const [txnId, setTxnId] = useState(abhaTransactionId || "");
   const [busy, setBusy] = useState(false);
+  // Synchronous guard so a fast double-click can't fire the same ABHA call twice
+  const createLockRef = useRef(false);
+  const [resending, setResending] = useState(false);
   const [err, setErr] = useState("");
   const [form, setForm] = useState({
     name: "",
@@ -2645,8 +2711,11 @@ function AbhaCreate({
   const isAadhaarValid = rawAadhaar.length === 12;
 
   const handleResendOtp = async () => {
+    if (createLockRef.current) return;
+    createLockRef.current = true;
     setErr("");
     setBusy(true);
+    setResending(true);
     try {
       const res = await abhaSendCreationOtp(rawAadhaar);
       const newTxnId =
@@ -2672,6 +2741,8 @@ function AbhaCreate({
       if (showToast) showToast(errMsg, "error");
     } finally {
       setBusy(false);
+      setResending(false);
+      createLockRef.current = false;
     }
   };
 
@@ -2699,6 +2770,8 @@ function AbhaCreate({
       if (showToast) showToast(msg, "error");
       return;
     }
+    if (createLockRef.current) return;
+    createLockRef.current = true;
     setErr("");
     setBusy(true);
     try {
@@ -2741,6 +2814,8 @@ function AbhaCreate({
       setErr(errMsg);
       if (showToast) showToast(errMsg, "error");
       setBusy(false);
+    } finally {
+      createLockRef.current = false;
     }
   };
 
@@ -2760,6 +2835,8 @@ function AbhaCreate({
       if (showToast) showToast(msg, "error");
       return;
     }
+    if (createLockRef.current) return;
+    createLockRef.current = true;
     setErr("");
     setBusy(true);
     try {
@@ -2863,6 +2940,8 @@ function AbhaCreate({
       setErr(errMsg);
       if (showToast) showToast(errMsg, "error");
       setBusy(false);
+    } finally {
+      createLockRef.current = false;
     }
   };
 
@@ -2873,10 +2952,13 @@ function AbhaCreate({
       if (showToast) showToast(msg, "error");
       return;
     }
+    if (createLockRef.current) return;
+    createLockRef.current = true;
     setErr("");
     setBusy(true);
     await new Promise((r) => setTimeout(r, 600));
     setBusy(false);
+    createLockRef.current = false;
     onNext("abha_create_done");
   };
 
@@ -3067,10 +3149,12 @@ function AbhaCreate({
       >
         <button
           onClick={onBack}
+          disabled={busy}
           style={{
             background: "var(--bg-app)",
             border: "1px solid var(--border)",
-            cursor: "pointer",
+            cursor: busy ? "default" : "pointer",
+            opacity: busy ? 0.6 : 1,
             color: "var(--text-main)",
             width: "32px",
             height: "32px",
@@ -3406,10 +3490,15 @@ function AbhaCreate({
                     fontSize: "12px",
                     background: "none",
                     border: "none",
-                    cursor: busy ? "not-allowed" : "pointer",
+                    cursor: busy ? "default" : "pointer",
+                    opacity: busy ? 0.6 : 1,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "4px",
                   }}
                 >
-                  {busy ? "Resending..." : "Resend OTP"}
+                  {resending && <Loader2 size={12} className="animate-spin" />}
+                  {resending ? "Resending..." : "Resend OTP"}
                 </button>
               ) : (
                 <span
@@ -3676,8 +3765,9 @@ function AbhaCreate({
           fontWeight: "700",
           cursor:
             busy || (step === "abha_create_1" && !isAadhaarValid)
-              ? "not-allowed"
+              ? "default"
               : "pointer",
+          opacity: busy ? 0.6 : 1,
           transition: "all 0.25s",
           boxShadow:
             busy || (step === "abha_create_1" && !isAadhaarValid)
@@ -3690,7 +3780,16 @@ function AbhaCreate({
         }}
       >
         {busy ? (
-          "Please wait..."
+          <>
+            <Loader2 size={17} className="animate-spin" />
+            {resending
+              ? "Please wait..."
+              : step === "abha_create_1"
+                ? "Sending OTP..."
+                : step === "abha_create_2"
+                  ? "Verifying..."
+                  : "Creating..."}
+          </>
         ) : step === "abha_create_1" ? (
           "Send OTP →"
         ) : step === "abha_create_2" ? (
@@ -4614,6 +4713,7 @@ function ChooseProfile({
           <button
             type="button"
             onClick={() => setChooseStep("verify")}
+            disabled={busy}
             style={{
               display: "inline-flex",
               alignItems: "center",
@@ -4623,7 +4723,8 @@ function ChooseProfile({
               color: "#1b6b72",
               fontSize: "13px",
               fontWeight: "700",
-              cursor: "pointer",
+              cursor: busy ? "default" : "pointer",
+              opacity: busy ? 0.6 : 1,
               padding: "0 0 10px 0",
             }}
           >
@@ -4788,13 +4889,13 @@ function ChooseProfile({
               margin: 0,
               background: "linear-gradient(135deg, #1b6b72, #134e54)",
               color: "#ffffff",
-              opacity: busy ? 0.85 : 1,
+              opacity: busy ? 0.6 : 1,
               border: "none",
               padding: "13px 16px",
               borderRadius: "12px",
               fontSize: "15px",
               fontWeight: "700",
-              cursor: busy ? "wait" : "pointer",
+              cursor: busy ? "default" : "pointer",
               boxShadow: busy
                 ? "none"
                 : "0 4px 14px rgba(27, 107, 114, 0.35)",
@@ -5248,13 +5349,13 @@ function ChooseProfile({
               margin: 0,
               background: "linear-gradient(135deg, #1b6b72, #144e53)",
               color: "#ffffff",
-              opacity: busy ? 0.85 : 1,
+              opacity: busy ? 0.6 : 1,
               border: "none",
               padding: "13px 16px",
               borderRadius: "12px",
               fontSize: "15px",
               fontWeight: "700",
-              cursor: busy ? "wait" : "pointer",
+              cursor: busy ? "default" : "pointer",
               boxShadow: busy ? "none" : "0 4px 14px rgba(27, 107, 114, 0.35)",
               transition: "all 0.25s ease",
               display: "flex",

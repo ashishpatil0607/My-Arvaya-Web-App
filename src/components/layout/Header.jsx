@@ -1,4 +1,4 @@
-import { Search, MapPin, ChevronDown, ChevronRight, ChevronLeft, Users, User, LogOut, Smartphone, HelpCircle, Menu, X, ArrowRight, Check, FlaskConical, Bell, Gift, Send, Mail, Copy, Share2, Shield, Home, Wallet, Truck, Phone, Siren, CalendarCheck, ShoppingBag, Info, MessageSquare } from "lucide-react";
+import { Search, MapPin, ChevronDown, ChevronRight, ChevronLeft, Users, User, LogOut, Smartphone, HelpCircle, Menu, X, ArrowRight, Check, FlaskConical, Bell, Gift, Send, Mail, Copy, Share2, Shield, Home, Wallet, Truck, Phone, Siren, CalendarCheck, ShoppingBag, Info, MessageSquare, Loader2 } from "lucide-react";
 import { Link, NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useState, useRef, useEffect, useMemo } from "react";
@@ -297,6 +297,41 @@ export default function Header() {
       setTimeout(() => setCopied(false), 2500);
     } catch (e) {
       console.error("Copy failed", e);
+    }
+  };
+
+  // Account actions (switch profile / logout) hit the API — keep the menu open with a spinner until done
+  const [switchingProfileId, setSwitchingProfileId] = useState(null);
+  const [loggingOut, setLoggingOut] = useState(false);
+  // Synchronous lock so a fast double-click can't fire a second switch/logout before re-render
+  const accountActionLockRef = useRef(false);
+  const accountActionBusy = loggingOut || switchingProfileId !== null;
+
+  const handleSwitchProfile = async (p, closeMenu) => {
+    if (accountActionLockRef.current) return;
+    accountActionLockRef.current = true;
+    setSwitchingProfileId(p.id);
+    try {
+      const switched = await switchProfile(p);
+      closeMenu();
+      if (switched) go("/");
+    } finally {
+      accountActionLockRef.current = false;
+      setSwitchingProfileId(null);
+    }
+  };
+
+  const handleLogout = async (closeMenu) => {
+    if (accountActionLockRef.current) return;
+    accountActionLockRef.current = true;
+    setLoggingOut(true);
+    try {
+      await logout();
+      closeMenu();
+      go("/");
+    } finally {
+      accountActionLockRef.current = false;
+      setLoggingOut(false);
     }
   };
 
@@ -832,6 +867,7 @@ export default function Header() {
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 14px 10px', borderBottom: '1px solid var(--border)' }}>
                           <button
                             type="button"
+                            disabled={accountActionBusy}
                             onClick={() => setProfileMenuTab("main")}
                             style={{
                               display: 'inline-flex',
@@ -840,13 +876,14 @@ export default function Header() {
                               background: 'transparent',
                               border: 'none',
                               color: '#1b6b72',
-                              cursor: 'pointer',
+                              cursor: accountActionBusy ? 'default' : 'pointer',
+                              opacity: accountActionBusy ? 0.6 : 1,
                               fontSize: '13px',
                               fontWeight: '700',
                               padding: '2px 6px',
                               borderRadius: '6px',
                             }}
-                            onMouseOver={e => e.currentTarget.style.background = 'rgba(27, 107, 114, 0.08)'}
+                            onMouseOver={e => { if (!accountActionBusy) e.currentTarget.style.background = 'rgba(27, 107, 114, 0.08)'; }}
                             onMouseOut={e => e.currentTarget.style.background = 'transparent'}
                           >
                             <ChevronLeft size={16} /> Back
@@ -883,21 +920,25 @@ export default function Header() {
                             return (
                               <div
                                 key={p.id}
-                                onClick={async () => {
-                                  setIsProfileMenuOpen(false);
-                                  setProfileMenuTab("main");
-                                  const switched = await switchProfile(p);
-                                  if (switched) go("/");
+                                aria-disabled={accountActionBusy}
+                                aria-busy={switchingProfileId === p.id}
+                                onClick={() => {
+                                  if (accountActionBusy) return;
+                                  handleSwitchProfile(p, () => {
+                                    setIsProfileMenuOpen(false);
+                                    setProfileMenuTab("main");
+                                  });
                                 }}
                                 style={{
                                   display: 'flex',
                                   alignItems: 'center',
                                   gap: '10px',
                                   padding: '8px 16px',
-                                  cursor: 'pointer',
+                                  cursor: accountActionBusy ? 'default' : 'pointer',
+                                  opacity: accountActionBusy && switchingProfileId !== p.id ? 0.6 : 1,
                                   transition: 'background 0.15s ease'
                                 }}
-                                onMouseOver={e => e.currentTarget.style.background = 'var(--bg-app)'}
+                                onMouseOver={e => { if (!accountActionBusy) e.currentTarget.style.background = 'var(--bg-app)'; }}
                                 onMouseOut={e => e.currentTarget.style.background = 'transparent'}
                               >
                                 <div style={{
@@ -937,6 +978,9 @@ export default function Header() {
                                     {stripTitle(p.name)}
                                   </div>
                                 </div>
+                                {switchingProfileId === p.id && (
+                                  <Loader2 size={15} className="animate-spin" style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                                )}
                               </div>
                             );
                           })}
@@ -1011,17 +1055,18 @@ export default function Header() {
 
                         <div className="profile-menu-footer">
                           <div
-                            className="profile-menu-item profile-menu-logout"
+                            className={`profile-menu-item profile-menu-logout${loggingOut ? ' is-busy' : ''}`}
+                            aria-disabled={loggingOut}
+                            aria-busy={loggingOut}
                             onClick={() => {
-                              setIsProfileMenuOpen(false);
-                              logout();
-                              go("/");
+                              if (loggingOut) return;
+                              handleLogout(() => setIsProfileMenuOpen(false));
                             }}
                           >
                             <span className="profile-menu-icon">
-                              <LogOut size={16} />
+                              {loggingOut ? <Loader2 size={16} className="animate-spin" /> : <LogOut size={16} />}
                             </span>
-                            <span className="profile-menu-label">Logout</span>
+                            <span className="profile-menu-label">{loggingOut ? "Logging out..." : "Logout"}</span>
                           </div>
                         </div>
                       </>
@@ -1117,6 +1162,7 @@ export default function Header() {
                 <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-app)', flexShrink: 0 }}>
                   <button
                     type="button"
+                    disabled={accountActionBusy}
                     onClick={() => setMobileDrawerTab("main")}
                     style={{
                       background: 'var(--bg-surface)',
@@ -1129,7 +1175,8 @@ export default function Header() {
                       color: 'var(--primary)',
                       fontSize: '12.5px',
                       fontWeight: '700',
-                      cursor: 'pointer',
+                      cursor: accountActionBusy ? 'default' : 'pointer',
+                      opacity: accountActionBusy ? 0.6 : 1,
                     }}
                   >
                     <ChevronLeft size={15} /> Back
@@ -1137,11 +1184,12 @@ export default function Header() {
 
                   <button
                     type="button"
+                    disabled={accountActionBusy}
                     onClick={() => {
                       setMobileDrawerOpen(false);
                       setMobileDrawerTab("main");
                     }}
-                    style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: '50%', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}
+                    style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: '50%', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', cursor: accountActionBusy ? 'default' : undefined, opacity: accountActionBusy ? 0.6 : 1 }}
                   >
                     <X size={16} />
                   </button>
@@ -1216,11 +1264,14 @@ export default function Header() {
                         return (
                           <div
                             key={p.id}
-                            onClick={async () => {
-                              setMobileDrawerOpen(false);
-                              setMobileDrawerTab("main");
-                              const switched = await switchProfile(p);
-                              if (switched) go("/");
+                            aria-disabled={accountActionBusy}
+                            aria-busy={switchingProfileId === p.id}
+                            onClick={() => {
+                              if (accountActionBusy) return;
+                              handleSwitchProfile(p, () => {
+                                setMobileDrawerOpen(false);
+                                setMobileDrawerTab("main");
+                              });
                             }}
                             style={{
                               display: 'flex',
@@ -1230,7 +1281,8 @@ export default function Header() {
                               borderRadius: '10px',
                               border: '1px solid var(--border)',
                               background: 'var(--bg-surface)',
-                              cursor: 'pointer',
+                              cursor: accountActionBusy ? 'default' : 'pointer',
+                              opacity: accountActionBusy && switchingProfileId !== p.id ? 0.6 : 1,
                               transition: 'all 0.15s ease'
                             }}
                           >
@@ -1264,6 +1316,9 @@ export default function Header() {
                                 {stripTitle(p.name)}
                               </div>
                             </div>
+                            {switchingProfileId === p.id && (
+                              <Loader2 size={15} className="animate-spin" style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                            )}
                           </div>
                         );
                       })}
@@ -1277,11 +1332,12 @@ export default function Header() {
                 <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-app)', flexShrink: 0 }}>
                   <img src="/secure-hospitals-logo.png" alt="Secure Hospitals – Arvaya Healthcare Ltd." style={{ height: '36px', width: 'auto', objectFit: 'contain' }} />
                   <button
+                    disabled={loggingOut}
                     onClick={() => {
                       setMobileDrawerOpen(false);
                       setMobileDrawerTab("main");
                     }}
-                    style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: '50%', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}
+                    style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: '50%', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', cursor: loggingOut ? 'default' : undefined, opacity: loggingOut ? 0.6 : 1 }}
                   >
                     <X size={16} />
                   </button>
@@ -1396,7 +1452,7 @@ export default function Header() {
                             },
                             {
                               label: "Logout", Icon: LogOut, color: '#dc2626', tint: 'rgba(220, 38, 38, 0.1)',
-                              onClick: () => { logout(); setMobileDrawerOpen(false); go("/"); }
+                              onClick: () => handleLogout(() => setMobileDrawerOpen(false))
                             },
                           ].map(({ label, Icon, color, tint, onClick }) => (
                             <button
@@ -1404,18 +1460,20 @@ export default function Header() {
                               type="button"
                               onClick={onClick}
                               title={label}
+                              disabled={loggingOut}
                               style={{
                                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '6px',
                                 padding: '10px 6px', borderRadius: '12px',
                                 background: 'var(--bg-app)', border: '1px solid var(--border)',
                                 fontSize: '11.5px', fontWeight: '700', color: label === "Logout" ? color : 'var(--text-main)',
-                                cursor: 'pointer', transition: 'transform 0.15s ease, box-shadow 0.15s ease'
+                                cursor: loggingOut ? 'default' : 'pointer', opacity: loggingOut ? 0.6 : 1,
+                                transition: 'transform 0.15s ease, box-shadow 0.15s ease'
                               }}
                             >
                               <span style={{ width: '32px', height: '32px', borderRadius: '10px', background: tint, color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                <Icon size={16} />
+                                {label === "Logout" && loggingOut ? <Loader2 size={16} className="animate-spin" /> : <Icon size={16} />}
                               </span>
-                              {label}
+                              {label === "Logout" && loggingOut ? "Logging out..." : label}
                             </button>
                           ))}
                         </div>
@@ -2270,6 +2328,18 @@ export default function Header() {
             max-width: calc(100vw - 16px) !important;
             box-shadow: 0 12px 36px rgba(0, 0, 0, 0.22) !important;
           }
+        }
+        /* Logout in progress — faded, no hover highlight */
+        .profile-menu-logout.is-busy {
+          opacity: 0.6;
+          cursor: default;
+        }
+        .profile-menu-logout.is-busy:hover {
+          background: transparent;
+        }
+        .profile-menu-logout.is-busy:hover .profile-menu-icon {
+          color: #dc2626;
+          background: rgba(220, 38, 38, 0.08);
         }
       `}</style>
     </>

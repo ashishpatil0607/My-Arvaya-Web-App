@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Calendar as CalendarIcon, Clock, MapPin, Video, User, CheckCircle, XCircle, AlertCircle, ChevronRight, ChevronLeft, Sunrise, Sun, Sunset, Check, Stethoscope, FileText } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, MapPin, Video, User, CheckCircle, XCircle, AlertCircle, ChevronRight, ChevronLeft, Sunrise, Sun, Sunset, Check, Stethoscope, FileText, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { getAppointments, cancelAppointment, rescheduleAppointment, getStoredUserId, getDoctorSlots } from "../services/dataService";
 import { toDisplayTime } from "../utils/formatTime";
@@ -86,6 +86,10 @@ export default function MyAppointments() {
   const [slotsLoading, setSlotsLoading] = useState(false);
   const [isRescheduling, setIsRescheduling] = useState(false);
 
+  // Synchronous guards so a fast double-click can't fire the request twice
+  const cancelLockRef = useRef(false);
+  const rescheduleLockRef = useRef(false);
+
   const fetchAppointmentsForPage = async (page) => {
     const requestId = ++requestIdRef.current;
     setLoading(true);
@@ -136,10 +140,12 @@ export default function MyAppointments() {
   };
 
   const confirmCancel = async () => {
+    if (cancelLockRef.current) return;
     if (!cancelReason.trim()) {
       setCancelReasonError("Please provide a reason for cancellation.");
       return;
     }
+    cancelLockRef.current = true;
     setIsCancelling(true);
     try {
       const raw = appointmentToCancel.raw || {};
@@ -160,6 +166,7 @@ export default function MyAppointments() {
       const errMsg = err?.response?.data?.message || err?.message || "Failed to cancel appointment.";
       showToast(errMsg, "error");
     } finally {
+      cancelLockRef.current = false;
       setIsCancelling(false);
     }
   };
@@ -250,10 +257,12 @@ export default function MyAppointments() {
   };
 
   const confirmReschedule = async () => {
+    if (rescheduleLockRef.current) return;
     if (!rescheduleSlot) {
       setRescheduleSlotError(true);
       return;
     }
+    rescheduleLockRef.current = true;
     setIsRescheduling(true);
     try {
       const raw = appointmentToReschedule.raw || {};
@@ -280,6 +289,7 @@ export default function MyAppointments() {
       const errMsg = err?.response?.data?.message || err?.message || "Failed to reschedule appointment.";
       showToast(errMsg, "error");
     } finally {
+      rescheduleLockRef.current = false;
       setIsRescheduling(false);
     }
   };
@@ -690,7 +700,7 @@ export default function MyAppointments() {
       </div>
       
       {/* Cancel Modal */}
-      <Modal isOpen={cancelModalOpen} onClose={() => setCancelModalOpen(false)} title="Cancel Appointment" maxWidth="640px">
+      <Modal isOpen={cancelModalOpen} onClose={() => { if (!isCancelling) setCancelModalOpen(false); }} title="Cancel Appointment" maxWidth="640px">
         <div className="reschedule-modal">
           {appointmentToCancel && (
             <div className="reschedule-current">
@@ -731,6 +741,7 @@ export default function MyAppointments() {
               rows={4}
               placeholder="Please tell us why you are cancelling..."
               aria-invalid={!!cancelReasonError}
+              disabled={isCancelling}
             />
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', fontSize: '12px', marginTop: '4px' }}>
               <span className="cancel-reason-error">{cancelReasonError}</span>
@@ -746,8 +757,13 @@ export default function MyAppointments() {
               <button className="btn btn-secondary" onClick={() => setCancelModalOpen(false)} disabled={isCancelling}>
                 Keep Appointment
               </button>
-              <button className="btn" onClick={confirmCancel} disabled={isCancelling} style={{ background: 'var(--danger, #dc2626)', color: 'white', border: 'none' }}>
-                {isCancelling ? "Cancelling..." : "Confirm Cancel"}
+              <button className="btn" onClick={confirmCancel} disabled={isCancelling} aria-busy={isCancelling} style={{ background: 'var(--danger, #dc2626)', color: 'white', border: 'none' }}>
+                {isCancelling ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    Cancelling...
+                  </>
+                ) : "Confirm Cancel"}
               </button>
             </div>
           </div>
@@ -755,7 +771,7 @@ export default function MyAppointments() {
       </Modal>
 
       {/* Reschedule Modal */}
-      <Modal isOpen={rescheduleModalOpen} onClose={() => setRescheduleModalOpen(false)} title="Reschedule Appointment" maxWidth="820px">
+      <Modal isOpen={rescheduleModalOpen} onClose={() => { if (!isRescheduling) setRescheduleModalOpen(false); }} title="Reschedule Appointment" maxWidth="820px">
         <div className="reschedule-modal">
           {appointmentToReschedule && (
             <div className="reschedule-current">
@@ -789,7 +805,7 @@ export default function MyAppointments() {
               {(() => {
                 const minDate = new Date();
                 minDate.setDate(minDate.getDate() + 1);
-                return <Calendar selectedDate={rescheduleDate} onSelectDate={setRescheduleDate} minDate={minDate} />;
+                return <Calendar selectedDate={rescheduleDate} onSelectDate={(d) => { if (!isRescheduling) setRescheduleDate(d); }} minDate={minDate} />;
               })()}
             </div>
 
@@ -829,7 +845,7 @@ export default function MyAppointments() {
                             <button
                               key={`${key}-${idx}`}
                               type="button"
-                              disabled={isCurrent}
+                              disabled={isCurrent || isRescheduling}
                               onClick={() => {
                                 setRescheduleSlot(slotItem);
                                 setRescheduleSlotError(false);
@@ -880,8 +896,13 @@ export default function MyAppointments() {
               <button className="btn btn-secondary" onClick={() => setRescheduleModalOpen(false)} disabled={isRescheduling}>
                 Cancel
               </button>
-              <button className="btn btn-primary" onClick={confirmReschedule} disabled={isRescheduling}>
-                {isRescheduling ? "Rescheduling..." : "Confirm Reschedule"}
+              <button className="btn btn-primary" onClick={confirmReschedule} disabled={isRescheduling} aria-busy={isRescheduling}>
+                {isRescheduling ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    Rescheduling...
+                  </>
+                ) : "Confirm Reschedule"}
               </button>
             </div>
           </div>
@@ -891,6 +912,14 @@ export default function MyAppointments() {
       <Toast isOpen={toast.isOpen} message={toast.message} type={toast.type} onClose={() => setToast({ ...toast, isOpen: false })} />
 
       <style>{`
+        /* ── Modal action buttons while a request is in flight ── */
+        .reschedule-buttons .btn:disabled {
+          opacity: 0.6;
+          cursor: default;
+          transform: none;
+          box-shadow: none;
+        }
+
         /* ── Empty State ── */
         .appt-empty {
           position: relative;

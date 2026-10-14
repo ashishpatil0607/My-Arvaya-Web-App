@@ -50,6 +50,8 @@ export default function FeedbackModal() {
 
   const lastKeyRef = useRef(null);
   const successTimerRef = useRef(null);
+  // Synchronous lock so a fast double-click can't submit the review twice
+  const submitLockRef = useRef(false);
 
   // Helper to get patient ID
   const getPatientId = () => {
@@ -136,6 +138,7 @@ export default function FeedbackModal() {
   }, []);
 
   const handleDismiss = () => {
+    if (submitLockRef.current) return;
     setIsOpen(false);
     const state = getStoredFeedbackState(getFeedbackUserKey());
     state.dismissCount = (state.dismissCount || 0) + 1;
@@ -145,11 +148,13 @@ export default function FeedbackModal() {
 
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
+    if (submitLockRef.current) return;
     if (!ratings) {
       setErrorMessage("Please select a star rating.");
       return;
     }
 
+    submitLockRef.current = true;
     setLoading(true);
     setErrorMessage("");
 
@@ -189,6 +194,7 @@ export default function FeedbackModal() {
       setSubmittedSuccess(true);
       successTimerRef.current = setTimeout(() => setIsOpen(false), SUCCESS_AUTO_CLOSE_MS);
     } finally {
+      submitLockRef.current = false;
       setLoading(false);
     }
   };
@@ -457,6 +463,7 @@ export default function FeedbackModal() {
               <button
                 type="button"
                 onClick={handleDismiss}
+                disabled={loading}
                 style={{
                   position: "absolute",
                   top: "12px",
@@ -470,10 +477,11 @@ export default function FeedbackModal() {
                   alignItems: "center",
                   justifyContent: "center",
                   color: "#ffffff",
-                  cursor: "pointer",
+                  cursor: loading ? "default" : "pointer",
+                  opacity: loading ? 0.6 : 1,
                   transition: "background 0.2s ease",
                 }}
-                onMouseOver={(e) => (e.currentTarget.style.background = "rgba(255, 255, 255, 0.3)")}
+                onMouseOver={(e) => { if (!loading) e.currentTarget.style.background = "rgba(255, 255, 255, 0.3)"; }}
                 onMouseOut={(e) => (e.currentTarget.style.background = "rgba(255, 255, 255, 0.15)")}
                 aria-label="Close feedback modal"
               >
@@ -584,6 +592,7 @@ export default function FeedbackModal() {
                       <button
                         key={starValue}
                         type="button"
+                        disabled={loading}
                         onClick={() => setRatings(starValue)}
                         onMouseEnter={() => setHoverRating(starValue)}
                         onMouseLeave={() => setHoverRating(0)}
@@ -591,7 +600,7 @@ export default function FeedbackModal() {
                           background: "none",
                           border: "none",
                           padding: "2px",
-                          cursor: "pointer",
+                          cursor: loading ? "default" : "pointer",
                           outline: "none",
                           transition: "transform 0.15s ease",
                           display: "flex",
@@ -653,6 +662,7 @@ export default function FeedbackModal() {
                   value={review}
                   onChange={(e) => setReview(e.target.value.slice(0, 1000))}
                   maxLength={1000}
+                  disabled={loading}
                   placeholder="Share your feedback or suggestions with us."
                   rows={3}
                   style={{
@@ -717,13 +727,14 @@ export default function FeedbackModal() {
                     color: "#ffffff",
                     fontSize: "14px",
                     fontWeight: "700",
-                    cursor: loading ? "not-allowed" : "pointer",
+                    cursor: loading ? "default" : "pointer",
+                    opacity: loading ? 0.6 : 1,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                     gap: "8px",
                     transition: "filter 0.15s ease, transform 0.1s ease",
-                    boxShadow: "0 3px 10px rgba(251, 145, 63, 0.3)",
+                    boxShadow: loading ? "none" : "0 3px 10px rgba(251, 145, 63, 0.3)",
                   }}
                   onMouseOver={(e) => {
                     if (!loading) e.currentTarget.style.filter = "brightness(1.08)";
@@ -751,6 +762,7 @@ export default function FeedbackModal() {
                 <button
                   type="button"
                   onClick={handleDismiss}
+                  disabled={loading}
                   style={{
                     background: "none",
                     border: "none",
@@ -758,11 +770,12 @@ export default function FeedbackModal() {
                     fontSize: "13px",
                     fontWeight: "600",
                     padding: "4px",
-                    cursor: "pointer",
+                    cursor: loading ? "default" : "pointer",
+                    opacity: loading ? 0.6 : 1,
                     textAlign: "center",
                     transition: "color 0.15s ease",
                   }}
-                  onMouseOver={(e) => (e.currentTarget.style.color = "#1e293b")}
+                  onMouseOver={(e) => { if (!loading) e.currentTarget.style.color = "#1e293b"; }}
                   onMouseOut={(e) => (e.currentTarget.style.color = "#64748b")}
                 >
                   Not Now
