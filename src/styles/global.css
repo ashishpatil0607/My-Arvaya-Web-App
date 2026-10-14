@@ -5937,6 +5937,12 @@ input[type="radio"]:focus-visible {
   }
 }
 
+/* Page scroll lock while a modal is open (see hooks/useScrollLock.js) */
+html.scroll-locked,
+html.scroll-locked body {
+  overflow: hidden !important;
+}
+
 /* ── Ambulance & Auth Modal Responsiveness ── */
 .ambulance-modal-overlay {
   position: fixed;

@@ -6,6 +6,7 @@ import { useBooking } from "../../context/BookingContext";
 import { useNavigate } from "react-router-dom";
 import { EMERGENCY_TYPES, requestAmbulance, reverseGeocode, GOOGLE_MAPS_API_KEY } from "../../services/ambulanceService";
 import useGoogleMapsScript from "./useGoogleMapsScript";
+import useScrollLock from "../../hooks/useScrollLock";
 
 const DEFAULT_CENTER = { lat: 20.5937, lng: 78.9629 };
 
@@ -299,6 +300,8 @@ export default function AmbulanceRequestModal({ onClose, onSuccess }) {
       { enableHighAccuracy: true, timeout: 10000 }
     );
   };
+
+  useScrollLock();
 
   useEffect(() => {
     handleLocate();

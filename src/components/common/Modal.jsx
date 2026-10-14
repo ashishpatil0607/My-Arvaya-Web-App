@@ -1,6 +1,7 @@
 import { X } from "lucide-react";
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useState } from "react";
 import { createPortal } from "react-dom";
+import useScrollLock from "../../hooks/useScrollLock";
 
 // Children can portal content (e.g. a confirm button) into this element so it stays
 // pinned below the scrolling body, like the Call Ambulance modal footer.
@@ -10,16 +11,7 @@ export const useModalFooter = () => useContext(ModalFooterContext);
 export default function Modal({ isOpen, onClose, title, children, maxWidth = "600px", hideHeader = false }) {
   const [footerEl, setFooterEl] = useState(null);
 
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      if (isOpen) {
-        document.body.style.overflow = 'hidden';
-      } else {
-        document.body.style.overflow = 'unset';
-      }
-      return () => { document.body.style.overflow = 'unset'; };
-    }
-  }, [isOpen]);
+  useScrollLock(isOpen);
 
   if (!isOpen) return null;
 
