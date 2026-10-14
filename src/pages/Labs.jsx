@@ -4,7 +4,7 @@ import {
   Scissors, Apple, Zap, Users, Dumbbell, Beaker, Microscope, TestTube, Stethoscope, 
   CalendarDays, MapPin, ArrowRight, CheckCircle2, Filter, X, Wallet, Home, Building2, User, ClipboardList
 } from "lucide-react";
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { getLabPackages, getDiagnosticTests, getDiagnosticPackages, getAppointments, getLabOrderHistory, createLabOrder, verifyLabPayment, loadRazorpayScript, getWalletAmount } from "../services/dataService";
 import { useBooking } from "../context/BookingContext";
@@ -254,11 +254,13 @@ function toTitleCase(str) {
     return () => { isMounted = false; };
   }, [user]); // re-fetch after login/logout so guest fallback data is replaced with real API data
 
-  useEffect(() => {
-    if (!selectedItem || !user) return;
-    setLoadingWallet(true);
-    setApplyWallet(false);
-    setWalletAppliedAmount(0);
+  // Wallet balance is fetched as soon as the user is known, so it is ready before the
+  // booking modal opens. Showing a loader inside the (vertically centered) modal made its
+  // height change several times while opening, which made the whole dialog jump.
+  const walletLoadedRef = useRef(false);
+  const fetchWalletBalance = useCallback(() => {
+    if (!user) return;
+    if (!walletLoadedRef.current) setLoadingWallet(true);
     const patientId = user?.id || user?.user_id || user?.patient_id || "";
     getWalletAmount(patientId)
       .then((res) => {
@@ -274,9 +276,24 @@ function toTitleCase(str) {
         setWalletBalance(0);
       })
       .finally(() => {
+        walletLoadedRef.current = true;
         setLoadingWallet(false);
       });
-  }, [selectedItem, user]);
+  }, [user]);
+
+  useEffect(() => {
+    walletLoadedRef.current = false;
+    if (!user) { setWalletBalance(0); return; }
+    fetchWalletBalance();
+  }, [user, fetchWalletBalance]);
+
+  // Refresh silently (no loader) each time the modal opens, keeping the current value on screen
+  useEffect(() => {
+    if (!selectedItem || !user) return;
+    setApplyWallet(false);
+    setWalletAppliedAmount(0);
+    fetchWalletBalance();
+  }, [selectedItem, user, fetchWalletBalance]);
 
   const maxWalletApplicable = Math.min(walletBalance, selectedItem?.price || 0);
 

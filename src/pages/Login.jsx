@@ -4575,7 +4575,9 @@ function ChooseProfile({
 
   const getInitials = (name) => {
     if (!name) return "U";
-    const cleaned = name.trim().replace(/^(Mr\.|Mrs\.|Ms\.|Dr\.)\s+/i, "");
+    const cleaned = name
+      .trim()
+      .replace(/^(Mr|Mrs|Ms|Miss|Mstr|Master|Dr|Baby|Smt|Shri)\.?\s+/i, "");
     const parts = cleaned.split(/\s+/).filter(Boolean);
     if (parts.length >= 2) {
       return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();

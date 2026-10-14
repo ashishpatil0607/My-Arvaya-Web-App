@@ -1,4 +1,4 @@
-import { ChevronLeft, User, Building2, AlertTriangle, Activity, ChevronRight, CalendarCheck, Loader2, FileSearch, IdCard, Stethoscope, Headset, RefreshCw, Home, Lock, LogIn, FileText, Pill, ShieldCheck } from "lucide-react";
+import { ChevronLeft, User, Building2, AlertTriangle, Activity, ChevronRight, CalendarCheck, FileSearch, IdCard, Stethoscope, Headset, RefreshCw, Home, Lock, LogIn, FileText, Pill, ShieldCheck } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
@@ -79,8 +79,25 @@ export default function CareJourney() {
 
   if (loading) {
     return (
-      <main className="page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: 'var(--bg-app)' }}>
-        <Loader2 size={48} className="animate-spin" style={{ color: 'var(--primary)' }} />
+      <main className="page care-journey-page cj-loader-page" role="status" aria-live="polite">
+        <div className="cj-loader">
+          <div className="cj-loader-orbit">
+            <span className="cj-loader-ring cj-loader-ring--outer" />
+            <span className="cj-loader-ring cj-loader-ring--inner" />
+            <span className="cj-loader-dot" />
+            <div className="cj-loader-core">
+              <Activity size={34} strokeWidth={2.4} />
+            </div>
+          </div>
+          <svg className="cj-loader-ecg" viewBox="0 0 220 40" aria-hidden="true">
+            <path d="M0 20 H70 L80 8 L92 34 L104 4 L116 28 L124 20 H220" />
+          </svg>
+          <p className="cj-loader-title">Loading your care journey</p>
+          <p className="cj-loader-sub">
+            Gathering appointments, records &amp; reports
+            <span className="cj-loader-dots"><i /><i /><i /></span>
+          </p>
+        </div>
       </main>
     );
   }

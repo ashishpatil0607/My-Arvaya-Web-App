@@ -1,5 +1,7 @@
 import { ChevronLeft, ChevronRight, ChevronDown, CalendarX2, Calendar, Loader2 } from "lucide-react";
 import { useState, useRef } from "react";
+import { createPortal } from "react-dom";
+import { useModalFooter } from "../common/Modal";
 
 export default function SelectSlotUI({ doctor, onConfirm, type = "doctor", submitting = false }) {
   const today = new Date();
@@ -10,6 +12,7 @@ export default function SelectSlotUI({ doctor, onConfirm, type = "doctor", submi
   const [selectedTime, setSelectedTime] = useState(type === "lab" ? "10:00 AM" : null);
   // Synchronous guard so a fast double-click can't call onConfirm twice
   const confirmLockRef = useRef(false);
+  const modalFooterEl = useModalFooter();
 
   const startOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
   const endOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
@@ -34,6 +37,38 @@ export default function SelectSlotUI({ doctor, onConfirm, type = "doctor", submi
       confirmLockRef.current = false;
     }
   };
+
+  const confirmAction = (
+    <div
+      className="bottom-fixed-action"
+      style={modalFooterEl
+        ? { margin: 0, padding: '16px 24px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }
+        : { borderTop: '1px solid var(--border)', paddingTop: '24px', marginTop: type === "lab" ? '12px' : '24px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}
+    >
+      <button
+        className="btn btn-primary"
+        disabled={!selectedTime || submitting}
+        onClick={handleConfirm}
+        aria-busy={submitting}
+        style={{
+          padding: '12px 24px', fontSize: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+          ...((!selectedTime || submitting) && { opacity: 0.6, cursor: 'default', transform: 'none', boxShadow: 'none' })
+        }}
+      >
+        {submitting ? (
+          <>
+            <Loader2 size={18} className="animate-spin" />
+            {type === "lab" ? "Scheduling..." : "Booking..."}
+          </>
+        ) : (
+          <>
+            <Calendar size={18} style={{ marginRight: '8px' }} />
+            {type === "lab" ? "Confirm Schedule" : "Confirm Booking"}
+          </>
+        )}
+      </button>
+    </div>
+  );
 
   return (
     <div className="select-slot-container">
@@ -127,31 +162,9 @@ export default function SelectSlotUI({ doctor, onConfirm, type = "doctor", submi
       </div>
       )}
 
-      {/* Sticky Bottom Button */}
-      <div className="bottom-fixed-action" style={{ borderTop: '1px solid var(--border)', paddingTop: '16px', marginTop: type === "lab" ? '12px' : '24px', display: 'flex', justifyContent: 'flex-end' }}>
-        <button
-          className="btn btn-primary"
-          disabled={!selectedTime || submitting}
-          onClick={handleConfirm}
-          aria-busy={submitting}
-          style={{
-            padding: '12px 24px', fontSize: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-            ...((!selectedTime || submitting) && { opacity: 0.6, cursor: 'default', transform: 'none', boxShadow: 'none' })
-          }}
-        >
-          {submitting ? (
-            <>
-              <Loader2 size={18} className="animate-spin" />
-              {type === "lab" ? "Scheduling..." : "Booking..."}
-            </>
-          ) : (
-            <>
-              <Calendar size={18} style={{ marginRight: '8px' }} />
-              {type === "lab" ? "Confirm Schedule" : "Confirm Booking"}
-            </>
-          )}
-        </button>
-      </div>
+      {/* Inside a Modal the button is portaled into the modal's footer slot, so it stays
+          pinned below the scrolling body; elsewhere it renders inline */}
+      {modalFooterEl ? createPortal(confirmAction, modalFooterEl) : confirmAction}
     </div>
   );
 }

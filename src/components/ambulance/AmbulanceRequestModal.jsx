@@ -379,7 +379,7 @@ export default function AmbulanceRequestModal({ onClose, onSuccess }) {
 
   /* ── Left Panel ──────────────────────────────────────────────────────── */
   const leftPanel = (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", justifyContent: "center" }}>
+    <div className="ambulance-modal-left-content" style={{ display: "flex", flexDirection: "column", height: "100%", justifyContent: "center" }}>
       {/* Icon */}
       <div className="ambulance-modal-left-icon" style={{ width: "60px", height: "60px", borderRadius: "18px", background: "rgba(220,38,38,0.15)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "28px", border: "1px solid rgba(220,38,38,0.3)" }}>
         <Ambulance size={28} color="#ef4444" />
@@ -407,8 +407,6 @@ export default function AmbulanceRequestModal({ onClose, onSuccess }) {
   /* ── Right Panel — Form ──────────────────────────────────────────────── */
   const formPanel = (
     <div style={{ animation: "fadeIn 0.25s ease" }}>
-      <h3 style={{ fontSize: "22px", fontWeight: "700", color: "var(--text-main)", margin: "0 0 4px", fontFamily: "var(--font-display)" }}>Request Details</h3>
-      <p style={{ fontSize: "13.5px", color: "var(--text-muted)", margin: "0 0 22px" }}>All fields marked with * are required</p>
       <ErrorBanner msg={err} />
 
       <div className="ambulance-form-row">
@@ -516,10 +514,6 @@ export default function AmbulanceRequestModal({ onClose, onSuccess }) {
 
   return (
     <Overlay onClose={handleClose}>
-      {/* Close button anchored to the (non-scrolling) card frame so it stays in the top-right corner */}
-      <button onClick={handleClose} disabled={busy} aria-label="Close" style={{ position: "absolute", top: "16px", right: "16px", background: "var(--bg-app)", border: "1px solid var(--border)", width: "34px", height: "34px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1, transition: "all 0.2s", zIndex: 40, boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }} onMouseEnter={e => { if (!busy) e.currentTarget.style.background="var(--border)"; }} onMouseLeave={e => e.currentTarget.style.background="var(--bg-app)"}>
-        <X size={16} color="var(--text-muted)" />
-      </button>
       <div className="ambulance-modal-card">
 
         {/* Left Panel */}
@@ -533,6 +527,16 @@ export default function AmbulanceRequestModal({ onClose, onSuccess }) {
 
         {/* Right Panel */}
         <div className="ambulance-modal-right">
+          {/* Header strip stays fixed above the scrolling form */}
+          <div className="ambulance-modal-header">
+            <div style={{ minWidth: 0 }}>
+              <h3 style={{ fontSize: "22px", fontWeight: "700", color: "var(--text-main)", margin: "0 0 4px", fontFamily: "var(--font-display)" }}>{step === 1 && "Request Details"}</h3>
+              {step === 1 && <p style={{ fontSize: "13.5px", color: "var(--text-muted)", margin: 0 }}>All fields marked with * are required</p>}
+            </div>
+            <button className="ambulance-modal-close" onClick={handleClose} disabled={busy} aria-label="Close">
+              <X size={18} />
+            </button>
+          </div>
           <div className="ambulance-modal-scroll" style={{ justifyContent: step === 2 ? "center" : "flex-start" }}>
             {step === 1 ? formPanel : successPanel}
           </div>
