@@ -37,6 +37,15 @@ function withTitle(title, name) {
   return title ? `${title} ${bare}` : bare;
 }
 
+// "Ashish Patil" -> "AP", "Ashish" -> "A"
+function getInitials(name) {
+  const parts = stripTitle(name).split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "M";
+  const first = parts[0].charAt(0);
+  const last = parts.length > 1 ? parts[parts.length - 1].charAt(0) : "";
+  return (first + last).toUpperCase();
+}
+
 function getLocationLabel(loc) {
   if (!loc) return "Select Location";
   return [loc.alt_name, loc.area, loc.street, loc.landmark, loc.zip, loc.city, loc.state]
@@ -340,6 +349,16 @@ export default function Profile() {
           };
         });
         setFamilyMembers(mapped);
+
+        // Image endpoints may require auth, so resolve them to blob URLs (same as the Personal Details avatar)
+        const resolved = await Promise.all(mapped.map(async (m) => {
+          if (!m.profileImage || m.profileImage.startsWith("data:") || m.profileImage.startsWith("blob:")) return m;
+          const folder = m.isPrimary ? "patientProfileImage" : "familyProfileImage";
+          const blobUrl = await fetchImageBlob(m.profileImage, folder)
+            || (m.isPrimary ? await fetchImageBlob(m.profileImage, "familyProfileImage") : null);
+          return blobUrl ? { ...m, displayImage: blobUrl } : m;
+        }));
+        setFamilyMembers(resolved);
       }
     } catch (err) {
       console.error("fetchFamilyMembers error:", err);
@@ -1190,9 +1209,9 @@ export default function Profile() {
                         <div key={member.id} className={`family-card${member.isPrimary ? ' family-card--primary' : ''}`}>
                           <div className="family-card-main">
                             <div className="family-card-avatar">
-                              {member.displayImage ? (
+                              {(member.displayImage || (member.isPrimary && userDisplayImage)) ? (
                                 <img
-                                  src={member.displayImage}
+                                  src={member.displayImage || userDisplayImage}
                                   alt={member.name}
                                   style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', top: 0, left: 0, zIndex: 1 }}
                                   onError={(e) => {
@@ -1200,7 +1219,7 @@ export default function Profile() {
                                   }}
                                 />
                               ) : null}
-                              {(member.name || "M").charAt(0)}
+                              {getInitials(member.name)}
                             </div>
                             <div style={{ minWidth: 0 }}>
                               <div className="family-card-name-row">
