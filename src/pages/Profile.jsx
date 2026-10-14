@@ -6,6 +6,7 @@ import { Link } from "react-router-dom";
 import { getPatients, getFamilyDetails, upsertFamilyDetails, addFamilyMember, updateAppUser, getLocations } from "../services/dataService";
 import { uploadImage, getImageUrl, fetchImageBlob } from "../services/uploadService";
 import Toast from "../components/common/Toast";
+import useScrollLock from "../hooks/useScrollLock";
 
 function formatGender(g) {
   if (!g) return "Male";
@@ -661,16 +662,7 @@ export default function Profile() {
     ? locations.filter(loc => `${getLocationLabel(loc)} ${loc.entitylocation || ""}`.toLowerCase().includes(locationQuery))
     : locations;
 
-  useEffect(() => {
-    if (isMemberModalOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [isMemberModalOpen]);
+  useScrollLock(isMemberModalOpen);
 
   const handleChange = (e) => {
     setProfile({ ...profile, [e.target.name]: e.target.value });

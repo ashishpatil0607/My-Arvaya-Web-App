@@ -9,6 +9,7 @@ import { getPatients } from "../../services/dataService";
 import AmbulanceRequestModal from "../ambulance/AmbulanceRequestModal";
 import AmbulanceLoginPrompt from "../ambulance/AmbulanceLoginPrompt";
 import { stripTitle } from "../../utils/formatName";
+import useScrollLock from "../../hooks/useScrollLock";
 
 function getNameInitials(name) {
   const parts = stripTitle(name).split(/\s+/).filter(Boolean);
@@ -124,6 +125,7 @@ export default function Header() {
   const [isCustomShareOpen, setIsCustomShareOpen] = useState(false);
   const [showAmbulanceModal, setShowAmbulanceModal] = useState(false);
   const [showAmbulanceLoginPrompt, setShowAmbulanceLoginPrompt] = useState(false);
+  useScrollLock(mobileDrawerOpen || isReferralModalOpen || isCustomShareOpen);
 
   const appDownloadUrl = "https://drive.google.com/file/d/136Lb50jdaadDi9_Uigmq-Qsu2zm9jx51/view?usp=sharing";
 

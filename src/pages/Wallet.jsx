@@ -29,6 +29,7 @@ import {
   ArrowRight
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import useScrollLock from "../hooks/useScrollLock";
 import { getWalletAmount, getAppointmentHistory, getPlans } from "../services/dataService";
 
 function formatPlanTitle(plan) {
@@ -138,6 +139,7 @@ export default function Wallet() {
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [activeModal, setActiveModal] = useState(null);
+  useScrollLock(Boolean(activeModal));
   const [copiedCode, setCopiedCode] = useState(false);
   const [redeemedOffers, setRedeemedOffers] = useState([]);
   const [toastMessage, setToastMessage] = useState("");

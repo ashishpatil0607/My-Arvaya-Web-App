@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Antworkapi } from "../services/apiClient";
 import { useAuth } from "../context/AuthContext";
+import useScrollLock from "../hooks/useScrollLock";
 
 const DOCS_PAGE_SIZE = 6;
 
@@ -61,16 +62,7 @@ export default function CareJourney() {
     return () => { cancelled = true; };
   }, [user?.id, uhid, reloadKey]);
 
-  useEffect(() => {
-    if (isModalOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
-  }, [isModalOpen]);
+  useScrollLock(isModalOpen);
 
   const openDoc = (doc) => {
     setActiveDoc(doc);

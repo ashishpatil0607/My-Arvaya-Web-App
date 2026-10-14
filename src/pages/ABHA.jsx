@@ -5,6 +5,7 @@ import {
   Info, ArrowLeft, MapPin, ShieldCheck, Copy, FileText, Building2, Phone, Calendar, UserCircle, Loader2
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import useScrollLock from "../hooks/useScrollLock";
 import { Link } from "react-router-dom";
 import { abhaSendOtp, abhaVerifyOtp, abhaConfirmAddress, abhaGetSuggestions } from "../services/abhaService";
 
@@ -1021,6 +1022,7 @@ function CreateAddressModal({ abhaData, onClose }) {
    PROFILE PANEL
    ═══════════════════════════════════════════════════ */
 function ProfilePanel({ abhaData, onClose }) {
+  useScrollLock();
   return (
     <>
       <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.5)", backdropFilter: "blur(6px)", zIndex: 1000 }} />
@@ -1120,6 +1122,7 @@ function QrModal({ abhaData, onClose }) {
    SHARED HELPERS
    ═══════════════════════════════════════════════════ */
 function Overlay({ children, onClose }) {
+  useScrollLock();
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.65)", backdropFilter: "blur(10px)", display: "flex", alignItems: "flex-start", justifyContent: "center", zIndex: 2000, padding: "16px", overflowY: "auto" }}
       onClick={onClose}>

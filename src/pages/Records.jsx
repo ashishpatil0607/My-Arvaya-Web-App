@@ -7,6 +7,7 @@ import { uploadImage, getImageUrl, fetchImageBlob } from "../services/uploadServ
 import { api } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import Toast from "../components/common/Toast";
+import useScrollLock from "../hooks/useScrollLock";
 
 const iconMap = {
   "Lab Report": { Icon: HeartPulse, color: "#38a169", bg: "#f0fff4" },
@@ -247,18 +248,15 @@ export default function Records() {
     }
   };
 
+  useScrollLock(showUploadModal);
+
   useEffect(() => {
     if (showUploadModal) {
-      document.body.style.overflow = 'hidden';
       fetchDocumentTypes();
     } else {
-      document.body.style.overflow = '';
       setErrors({});
       setFocusedField(null);
     }
-    return () => {
-      document.body.style.overflow = '';
-    };
   }, [showUploadModal]);
 
   const handleCancelUpload = () => {

@@ -38,6 +38,7 @@ import {
 import LiveAmbulanceTracker from "../components/ambulance/LiveAmbulanceTracker";
 import AmbulanceRequestModal from "../components/ambulance/AmbulanceRequestModal";
 import CancelAmbulanceModal from "../components/ambulance/CancelAmbulanceModal";
+import useScrollLock from "../hooks/useScrollLock";
 
 class AmbulanceErrorBoundary extends React.Component {
   constructor(props) {
@@ -128,6 +129,11 @@ export default function AmbulancePage() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [viewMapRequest, setViewMapRequest] = useState(null);
+  const viewMapStatus = String(viewMapRequest?.status || "").toLowerCase();
+  const isMapModalOpen =
+    Boolean(viewMapRequest) &&
+    !["complete", "assign", "unavailable", "cancel"].some((s) => viewMapStatus.includes(s));
+  useScrollLock(isMapModalOpen);
   const [historyFilter, setHistoryFilter] = useState("all");
   const [historyPage, setHistoryPage] = useState(1);
   const [selectedRequestId, setSelectedRequestId] = useState(null);
@@ -3502,11 +3508,7 @@ export default function AmbulancePage() {
       />
 
       {/* ── Request Map View Modal ── */}
-      {viewMapRequest &&
-        !String(viewMapRequest.status || "").toLowerCase().includes("complete") &&
-        !String(viewMapRequest.status || "").toLowerCase().includes("assign") &&
-        !String(viewMapRequest.status || "").toLowerCase().includes("unavailable") &&
-        !String(viewMapRequest.status || "").toLowerCase().includes("cancel") &&
+      {isMapModalOpen &&
         (() => {
           const content = (
             <div

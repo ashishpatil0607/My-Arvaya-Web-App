@@ -5,6 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import { upsertPatientReview } from "../services/dataService";
 import { Antworkapi } from "../services/apiClient";
 import { api } from "../services/api";
+import useScrollLock from "../hooks/useScrollLock";
 
 const STORAGE_KEY_PREFIX = "arvaya_feedback_state";
 const SUCCESS_AUTO_CLOSE_MS = 4000;
@@ -52,6 +53,8 @@ export default function FeedbackModal() {
   const successTimerRef = useRef(null);
   // Synchronous lock so a fast double-click can't submit the review twice
   const submitLockRef = useRef(false);
+
+  useScrollLock(isOpen);
 
   // Helper to get patient ID
   const getPatientId = () => {

@@ -44,6 +44,7 @@ import { fetchImageBlob, getImageUrl } from "../services/uploadService";
 import { getPatients } from "../services/dataService";
 import { useNavigate, useLocation } from "react-router-dom";
 import { createPortal } from "react-dom";
+import useScrollLock from "../hooks/useScrollLock";
 
 export default function Login({ forceOpen = false, modalHost = false }) {
   const {
@@ -91,15 +92,7 @@ export default function Login({ forceOpen = false, modalHost = false }) {
   const isModalPresentation =
     (isLoginModalOpen || forceOpen) && location.pathname !== "/login";
 
-  useEffect(() => {
-    if (!isModalPresentation || typeof document === "undefined")
-      return undefined;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [isModalPresentation]);
+  useScrollLock(isModalPresentation);
 
   const handleClose = () => {
     setScreen("landing");

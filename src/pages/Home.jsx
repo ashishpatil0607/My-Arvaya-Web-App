@@ -37,6 +37,7 @@ import {
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
+import useScrollLock from "../hooks/useScrollLock";
 import { fallbackHealthPackages, normalizeHealthPackage } from "../utils/healthPackages";
 import { getNameInitials } from "../utils/formatName";
 import AmbulanceRequestModal from "../components/ambulance/AmbulanceRequestModal";
@@ -81,13 +82,11 @@ function ReviewText({ text, onReadMore }) {
 }
 
 function ReviewModal({ review, accent, onClose }) {
+  useScrollLock();
   useEffect(() => {
     const onKey = (e) => e.key === "Escape" && onClose();
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
     window.addEventListener("keydown", onKey);
     return () => {
-      document.body.style.overflow = prevOverflow;
       window.removeEventListener("keydown", onKey);
     };
   }, [onClose]);
