@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import ReactDOM from "react-dom";
-import { X, MapPin, Phone, User, AlertTriangle, ArrowRight, CheckCircle2, Ambulance, Shield, Loader2, ChevronDown, Navigation } from "lucide-react";
+import { X, MapPin, Phone, User, AlertTriangle, ArrowRight, CheckCircle2, Ambulance, Shield, Loader2, ChevronDown, Navigation, HeartPulse, Car, Wind, Baby, Flame, Brain, HelpCircle, Check } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useBooking } from "../../context/BookingContext";
 import { useNavigate } from "react-router-dom";
@@ -79,6 +79,106 @@ function GoogleLocationPicker({ position, onPick }) {
         <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", color: "var(--text-muted)", fontSize: "13px", background: "var(--bg-app)" }}>
           <Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} /> Loading map…
         </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Emergency type dropdown (custom, since native <select> popups can't be styled) ── */
+
+const EMERGENCY_META = {
+  cardiac:   { icon: HeartPulse, color: "#dc2626", bg: "#fef2f2" },
+  accident:  { icon: Car,        color: "#ea580c", bg: "#fff7ed" },
+  breathing: { icon: Wind,       color: "#0284c7", bg: "#f0f9ff" },
+  pregnancy: { icon: Baby,       color: "#db2777", bg: "#fdf2f8" },
+  burns:     { icon: Flame,      color: "#d97706", bg: "#fffbeb" },
+  stroke:    { icon: Brain,      color: "#7c3aed", bg: "#f5f3ff" },
+  other:     { icon: HelpCircle, color: "#475569", bg: "#f1f5f9" },
+};
+const MENU_MAX_HEIGHT = 300;
+
+function EmergencyTypeSelect({ value, onChange, hasError }) {
+  const [open, setOpen] = useState(false);
+  const [openUp, setOpenUp] = useState(false);
+  const [active, setActive] = useState(-1);
+  const wrapRef = React.useRef(null);
+  const triggerRef = React.useRef(null);
+
+  const selected = EMERGENCY_TYPES.find(t => t.value === value);
+  const selectedMeta = selected && (EMERGENCY_META[selected.value] || EMERGENCY_META.other);
+
+  // Close on outside click
+  useEffect(() => {
+    if (!open) return;
+    const onDown = e => { if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [open]);
+
+  const toggle = () => {
+    if (!open && triggerRef.current) {
+      // Flip upward when the scroll area doesn't have room below the trigger
+      const rect = triggerRef.current.getBoundingClientRect();
+      const bounds = triggerRef.current.closest(".ambulance-modal-scroll")?.getBoundingClientRect() || { top: 0, bottom: window.innerHeight };
+      const below = bounds.bottom - rect.bottom;
+      const above = rect.top - bounds.top;
+      setOpenUp(below < MENU_MAX_HEIGHT && above > below);
+      setActive(Math.max(0, EMERGENCY_TYPES.findIndex(t => t.value === value)));
+    }
+    setOpen(o => !o);
+  };
+
+  const pick = (v) => { onChange(v); setOpen(false); triggerRef.current?.focus(); };
+
+  const onKeyDown = (e) => {
+    if (!open) {
+      if (["Enter", " ", "ArrowDown", "ArrowUp"].includes(e.key)) { e.preventDefault(); toggle(); }
+      return;
+    }
+    if (e.key === "Escape") { e.preventDefault(); setOpen(false); }
+    else if (e.key === "ArrowDown") { e.preventDefault(); setActive(i => (i + 1) % EMERGENCY_TYPES.length); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); setActive(i => (i - 1 + EMERGENCY_TYPES.length) % EMERGENCY_TYPES.length); }
+    else if (e.key === "Enter" || e.key === " ") { e.preventDefault(); if (active >= 0) pick(EMERGENCY_TYPES[active].value); }
+    else if (e.key === "Tab") setOpen(false);
+  };
+
+  const borderColor = hasError ? "var(--danger)" : open ? "var(--primary)" : "var(--border)";
+  const SelectedIcon = selectedMeta?.icon;
+
+  return (
+    <div ref={wrapRef} style={{ position: "relative" }}>
+      <button ref={triggerRef} type="button" onClick={toggle} onKeyDown={onKeyDown}
+        aria-haspopup="listbox" aria-expanded={open}
+        style={{ width: "100%", display: "flex", alignItems: "center", gap: "10px", padding: "8px 14px 8px 8px", minHeight: "50px", border: `1.5px solid ${borderColor}`, borderRadius: "10px", background: "#fff", cursor: "pointer", outline: "none", textAlign: "left", fontFamily: "var(--font-sans)", transition: "border-color 0.2s, box-shadow 0.2s", boxShadow: open ? "0 0 0 4px rgba(46,102,110,0.10)" : "none" }}>
+        <span style={{ width: "32px", height: "32px", borderRadius: "8px", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: selectedMeta ? selectedMeta.bg : "var(--bg-app)", color: selectedMeta ? selectedMeta.color : "var(--text-muted)", transition: "all 0.2s" }}>
+          {SelectedIcon ? <SelectedIcon size={17} /> : <AlertTriangle size={16} />}
+        </span>
+        <span style={{ flex: 1, fontSize: "15px", fontWeight: selected ? "600" : "500", color: selected ? "var(--text-main)" : "var(--text-muted)" }}>
+          {selected ? selected.label : "Select emergency type"}
+        </span>
+        <ChevronDown size={18} color="var(--text-muted)" style={{ transition: "transform 0.2s", transform: open ? "rotate(180deg)" : "none" }} />
+      </button>
+
+      {open && (
+        <ul role="listbox" style={{ position: "absolute", left: 0, right: 0, [openUp ? "bottom" : "top"]: "calc(100% + 6px)", margin: 0, padding: "6px", listStyle: "none", background: "#fff", border: "1px solid var(--border)", borderRadius: "12px", boxShadow: "0 12px 32px rgba(15,23,42,0.16), 0 2px 6px rgba(15,23,42,0.06)", maxHeight: `${MENU_MAX_HEIGHT}px`, overflowY: "auto", zIndex: 50, animation: "emgMenuIn 0.15s ease-out", transformOrigin: openUp ? "bottom" : "top" }}>
+          {EMERGENCY_TYPES.map((t, i) => {
+            const meta = EMERGENCY_META[t.value] || EMERGENCY_META.other;
+            const Icon = meta.icon;
+            const isSel = t.value === value;
+            const isActive = i === active;
+            return (
+              <li key={t.value} role="option" aria-selected={isSel}
+                onMouseEnter={() => setActive(i)} onMouseDown={e => e.preventDefault()} onClick={() => pick(t.value)}
+                style={{ display: "flex", alignItems: "center", gap: "10px", padding: "8px 10px", borderRadius: "8px", cursor: "pointer", background: isSel ? meta.bg : isActive ? "var(--bg-app)" : "transparent", transition: "background 0.12s" }}>
+                <span style={{ width: "30px", height: "30px", borderRadius: "8px", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: meta.bg, color: meta.color }}>
+                  <Icon size={16} />
+                </span>
+                <span style={{ flex: 1, fontSize: "14.5px", fontWeight: isSel ? "700" : "500", color: isSel ? meta.color : "var(--text-main)" }}>{t.label}</span>
+                {isSel && <Check size={16} color={meta.color} strokeWidth={2.5} />}
+              </li>
+            );
+          })}
+        </ul>
       )}
     </div>
   );
@@ -259,9 +359,6 @@ export default function AmbulanceRequestModal({ onClose, onSuccess }) {
       // The modal is opened from Header/Home/Ambulance; hand the booking to the
       // Ambulance page via route state so it can show it immediately
       go("/ambulance", { state: { bookedRequest: { res, submitted, at: Date.now() } } });
-
-      window.alert("Opening dialer for dummy call to 108...");
-      window.location.href = "tel:108";
     } catch (e) { setErr(e.message || "Failed to submit request. Please try again."); }
     finally { setBusy(false); }
   };
@@ -356,15 +453,9 @@ export default function AmbulanceRequestModal({ onClose, onSuccess }) {
       {/* Emergency Type */}
       <div style={{ marginBottom: "8px", position: "relative", zIndex: 20 }}>
         <label style={{ fontSize: "12px", fontWeight: "700", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.07em", display: "block", marginBottom: "8px" }}>Emergency Type *</label>
-        <div data-field-error style={{ position: "relative" }}>
-          <select value={emergencyType} onChange={e => { setEmergency(e.target.value); clearFieldError("emergencyType"); }}
-            style={{ width: "100%", padding: "12px 40px 12px 14px", border: `1.5px solid ${fieldErrors.emergencyType ? "var(--danger)" : "var(--border)"}`, borderRadius: "10px", fontSize: "15px", color: emergencyType ? "var(--text-main)" : "var(--text-muted)", fontWeight: "500", background: "#fff", outline: "none", appearance: "none", cursor: "pointer", transition: "border-color 0.2s", fontFamily: "var(--font-sans)" }}
-            onFocus={e => { if (!fieldErrors.emergencyType) e.target.style.borderColor = "var(--primary)"; }}
-            onBlur={e => { if (!fieldErrors.emergencyType) e.target.style.borderColor = "var(--border)"; }}>
-            <option value="" disabled>Select emergency type</option>
-            {EMERGENCY_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-          </select>
-          <ChevronDown size={18} color="var(--text-muted)" style={{ position: "absolute", right: "14px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
+        <div data-field-error>
+          <EmergencyTypeSelect value={emergencyType} hasError={!!fieldErrors.emergencyType}
+            onChange={v => { setEmergency(v); clearFieldError("emergencyType"); }} />
         </div>
         <FieldError msg={fieldErrors.emergencyType} />
       </div>
@@ -443,7 +534,8 @@ export default function AmbulanceRequestModal({ onClose, onSuccess }) {
       </div>
 
       {/* Inline keyframes for spinner */}
-      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes emgMenuIn { from { opacity: 0; transform: scaleY(0.96); } to { opacity: 1; transform: scaleY(1); } }`}</style>
     </Overlay>
   );
 }

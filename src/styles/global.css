@@ -8134,9 +8134,13 @@ header.glass .header-secondary-nav a:focus-visible {
   overflow-x: auto;
   scroll-snap-type: x mandatory;
   gap: 24px;
-  padding: 8px 4px 24px;
-  /* padding keeps card shadows unclipped; offset it so section spacing matches others */
-  margin-bottom: -20px;
+  padding: 14px 10px 28px;
+  /* match the side padding so the first card snaps to scrollLeft 0
+     (otherwise it snaps to 10px and the prev button never hides) */
+  scroll-padding-inline: 10px;
+  /* padding keeps hovered (lifted + scaled) cards and shadows unclipped;
+     offset it so section spacing matches others */
+  margin: -6px -6px -24px;
   scrollbar-width: none;
 }
 
@@ -8178,7 +8182,7 @@ header.glass .header-secondary-nav a:focus-visible {
       #fff 60%);
   border: 1px solid color-mix(in srgb, var(--review-accent) 18%, transparent);
   border-radius: 22px;
-  transition: transform 0.3s ease, border-color 0.3s ease;
+  transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 /* soft accent blob in the bottom-right corner */
@@ -8212,9 +8216,16 @@ header.glass .header-secondary-nav a:focus-visible {
       color-mix(in srgb, var(--review-accent) 55%, #fff));
 }
 
-.home-review-card:hover {
-  transform: translateY(-4px);
-  border-color: color-mix(in srgb, var(--review-accent) 40%, transparent);
+.home-review-card:hover,
+.home-review-card:focus-visible {
+  transform: translateY(-4px) scale(1.02);
+  border-color: color-mix(in srgb, var(--review-accent) 45%, transparent);
+  box-shadow: 0 6px 14px color-mix(in srgb, var(--review-accent) 10%, transparent);
+  outline: none;
+}
+
+.home-review-card:hover > .home-review-quote {
+  opacity: 0.3;
 }
 
 .home-review-card > .home-review-quote {
@@ -8389,12 +8400,54 @@ header.glass .header-secondary-nav a:focus-visible {
   transform: rotate(90deg);
 }
 
+/* tinted like the review cards: accent wash + soft corner blobs */
 .review-modal-body {
+  position: relative;
   display: flex;
   min-height: 0;
   flex-direction: column;
   gap: 18px;
   padding: 22px 28px 26px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 100% 100%,
+      color-mix(in srgb, var(--review-accent) 18%, transparent) 0,
+      transparent 45%),
+    radial-gradient(circle at 0% 0%,
+      color-mix(in srgb, var(--review-accent) 10%, transparent) 0,
+      transparent 40%),
+    linear-gradient(180deg,
+      color-mix(in srgb, var(--review-accent) 9%, #fff) 0%,
+      color-mix(in srgb, var(--review-accent) 4%, #fff) 100%);
+}
+
+.review-modal-body::before,
+.review-modal-body::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.review-modal-body::before {
+  top: -50px;
+  left: -50px;
+  width: 130px;
+  height: 130px;
+  background: color-mix(in srgb, var(--review-accent) 8%, transparent);
+}
+
+.review-modal-body::after {
+  right: -70px;
+  bottom: -70px;
+  width: 190px;
+  height: 190px;
+  background: color-mix(in srgb, var(--review-accent) 12%, transparent);
+}
+
+.review-modal-body > * {
+  position: relative;
+  z-index: 1;
 }
 
 .review-modal-rating {
@@ -8420,10 +8473,11 @@ header.glass .header-secondary-nav a:focus-visible {
   min-height: 0;
   flex-direction: column;
   padding: 18px 18px 18px 22px;
-  background: color-mix(in srgb, var(--review-accent) 6%, #fff);
-  border: 1px solid color-mix(in srgb, var(--review-accent) 15%, transparent);
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid color-mix(in srgb, var(--review-accent) 20%, transparent);
   border-left: 4px solid var(--review-accent);
   border-radius: 14px;
+  box-shadow: 0 10px 26px color-mix(in srgb, var(--review-accent) 12%, transparent);
 }
 
 .review-modal-quote-icon {

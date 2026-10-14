@@ -264,7 +264,7 @@ export default function AmbulancePage() {
       String(name).toLowerCase().includes("unassigned") ||
       String(name).toLowerCase().includes("n/a")
     ) {
-      return "RP";
+      return null;
     }
     const parts = String(name).trim().split(" ");
     if (parts.length >= 2) {
@@ -1569,13 +1569,13 @@ export default function AmbulancePage() {
                           selectedRequest.driverName ||
                           (isRequested
                             ? "Awaiting driver assignment"
-                            : "Rajesh Patil");
+                            : "Driver not assigned");
                         const driverInitials =
                           getDriverInitials(driverDisplayName);
                         const ambulanceNo =
                           activeTracking?.ambulanceNo ||
                           selectedRequest.ambulanceId ||
-                          "MH 10 AB 1234";
+                          "N/A";
                         const driverPhone =
                           activeTracking?.driverPhone ||
                           selectedRequest.driverPhone;
@@ -1967,7 +1967,7 @@ export default function AmbulancePage() {
                                     flexShrink: 0,
                                   }}
                                 >
-                                  {driverInitials}
+                                  {driverInitials || <User size={20} />}
                                 </div>
                                 <div>
                                   <div

@@ -22,6 +22,7 @@ import {
   Link as LinkIcon,
   Ticket,
   AlertCircle,
+  Loader2,
 } from "lucide-react";
 import {
   sendOtp,
@@ -1723,22 +1724,34 @@ function Mobile({ onBack, onSend, busy, err }) {
       <button
         disabled={busy || m.length < 10}
         onClick={handleSend}
+        aria-busy={busy}
         style={{
           width: "100%",
-          background:
-            busy || m.length < 10 ? "var(--border)" : "var(--primary)",
-          color: busy || m.length < 10 ? "var(--text-muted)" : "#fff",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: "10px",
+          background: busy
+            ? "var(--primary)"
+            : m.length < 10
+              ? "var(--border)"
+              : "var(--primary)",
+          color: busy || m.length >= 10 ? "#fff" : "var(--text-muted)",
+          opacity: busy ? 0.85 : 1,
           border: "none",
           padding: "16px",
           borderRadius: "12px",
           fontSize: "15px",
           fontWeight: "600",
-          cursor: busy || m.length < 10 ? "not-allowed" : "pointer",
+          cursor: busy ? "wait" : m.length < 10 ? "not-allowed" : "pointer",
           transition: "all 0.2s",
           boxShadow:
             busy || m.length < 10 ? "none" : "0 4px 12px rgba(46,102,110,0.28)",
         }}
       >
+        {busy && (
+          <Loader2 size={18} style={{ animation: "spin 0.8s linear infinite" }} />
+        )}
         {busy ? "Sending OTP..." : "Get OTP"}
       </button>
     </div>
@@ -1867,21 +1880,34 @@ function Otp({ phone, onBack, onVerify, onResend, busy, err }) {
         className="otp-submit-btn"
         disabled={busy || o.length < 6}
         onClick={() => onVerify(o)}
+        aria-busy={busy}
         style={{
           width: "100%",
-          background: busy || o.length < 6 ? "var(--border)" : "var(--primary)",
-          color: busy || o.length < 6 ? "var(--text-muted)" : "#fff",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: "10px",
+          background: busy
+            ? "var(--primary)"
+            : o.length < 6
+              ? "var(--border)"
+              : "var(--primary)",
+          color: busy || o.length >= 6 ? "#fff" : "var(--text-muted)",
+          opacity: busy ? 0.85 : 1,
           border: "none",
           padding: "13px 16px",
           borderRadius: "12px",
           fontSize: "14.5px",
           fontWeight: "700",
-          cursor: busy || o.length < 6 ? "not-allowed" : "pointer",
+          cursor: busy ? "wait" : o.length < 6 ? "not-allowed" : "pointer",
           transition: "all 0.2s",
           boxShadow:
             busy || o.length < 6 ? "none" : "0 4px 12px rgba(46,102,110,0.28)",
         }}
       >
+        {busy && (
+          <Loader2 size={18} style={{ animation: "spin 0.8s linear infinite" }} />
+        )}
         {busy ? "Verifying..." : "Verify & Login"}
       </button>
     </div>
@@ -4756,25 +4782,32 @@ function ChooseProfile({
           <button
             disabled={busy || !primaryLoginId}
             onClick={handleDoLogin}
+            aria-busy={busy}
             style={{
               width: "100%",
               margin: 0,
-              background: busy
-                ? "#cbd5e1"
-                : "linear-gradient(135deg, #1b6b72, #134e54)",
+              background: "linear-gradient(135deg, #1b6b72, #134e54)",
               color: "#ffffff",
+              opacity: busy ? 0.85 : 1,
               border: "none",
               padding: "13px 16px",
               borderRadius: "12px",
               fontSize: "15px",
               fontWeight: "700",
-              cursor: busy ? "not-allowed" : "pointer",
+              cursor: busy ? "wait" : "pointer",
               boxShadow: busy
                 ? "none"
                 : "0 4px 14px rgba(27, 107, 114, 0.35)",
               transition: "all 0.25s ease",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "8px",
             }}
           >
+            {busy && (
+              <Loader2 size={18} style={{ animation: "spin 0.8s linear infinite" }} />
+            )}
             {busy
               ? "Logging in..."
               : `Login as ${(() => {
@@ -5208,18 +5241,21 @@ function ChooseProfile({
           <button
             type="button"
             onClick={handleProceedToPrimary}
+            disabled={busy}
+            aria-busy={busy}
             style={{
               width: "100%",
               margin: 0,
               background: "linear-gradient(135deg, #1b6b72, #144e53)",
               color: "#ffffff",
+              opacity: busy ? 0.85 : 1,
               border: "none",
               padding: "13px 16px",
               borderRadius: "12px",
               fontSize: "15px",
               fontWeight: "700",
-              cursor: "pointer",
-              boxShadow: "0 4px 14px rgba(27, 107, 114, 0.35)",
+              cursor: busy ? "wait" : "pointer",
+              boxShadow: busy ? "none" : "0 4px 14px rgba(27, 107, 114, 0.35)",
               transition: "all 0.25s ease",
               display: "flex",
               alignItems: "center",
@@ -5227,12 +5263,17 @@ function ChooseProfile({
               gap: "8px",
             }}
           >
+            {busy && (
+              <Loader2 size={18} style={{ animation: "spin 0.8s linear infinite" }} />
+            )}
             <span>
-              {profiles.length === 1
-                ? "Continue"
-                : `Continue (${selectedProfileIds.filter((id) => verifiedProfileIds.includes(id)).length} account${selectedProfileIds.filter((id) => verifiedProfileIds.includes(id)).length > 1 ? "s" : ""} selected)`}
+              {busy
+                ? "Logging in..."
+                : profiles.length === 1
+                  ? "Continue"
+                  : `Continue (${selectedProfileIds.filter((id) => verifiedProfileIds.includes(id)).length} account${selectedProfileIds.filter((id) => verifiedProfileIds.includes(id)).length > 1 ? "s" : ""} selected)`}
             </span>
-            <ChevronRight size={18} />
+            {!busy && <ChevronRight size={18} />}
           </button>
         ) : (
           <button

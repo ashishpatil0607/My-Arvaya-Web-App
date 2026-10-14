@@ -201,7 +201,11 @@ export default function Home() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [showAmbulanceModal, setShowAmbulanceModal] = useState(false);
   const [openReviewIndex, setOpenReviewIndex] = useState(null);
-  const closeReview = useCallback(() => setOpenReviewIndex(null), []);
+  const closeReview = useCallback(() => {
+    // give the reader a moment before auto-scroll resumes
+    reviewsLastInteractionRef.current = Date.now();
+    setOpenReviewIndex(null);
+  }, []);
   const [showAmbulanceLoginPrompt, setShowAmbulanceLoginPrompt] = useState(false);
   // Guests see the default packages; logged-in users start empty and wait for API data (avoids a flash of default items)
   const [apiPackages, setApiPackages] = useState(() => (user ? [] : fallbackHealthPackages.slice(0, 4)));
@@ -374,6 +378,8 @@ export default function Home() {
   // Auto-scroll testimonials
   useEffect(() => {
     if (!reviews || reviews.length === 0) return;
+    // hold the slider in place while a review is open in the modal
+    if (openReviewIndex !== null) return;
 
     const interval = setInterval(() => {
       if (reviewsHoverRef.current || reviewsFocusRef.current) return;
@@ -397,7 +403,7 @@ export default function Home() {
     }, 4000);
 
     return () => clearInterval(interval);
-  }, [reviews]);
+  }, [reviews, openReviewIndex]);
 
   useEffect(() => {
     updateReviewsNav();
@@ -1033,14 +1039,17 @@ export default function Home() {
               onScroll={updateReviewsNav}
             >
               {reviews.map((t, i) => (
-                <div key={i} className="testimonial-card-wrap">
+                // entry animation lives on the wrapper so its fill-mode
+                // transform doesn't override the card's hover transform
+                <div
+                  key={i}
+                  className="testimonial-card-wrap animate-fade-in-up"
+                  style={{ animationDelay: `${(i % 3) * 100}ms` }}
+                >
                   <article
                     tabIndex={0}
-                    className="home-review-card animate-fade-in-up"
-                    style={{
-                      "--review-accent": REVIEW_ACCENTS[i % 4],
-                      animationDelay: `${(i % 3) * 100}ms`,
-                    }}
+                    className="home-review-card"
+                    style={{ "--review-accent": REVIEW_ACCENTS[i % 4] }}
                   >
                     <Quote className="home-review-quote" size={64} aria-hidden="true" />
                     <div className="home-review-stars" aria-label={`${t.rating} out of 5 stars`}>
