@@ -8203,17 +8203,14 @@ header.glass .header-secondary-nav a:focus-visible {
   z-index: 1;
 }
 
-/* accent strip on the left edge */
+/* accent strip on the left edge — follows the card's rounded corners */
 .home-review-card::before {
   content: "";
   position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  width: 4px;
-  background: linear-gradient(180deg,
-      var(--review-accent),
-      color-mix(in srgb, var(--review-accent) 55%, #fff));
+  inset: 0;
+  border-left: 4px solid var(--review-accent);
+  border-radius: inherit;
+  pointer-events: none;
 }
 
 .home-review-card:hover,

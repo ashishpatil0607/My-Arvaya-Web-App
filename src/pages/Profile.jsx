@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { Edit2, Check, Shield, Camera, Plus, Trash2, ChevronRight, User, HeartPulse, FileText, Users, Loader2, X, Upload, ChevronDown, Droplet, Ruler, Lock, MapPin, Calendar, Phone } from "lucide-react";
+import { Edit2, Check, Shield, Camera, Plus, Trash2, ChevronRight, User, HeartPulse, FileText, Users, Loader2, X, Upload, ChevronDown, Droplet, Ruler, Lock, MapPin, Calendar, Phone, Search } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { Link } from "react-router-dom";
 import { getPatients, getFamilyDetails, upsertFamilyDetails, addFamilyMember, updateAppUser, getLocations } from "../services/dataService";
@@ -190,6 +190,7 @@ export default function Profile() {
   const [locations, setLocations] = useState([]);
   const [locationDropdownOpen, setLocationDropdownOpen] = useState(false);
   const locationDropdownRef = useRef(null);
+  const [locationSearch, setLocationSearch] = useState("");
 
   const [profile, setProfile] = useState(() => ({
     ...splitTitle((user?.name || user?.full_name || user?.fullName || "").replace(/\.\./g, "."), user?.title),
@@ -255,7 +256,7 @@ export default function Profile() {
       imageFile: null,
       abhaNumber: "",
       entitylocation: "",
-      title: "Mr"
+      title: ""
     });
     setIsMemberModalOpen(true);
   };
@@ -595,6 +596,11 @@ export default function Profile() {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [locationDropdownOpen]);
+
+  const locationQuery = locationSearch.trim().toLowerCase();
+  const filteredLocations = locationQuery
+    ? locations.filter(loc => `${getLocationLabel(loc)} ${loc.entitylocation || ""}`.toLowerCase().includes(locationQuery))
+    : locations;
 
   useEffect(() => {
     if (isMemberModalOpen) {
@@ -1394,14 +1400,17 @@ export default function Profile() {
                     <label className="family-modal-label">Entity Location <em>*</em></label>
                     <div ref={locationDropdownRef} style={{ position: 'relative' }}>
                       <div
-                        onClick={() => setLocationDropdownOpen(!locationDropdownOpen)}
+                        onClick={() => {
+                          if (!locationDropdownOpen) setLocationSearch("");
+                          setLocationDropdownOpen(!locationDropdownOpen);
+                        }}
                         className={`family-modal-location${locationDropdownOpen ? ' is-open' : ''}`}
                       >
                         <span className="family-modal-location-pin"><MapPin size={14} /></span>
                         <div style={{
-                          flex: 1, fontSize: '13px', fontWeight: '600',
+                          flex: 1, minWidth: 0, fontSize: '13px', fontWeight: '600', lineHeight: '1.4',
                           color: memberForm.entitylocation ? 'var(--text-main)' : '#9ca3af',
-                          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
+                          whiteSpace: 'normal', overflowWrap: 'anywhere'
                         }}>
                           {memberForm.entitylocation
                             ? (getLocationLabel(locations.find(l => l.entitylocation === memberForm.entitylocation || String(l.id) === String(memberForm.entitylocation) || String(l.location_key) === String(memberForm.entitylocation))) || memberForm.entitylocation)
@@ -1412,10 +1421,25 @@ export default function Profile() {
 
                       {locationDropdownOpen && (
                         <div className="family-modal-location-menu">
+                          <div className="family-modal-location-search">
+                            <Search size={14} />
+                            <input
+                              type="text"
+                              autoFocus
+                              value={locationSearch}
+                              onChange={(e) => setLocationSearch(e.target.value)}
+                              onKeyDown={(e) => { if (e.key === "Escape") setLocationDropdownOpen(false); }}
+                              placeholder="Search location..."
+                              aria-label="Search location"
+                            />
+                          </div>
+                          <div className="family-modal-location-list">
                           {locations.length === 0 ? (
                             <div style={{ padding: '12px', textAlign: 'center', fontSize: '13px', color: 'var(--text-muted)' }}>Loading locations...</div>
+                          ) : filteredLocations.length === 0 ? (
+                            <div style={{ padding: '12px', textAlign: 'center', fontSize: '13px', color: 'var(--text-muted)' }}>No locations found</div>
                           ) : (
-                            locations.map(loc => {
+                            filteredLocations.map(loc => {
                               const isSelected = memberForm.entitylocation === loc.entitylocation;
                               return (
                                 <button
@@ -1431,7 +1455,7 @@ export default function Profile() {
                                     <div style={{
                                       fontSize: '13px', fontWeight: isSelected ? '700' : '600',
                                       color: isSelected ? '#0f766e' : 'inherit',
-                                      lineHeight: '1.4', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
+                                      lineHeight: '1.4', whiteSpace: 'normal', overflowWrap: 'anywhere'
                                     }}>
                                       {getLocationLabel(loc) || loc.entitylocation || "Location"}
                                     </div>
@@ -1441,6 +1465,7 @@ export default function Profile() {
                               );
                             })
                           )}
+                          </div>
                         </div>
                       )}
                     </div>
@@ -2100,17 +2125,49 @@ export default function Profile() {
           left: 0;
           right: 0;
           z-index: 99;
-          max-height: 220px;
-          overflow-y: auto;
+          max-height: 280px;
+          overflow: hidden;
           padding: 6px;
           display: flex;
           flex-direction: column;
-          gap: 2px;
+          gap: 6px;
           background: #ffffff;
           border: 1px solid rgba(20, 184, 166, 0.2);
           border-radius: 14px;
           box-shadow: 0 -14px 32px rgba(11, 37, 69, 0.14), 0 -2px 6px rgba(11, 37, 69, 0.06);
           animation: profileSelectIn 0.16s ease-out;
+        }
+        .family-modal-location-search {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex-shrink: 0;
+          padding: 0 10px;
+          height: 38px;
+          border: 1px solid var(--border);
+          border-radius: 10px;
+          background: #f8fbfb;
+          color: #0d9488;
+        }
+        .family-modal-location-search:focus-within {
+          border-color: #14b8a6;
+          background: #ffffff;
+        }
+        .family-modal-location-search input {
+          flex: 1;
+          min-width: 0;
+          border: none;
+          outline: none;
+          background: transparent;
+          font-size: 13px;
+          color: var(--text-main);
+        }
+        .family-modal-location-list {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+          overflow-y: auto;
+          min-height: 0;
         }
         .family-modal-location-option {
           display: flex;
