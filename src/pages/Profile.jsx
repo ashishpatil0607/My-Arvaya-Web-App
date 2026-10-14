@@ -58,16 +58,31 @@ function ProfileSelect({ name, value, options, onChange, disabled, style, compac
   const [dropUp, setDropUp] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const [menuMaxHeight, setMenuMaxHeight] = useState(260);
+  const [menuPos, setMenuPos] = useState(null);
   const wrapRef = useRef(null);
+  const menuRef = useRef(null);
   const selected = options.find(o => o.value === value);
 
   useEffect(() => {
     if (!open) return;
     const handleOutside = (e) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
+      if (wrapRef.current?.contains(e.target) || menuRef.current?.contains(e.target)) return;
+      setOpen(false);
     };
+    // Menu is portaled with fixed positioning, so close it if the page/container scrolls or resizes
+    const handleScroll = (e) => {
+      if (menuRef.current?.contains(e.target)) return;
+      setOpen(false);
+    };
+    const handleResize = () => setOpen(false);
     document.addEventListener("mousedown", handleOutside);
-    return () => document.removeEventListener("mousedown", handleOutside);
+    window.addEventListener("scroll", handleScroll, true);
+    window.addEventListener("resize", handleResize);
+    return () => {
+      document.removeEventListener("mousedown", handleOutside);
+      window.removeEventListener("scroll", handleScroll, true);
+      window.removeEventListener("resize", handleResize);
+    };
   }, [open]);
 
   useEffect(() => {
@@ -75,17 +90,17 @@ function ProfileSelect({ name, value, options, onChange, disabled, style, compac
   }, [disabled]);
 
   const openMenu = () => {
-    if (disabled) return;
-    const rect = wrapRef.current?.getBoundingClientRect();
-    const boundary = wrapRef.current?.closest("[data-select-boundary]")?.getBoundingClientRect();
-    const top = boundary ? boundary.top : 0;
-    const bottom = boundary ? boundary.bottom : window.innerHeight;
+    if (disabled || !wrapRef.current) return;
+    const rect = wrapRef.current.getBoundingClientRect();
     const menuHeight = Math.min(options.length * 40 + 12, 260);
-    const spaceBelow = rect ? bottom - rect.bottom - 12 : menuHeight;
-    const spaceAbove = rect ? rect.top - top - 12 : 0;
+    const spaceBelow = window.innerHeight - rect.bottom - 12;
+    const spaceAbove = rect.top - 12;
     const up = spaceBelow < menuHeight && spaceAbove > spaceBelow;
     setDropUp(up);
     setMenuMaxHeight(Math.max(120, Math.min(260, up ? spaceAbove : spaceBelow)));
+    setMenuPos(up
+      ? { left: rect.left, width: rect.width, bottom: window.innerHeight - rect.top + 6 }
+      : { left: rect.left, width: rect.width, top: rect.bottom + 6 });
     setActiveIndex(Math.max(0, options.findIndex(o => o.value === value)));
     setOpen(true);
   };
@@ -136,8 +151,22 @@ function ProfileSelect({ name, value, options, onChange, disabled, style, compac
         <span className="profile-select-value">{selected ? selected.label : (value || "Select")}</span>
         {!disabled && <ChevronDown size={compact ? 15 : 16} className="profile-select-chevron" />}
       </button>
-      {open && (
-        <ul className={`profile-select-menu${dropUp ? " drop-up" : ""}`} role="listbox" style={{ maxHeight: menuMaxHeight }}>
+      {open && menuPos && createPortal(
+        <ul
+          ref={menuRef}
+          className={`profile-select-menu${dropUp ? " drop-up" : ""}`}
+          role="listbox"
+          style={{
+            position: "fixed",
+            left: menuPos.left,
+            width: menuPos.width,
+            right: "auto",
+            top: menuPos.top ?? "auto",
+            bottom: menuPos.bottom ?? "auto",
+            maxHeight: menuMaxHeight,
+            zIndex: 10050
+          }}
+        >
           {options.map((opt, i) => {
             const isSelected = opt.value === value;
             return (
@@ -154,7 +183,8 @@ function ProfileSelect({ name, value, options, onChange, disabled, style, compac
               </li>
             );
           })}
-        </ul>
+        </ul>,
+        document.body
       )}
     </div>
   );
@@ -168,6 +198,8 @@ export default function Profile() {
   const [loadingFamily, setLoadingFamily] = useState(false);
   const [savingMember, setSavingMember] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
+  // Synchronous lock so a fast double-click can't start a second save/upload before the button re-renders
+  const actionLockRef = useRef(false);
 
   const userImageInputRef = useRef(null);
   const [uploadingUserImage, setUploadingUserImage] = useState(false);
@@ -294,7 +326,10 @@ export default function Profile() {
     setIsMemberModalOpen(true);
   };
 
+  const familyFetchRef = useRef(false);
   const fetchFamilyMembers = async () => {
+    if (familyFetchRef.current) return;
+    familyFetchRef.current = true;
     setLoadingFamily(true);
     try {
       const storedUser = JSON.parse(localStorage.getItem("arvaya_user") || "{}");
@@ -363,12 +398,14 @@ export default function Profile() {
     } catch (err) {
       console.error("fetchFamilyMembers error:", err);
     } finally {
+      familyFetchRef.current = false;
       setLoadingFamily(false);
     }
   };
 
   const handleSaveMember = async (e) => {
     e.preventDefault();
+    if (actionLockRef.current) return;
     if (!memberForm.title) {
       showToast("Please select a title.", "error");
       return;
@@ -398,7 +435,9 @@ export default function Profile() {
       return;
     }
 
+    actionLockRef.current = true;
     setSavingMember(true);
+    setLocationDropdownOpen(false);
     try {
       let finalImageUrl = memberForm.profileImage;
 
@@ -492,6 +531,7 @@ export default function Profile() {
       console.error("Failed to save family member:", err);
       showToast("Failed to save family member. Please try again.", "error");
     } finally {
+      actionLockRef.current = false;
       setSavingMember(false);
     }
   };
@@ -643,7 +683,7 @@ export default function Profile() {
 
   const handleUserProfileImageUpload = async (e) => {
     const file = e.target.files[0];
-    if (!file) return;
+    if (!file || actionLockRef.current) return;
 
     const reader = new FileReader();
     reader.onloadend = () => {
@@ -651,6 +691,7 @@ export default function Profile() {
     };
     reader.readAsDataURL(file);
 
+    actionLockRef.current = true;
     setUploadingUserImage(true);
     try {
       const folderName = 'patientProfileImage';
@@ -722,11 +763,43 @@ export default function Profile() {
     } catch (uploadErr) {
       console.error("User profile image upload error:", uploadErr);
     } finally {
+      actionLockRef.current = false;
       setUploadingUserImage(false);
     }
   };
 
   const handleSaveProfile = async () => {
+    if (actionLockRef.current) return;
+    if (!profile.title) {
+      showToast("Please select a title.", "error");
+      return;
+    }
+    if (!String(profile.name || "").trim()) {
+      showToast("Please enter your full name.", "error");
+      return;
+    }
+    if (!profile.phone) {
+      showToast("Phone number is missing.", "error");
+      return;
+    }
+    if (!profile.dob) {
+      showToast("Please select date of birth.", "error");
+      return;
+    }
+    if (!profile.gender) {
+      showToast("Please select gender.", "error");
+      return;
+    }
+    if (!profile.bloodGroup) {
+      showToast("Please select blood group.", "error");
+      return;
+    }
+    if (profile.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(profile.email.trim())) {
+      showToast("Please enter a valid email address.", "error");
+      return;
+    }
+
+    actionLockRef.current = true;
     setSavingProfile(true);
     try {
       const storedUser = localStorage.getItem("arvaya_user");
@@ -792,9 +865,14 @@ export default function Profile() {
     } catch (err) {
       console.error("Failed to update profile via appUser/upsert:", err);
     } finally {
+      actionLockRef.current = false;
       setSavingProfile(false);
     }
   };
+
+  // Any request in flight on the page — page-level action buttons stay disabled until it finishes
+  const isBusy = loadingData || loadingFamily || savingProfile || savingMember || uploadingUserImage;
+  const isFieldLocked = !isEditing || savingProfile;
 
   const inputStyle = !isEditing ? { background: 'var(--bg-app)', borderColor: 'transparent', color: 'var(--text-main)', padding: '12px 16px' } : { padding: '12px 16px' };
 
@@ -861,10 +939,16 @@ export default function Profile() {
               <div className="profile-avatar-wrap" style={{ position: 'relative', display: 'inline-block', marginBottom: '16px' }}>
                 <div
                   className="animate-scale-in profile-avatar-circle"
-                  style={{ width: '100px', height: '100px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--primary), var(--primary-dark))', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '36px', fontWeight: '700', boxShadow: '0 8px 24px rgba(46,102,110,0.2)', margin: '0 auto', overflow: 'hidden', position: 'relative', cursor: 'pointer' }}
-                  onClick={() => userImageInputRef.current?.click()}
-                  title="Click to upload profile photo"
+                  style={{ width: '100px', height: '100px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--primary), var(--primary-dark))', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '36px', fontWeight: '700', boxShadow: '0 8px 24px rgba(46,102,110,0.2)', margin: '0 auto', overflow: 'hidden', position: 'relative', cursor: isBusy ? 'default' : 'pointer' }}
+                  onClick={() => { if (!isBusy) userImageInputRef.current?.click(); }}
+                  title={uploadingUserImage ? "Uploading..." : "Click to upload profile photo"}
+                  aria-busy={uploadingUserImage}
                 >
+                  {uploadingUserImage && (
+                    <div style={{ position: 'absolute', inset: 0, zIndex: 2, background: 'rgba(15, 23, 42, 0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Loader2 size={28} className="animate-spin" />
+                    </div>
+                  )}
                   {userDisplayImage || profile.profile_image ? (
                     <img
                       src={userDisplayImage || getImageUrl(profile.profile_image, 'patientProfileImage')}
@@ -879,9 +963,10 @@ export default function Profile() {
                 </div>
                 <button
                   onClick={() => userImageInputRef.current?.click()}
+                  disabled={isBusy}
                   className="hover-glow profile-camera-btn"
-                  style={{ position: 'absolute', bottom: '0', right: '0', width: '36px', height: '36px', borderRadius: '50%', background: 'white', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--text-main)', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', zIndex: 2 }}
-                  title="Upload Profile Image"
+                  style={{ position: 'absolute', bottom: '0', right: '0', width: '36px', height: '36px', borderRadius: '50%', background: 'white', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: isBusy ? 'default' : 'pointer', color: 'var(--text-main)', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', zIndex: 3 }}
+                  title={uploadingUserImage ? "Uploading..." : "Upload Profile Image"}
                 >
                   {uploadingUserImage ? <Loader2 size={16} className="animate-spin text-primary" /> : <Camera size={16} />}
                 </button>
@@ -889,7 +974,8 @@ export default function Profile() {
                   type="file"
                   ref={userImageInputRef}
                   accept="image/*"
-                  onChange={handleUserProfileImageUpload}
+                  onChange={(e) => { handleUserProfileImageUpload(e); e.target.value = ""; }}
+                  disabled={isBusy}
                   style={{ display: 'none' }}
                 />
               </div>
@@ -950,13 +1036,16 @@ export default function Profile() {
               ].map(tab => {
                 const Icon = tab.icon;
                 const isActive = activeTab === tab.id;
+                const isTabLoading = tab.id === 'family' && loadingFamily;
                 return (
                   <button
                     key={tab.id}
                     className={`profile-tab-btn${isActive ? ' profile-tab-btn--active' : ''}`}
+                    aria-busy={isTabLoading}
+                    disabled={isBusy}
                     onClick={() => {
                       setActiveTab(tab.id);
-                      if (tab.id === 'family') {
+                      if (tab.id === 'family' && !loadingFamily) {
                         fetchFamilyMembers();
                       }
                     }}
@@ -967,13 +1056,15 @@ export default function Profile() {
                       color: isActive ? '#ffffff' : 'var(--text-muted)',
                       background: isActive ? 'linear-gradient(135deg, #14b8a6 0%, #0d9488 100%)' : 'transparent',
                       boxShadow: isActive ? '0 6px 16px rgba(13, 148, 136, 0.25)' : 'none',
-                      border: 'none', cursor: 'pointer', transition: 'all 0.2s',
+                      border: 'none', cursor: isBusy ? 'default' : 'pointer', transition: 'all 0.2s',
                       flex: '1', justifyContent: 'center'
                     }}
-                    onMouseOver={e => { if (!isActive) e.currentTarget.style.background = 'var(--bg-app)'; }}
+                    onMouseOver={e => { if (!isActive && !isBusy) e.currentTarget.style.background = 'var(--bg-app)'; }}
                     onMouseOut={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
                   >
-                    <Icon size={16} className={isActive ? '' : 'text-muted'} />
+                    {isTabLoading
+                      ? <Loader2 size={16} className="animate-spin" />
+                      : <Icon size={16} className={isActive ? '' : 'text-muted'} />}
                     <span>{tab.label}</span>
                   </button>
                 )
@@ -994,10 +1085,13 @@ export default function Profile() {
                       id="profile-edit-btn"
                       className={`profile-edit-btn${isEditing ? ' profile-edit-btn--save' : ''}`}
                       onClick={isEditing ? handleSaveProfile : handleStartEdit}
-                      disabled={savingProfile}
+                      disabled={isBusy}
+                      aria-busy={savingProfile || loadingData}
                     >
                       {savingProfile ? (
                         <><Loader2 size={16} className="animate-spin" /> Saving...</>
+                      ) : loadingData && !isEditing ? (
+                        <><Loader2 size={16} className="animate-spin" /> Loading...</>
                       ) : isEditing ? (
                         <><Check size={16} /> Save Changes</>
                       ) : (
@@ -1010,38 +1104,38 @@ export default function Profile() {
                     <div className="profile-form-row-2col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                       <div style={{ display: 'grid', gridTemplateColumns: '110px 1fr', gap: '12px' }}>
                         <div className="flex flex-col gap-2">
-                          <label className="text-muted" style={{ fontSize: '13px', fontWeight: '600' }}>Title</label>
+                          <label className="text-muted" style={{ fontSize: '13px', fontWeight: '600' }}>Title <em className="profile-req">*</em></label>
                           <ProfileSelect
                             name="title"
                             value={profile.title || ""}
                             onChange={handleChange}
-                            disabled={!isEditing}
+                            disabled={isFieldLocked}
                             style={inputStyle}
-                            options={[{ value: "", label: "None" }, ...TITLES.map(v => ({ value: v, label: v }))]}
+                            options={TITLES.map(v => ({ value: v, label: v }))}
                           />
                         </div>
                         <div className="flex flex-col gap-2">
-                          <label className="text-muted" style={{ fontSize: '13px', fontWeight: '600' }}>Full Name</label>
-                          <input name="name" value={profile.name} onChange={handleChange} readOnly={!isEditing} className="input-field" style={inputStyle} />
+                          <label className="text-muted" style={{ fontSize: '13px', fontWeight: '600' }}>Full Name <em className="profile-req">*</em></label>
+                          <input name="name" value={profile.name} onChange={handleChange} readOnly={isFieldLocked} className="input-field" style={inputStyle} />
                         </div>
                       </div>
                       <div className="flex flex-col gap-2">
                         <label className="text-muted" style={{ fontSize: '13px', fontWeight: '600' }}>Email Address</label>
-                        <input name="email" value={profile.email || ""} onChange={handleChange} readOnly={!isEditing} className="input-field" style={inputStyle} placeholder="Enter email address" />
+                        <input name="email" value={profile.email || ""} onChange={handleChange} readOnly={isFieldLocked} className="input-field" style={inputStyle} placeholder="Enter email address" />
                       </div>
                     </div>
 
                     {/* Row 2: Phone Number & Date of Birth */}
                     <div className="profile-form-row-2col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                       <div className="flex flex-col gap-2">
-                        <label className="text-muted" style={{ fontSize: '13px', fontWeight: '600' }}>Phone Number</label>
+                        <label className="text-muted" style={{ fontSize: '13px', fontWeight: '600' }}>Phone Number <em className="profile-req">*</em></label>
                         <div style={{ position: 'relative' }}>
                           <input name="phone" value={profile.phone} readOnly className="input-field" style={{ background: 'var(--bg-app)', borderColor: 'transparent', color: 'var(--text-main)', padding: '12px 40px 12px 16px', cursor: isEditing ? 'not-allowed' : undefined, width: '100%' }} />
                           <Lock size={15} className="profile-input-lock" aria-label="Phone number cannot be changed" />
                         </div>
                       </div>
                       <div className="flex flex-col gap-2">
-                        <label className="text-muted" style={{ fontSize: '13px', fontWeight: '600' }}>Date of Birth</label>
+                        <label className="text-muted" style={{ fontSize: '13px', fontWeight: '600' }}>Date of Birth <em className="profile-req">*</em></label>
                         <input
                           type="date"
                           name="dob"
@@ -1049,7 +1143,7 @@ export default function Profile() {
                           min={new Date(new Date().setFullYear(new Date().getFullYear() - 150)).toISOString().split("T")[0]}
                           max={new Date().toISOString().split("T")[0]}
                           onChange={handleChange}
-                          readOnly={!isEditing}
+                          readOnly={isFieldLocked}
                           className="input-field"
                           style={inputStyle}
                         />
@@ -1059,34 +1153,34 @@ export default function Profile() {
                     {/* Row 3: Gender, Blood Group, Height (cm), Weight (kg) in 1 Row */}
                     <div className="profile-form-row-4col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '16px' }}>
                       <div className="flex flex-col gap-2">
-                        <label className="text-muted" style={{ fontSize: '13px', fontWeight: '600' }}>Gender</label>
+                        <label className="text-muted" style={{ fontSize: '13px', fontWeight: '600' }}>Gender <em className="profile-req">*</em></label>
                         <ProfileSelect
                           name="gender"
                           value={profile.gender}
                           onChange={handleChange}
-                          disabled={!isEditing}
+                          disabled={isFieldLocked}
                           style={inputStyle}
                           options={["Male", "Female", "Other"].map(v => ({ value: v, label: v }))}
                         />
                       </div>
                       <div className="flex flex-col gap-2">
-                        <label className="text-muted" style={{ fontSize: '13px', fontWeight: '600' }}>Blood Group</label>
+                        <label className="text-muted" style={{ fontSize: '13px', fontWeight: '600' }}>Blood Group <em className="profile-req">*</em></label>
                         <ProfileSelect
                           name="bloodGroup"
                           value={profile.bloodGroup}
                           onChange={handleChange}
-                          disabled={!isEditing}
+                          disabled={isFieldLocked}
                           style={inputStyle}
                           options={["B+", "A+", "O+", "AB+", "A-", "B-", "O-", "AB-"].map(v => ({ value: v, label: v }))}
                         />
                       </div>
                       <div className="flex flex-col gap-2">
                         <label className="text-muted" style={{ fontSize: '13px', fontWeight: '600' }}>Height (cm)</label>
-                        <input name="height" type="number" value={profile.height} onChange={handleChange} readOnly={!isEditing} className="input-field" style={inputStyle} placeholder="E.g., 175" />
+                        <input name="height" type="number" value={profile.height} onChange={handleChange} readOnly={isFieldLocked} className="input-field" style={inputStyle} placeholder="E.g., 175" />
                       </div>
                       <div className="flex flex-col gap-2">
                         <label className="text-muted" style={{ fontSize: '13px', fontWeight: '600' }}>Weight (kg)</label>
-                        <input name="weight" type="number" value={profile.weight} onChange={handleChange} readOnly={!isEditing} className="input-field" style={inputStyle} placeholder="E.g., 70" />
+                        <input name="weight" type="number" value={profile.weight} onChange={handleChange} readOnly={isFieldLocked} className="input-field" style={inputStyle} placeholder="E.g., 70" />
                       </div>
                     </div>
                   </div>
@@ -1187,7 +1281,7 @@ export default function Profile() {
                       </h3>
                       <p className="profile-section-sub">Manage profiles for your dependents and family members.</p>
                     </div>
-                    <button className="family-add-btn" onClick={handleOpenAddModal}>
+                    <button className="family-add-btn" onClick={handleOpenAddModal} disabled={isBusy}>
                       <Plus size={16} /> Add Member
                     </button>
                   </div>
@@ -1237,7 +1331,7 @@ export default function Profile() {
                             {member.isPrimary ? (
                               <span className="family-primary-badge"><Shield size={13} /> Primary Account</span>
                             ) : (
-                              <button className="family-edit-btn" onClick={() => handleEditMember(member)} title="Edit Member">
+                              <button className="family-edit-btn" onClick={() => handleEditMember(member)} disabled={isBusy} title="Edit Member">
                                 <Edit2 size={14} /> <span>Edit</span>
                               </button>
                             )}
@@ -1292,6 +1386,7 @@ export default function Profile() {
                   type="button"
                   className="family-modal-close"
                   aria-label="Close"
+                  disabled={savingMember}
                   onClick={() => { setIsMemberModalOpen(false); setEditingMemberId(null); }}
                 >
                   <X size={16} />
@@ -1299,14 +1394,19 @@ export default function Profile() {
               </div>
 
               <div className="family-modal-hero">
-                <label className="family-modal-avatar" title="Upload photo">
+                <label className="family-modal-avatar" title={savingMember ? "Saving..." : "Upload photo"} aria-busy={savingMember} style={savingMember ? { cursor: 'default' } : undefined}>
+                  {savingMember && (
+                    <span className="family-modal-avatar-loading" aria-hidden="true">
+                      <Loader2 size={24} className="animate-spin" />
+                    </span>
+                  )}
                   {memberForm.displayImage ? (
                     <img src={memberForm.displayImage} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   ) : (
                     <span>{(memberForm.name.trim().charAt(0) || "F").toUpperCase()}</span>
                   )}
                   <span className="family-modal-avatar-cam"><Camera size={13} /></span>
-                  <input type="file" accept="image/*" onChange={handleImageUpload} style={{ display: 'none' }} />
+                  <input type="file" accept="image/*" onChange={handleImageUpload} disabled={savingMember} style={{ display: 'none' }} />
                 </label>
                 <div className="family-modal-hero-body">
                   <h3 className="family-modal-title">
@@ -1326,7 +1426,7 @@ export default function Profile() {
 
             {/* Modal Form */}
             <form onSubmit={handleSaveMember} data-select-boundary className="family-modal-form">
-              <div className="family-modal-scroll">
+              <div className={`family-modal-scroll${savingMember ? ' is-saving' : ''}`} aria-busy={savingMember}>
 
                 {/* Section: Personal Details */}
                 <div className="family-modal-section">
@@ -1343,13 +1443,14 @@ export default function Profile() {
                         name="title"
                         value={memberForm.title}
                         onChange={handleMemberFormChange}
-                        options={[{ value: "", label: "None" }, ...TITLES.map(v => ({ value: v, label: v }))]}
+                        disabled={savingMember}
+                        options={TITLES.map(v => ({ value: v, label: v }))}
                       />
                     </div>
 
                     <div className="flex flex-col family-modal-field">
                       <label className="family-modal-label">Name <em>*</em></label>
-                      <input name="name" value={memberForm.name} onChange={handleMemberFormChange} placeholder="Full Name" className="input-field" />
+                      <input name="name" value={memberForm.name} onChange={handleMemberFormChange} placeholder="Full Name" className="input-field" disabled={savingMember} />
                     </div>
 
                     <div className="flex flex-col family-modal-field">
@@ -1359,6 +1460,7 @@ export default function Profile() {
                         name="relation"
                         value={memberForm.relation}
                         onChange={handleMemberFormChange}
+                        disabled={savingMember}
                         options={[{ value: "", label: "None" }, ...["Spouse", "Son", "Daughter", "Father", "Mother", "Brother", "Sister", "Other"].map(v => ({ value: v, label: v }))]}
                       />
                     </div>
@@ -1367,7 +1469,7 @@ export default function Profile() {
                   <div className="modal-form-3col" style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr', gap: '12px' }}>
                     <div className="flex flex-col family-modal-field">
                       <label className="family-modal-label">Date of Birth <em>*</em></label>
-                      <input type="date" name="dob" value={memberForm.dob} max={new Date().toISOString().split('T')[0]} onChange={handleMemberFormChange} className="input-field" />
+                      <input type="date" name="dob" value={memberForm.dob} max={new Date().toISOString().split('T')[0]} onChange={handleMemberFormChange} className="input-field" disabled={savingMember} />
                     </div>
 
                     <div className="flex flex-col family-modal-field">
@@ -1380,6 +1482,7 @@ export default function Profile() {
                             role="radio"
                             aria-checked={memberForm.gender === g}
                             className={`family-modal-segment-btn${memberForm.gender === g ? ' is-active' : ''}`}
+                            disabled={savingMember}
                             onClick={() => handleMemberFormChange({ target: { name: "gender", value: g } })}
                           >
                             {g}
@@ -1407,6 +1510,7 @@ export default function Profile() {
                           role="radio"
                           aria-checked={memberForm.bloodGroup === bg}
                           className={`family-modal-blood-btn${memberForm.bloodGroup === bg ? ' is-active' : ''}`}
+                          disabled={savingMember}
                           onClick={() => handleMemberFormChange({ target: { name: "bloodGroup", value: bg } })}
                         >
                           <Droplet size={12} /> {bg}
@@ -1420,6 +1524,7 @@ export default function Profile() {
                     <div ref={locationDropdownRef} style={{ position: 'relative' }}>
                       <div
                         onClick={() => {
+                          if (savingMember) return;
                           if (!locationDropdownOpen) setLocationSearch("");
                           setLocationDropdownOpen(!locationDropdownOpen);
                         }}
@@ -1497,11 +1602,11 @@ export default function Profile() {
               <div className="family-modal-footer">
                 <span className="family-modal-footer-note"><Shield size={13} /> Details are kept private</span>
                 <div className="family-modal-footer-actions">
-                  <button type="button" className="btn btn-secondary family-modal-cancel" onClick={() => setIsMemberModalOpen(false)} style={{ padding: '10px 20px', fontSize: '13.5px' }}>
+                  <button type="button" className="btn btn-secondary family-modal-cancel" onClick={() => setIsMemberModalOpen(false)} disabled={savingMember} style={{ padding: '10px 20px', fontSize: '13.5px' }}>
                     Cancel
                   </button>
                   <button type="submit" disabled={savingMember} className="btn btn-primary flex items-center gap-2 family-modal-save" style={{ padding: '10px 22px', fontSize: '13.5px' }}>
-                    {savingMember ? <><Loader2 size={14} className="animate-spin" /> Saving...</> : <><Check size={15} /> {editingMemberId ? "Save Changes" : "Add Member"}</>}
+                    {savingMember ? <><Loader2 size={14} className="animate-spin" /> {editingMemberId ? "Saving..." : "Adding..."}</> : <><Check size={15} /> {editingMemberId ? "Save Changes" : "Add Member"}</>}
                   </button>
                 </div>
               </div>
@@ -1586,7 +1691,23 @@ export default function Profile() {
           cursor: pointer;
           transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
-        .family-add-btn:hover {
+        .family-add-btn:disabled,
+        .family-edit-btn:disabled,
+        .profile-tab-btn:disabled:not(.profile-tab-btn--active),
+        .profile-camera-btn:disabled,
+        .family-modal-cancel:disabled,
+        .family-modal-segment-btn:disabled:not(.is-active),
+        .family-modal-blood-btn:disabled:not(.is-active) {
+          opacity: 0.55;
+          cursor: default !important;
+          transform: none !important;
+          box-shadow: none;
+        }
+        .family-modal-save:disabled {
+          opacity: 0.8;
+          cursor: default;
+        }
+        .family-add-btn:not(:disabled):hover {
           transform: translateY(-1px);
           box-shadow: 0 10px 22px rgba(13, 148, 136, 0.36);
         }
@@ -1733,7 +1854,7 @@ export default function Profile() {
           cursor: pointer;
           transition: all 0.2s ease;
         }
-        .family-edit-btn:hover {
+        .family-edit-btn:not(:disabled):hover {
           color: #ffffff;
           background: #0d9488;
           border-color: #0d9488;
@@ -1872,7 +1993,12 @@ export default function Profile() {
           cursor: pointer;
           transition: all 0.2s ease;
         }
-        .family-modal-close:hover {
+        .family-modal-close:disabled {
+          opacity: 0.5;
+          cursor: default;
+          transform: none;
+        }
+        .family-modal-close:not(:disabled):hover {
           background: #ffffff;
           color: #e11d48;
           transform: rotate(90deg);
@@ -1976,6 +2102,22 @@ export default function Profile() {
           display: flex;
           flex-direction: column;
           gap: 14px;
+          transition: opacity 0.2s ease;
+        }
+        .family-modal-scroll.is-saving .family-modal-section {
+          opacity: 0.6;
+          pointer-events: none;
+        }
+        .family-modal-avatar-loading {
+          position: absolute;
+          inset: 0;
+          z-index: 3;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: rgba(15, 23, 42, 0.45);
+          color: #ffffff;
         }
         .family-modal-section {
           display: flex;
@@ -2019,6 +2161,7 @@ export default function Profile() {
           text-transform: uppercase;
           letter-spacing: 0.05em;
         }
+        .profile-req,
         .family-modal-label em {
           font-style: normal;
           color: #e11d48;
