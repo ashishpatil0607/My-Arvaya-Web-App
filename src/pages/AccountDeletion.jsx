@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { AlertTriangle, CheckCircle, ArrowLeft, Trash2, Mail, Phone, MessageSquare, ShieldAlert } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { AlertTriangle, CheckCircle, ArrowLeft, Trash2, Mail, Phone, MessageSquare, ShieldAlert, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function AccountDeletion() {
@@ -9,6 +9,8 @@ export default function AccountDeletion() {
   const [reason, setReason] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [busy, setBusy] = useState(false);
+  // Synchronous guard so a fast double-click can't submit the request twice
+  const submitLockRef = useRef(false);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
@@ -25,11 +27,14 @@ export default function AccountDeletion() {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!confirmDelete) return;
+    if (submitLockRef.current) return;
+    submitLockRef.current = true;
     setBusy(true);
     // Simulate an API call
     setTimeout(() => {
       setIsSubmitted(true);
       setBusy(false);
+      submitLockRef.current = false;
     }, 1200);
   };
 
@@ -236,7 +241,8 @@ export default function AccountDeletion() {
                       width: '100%', background: busy || !confirmDelete ? 'var(--border)' : 'var(--danger)',
                       color: busy || !confirmDelete ? 'var(--text-muted)' : '#fff', border: 'none', padding: '18px',
                       borderRadius: '16px', fontSize: '16px', fontWeight: '700',
-                      cursor: busy || !confirmDelete ? 'not-allowed' : 'pointer', 
+                      cursor: busy || !confirmDelete ? 'default' : 'pointer',
+                      opacity: busy ? 0.6 : 1,
                       transition: 'all 0.3s var(--ease-spring)',
                       display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
                       boxShadow: busy || !confirmDelete ? 'none' : '0 8px 24px rgba(220, 38, 38, 0.3)',
@@ -245,7 +251,12 @@ export default function AccountDeletion() {
                     onMouseEnter={e => { if (!busy && confirmDelete) { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 12px 28px rgba(220, 38, 38, 0.4)'; } }}
                     onMouseLeave={e => { if (!busy && confirmDelete) { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(220, 38, 38, 0.3)'; } }}
                   >
-                    {busy ? "Processing..." : (
+                    {busy ? (
+                      <>
+                        <Loader2 size={20} className="animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
                       <>
                         <Trash2 size={20} />
                         Permanently Delete Account

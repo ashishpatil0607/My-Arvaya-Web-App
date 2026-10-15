@@ -1,36 +1,188 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import ReactDOM from "react-dom";
-import { X, MapPin, Phone, User, AlertTriangle, ArrowRight, CheckCircle2, Ambulance, Shield, Loader2, ChevronDown, Navigation } from "lucide-react";
+import { X, MapPin, Phone, User, AlertTriangle, ArrowRight, CheckCircle2, Ambulance, Shield, Loader2, ChevronDown, Navigation, HeartPulse, Car, Wind, Baby, Flame, Brain, HelpCircle, Check } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useBooking } from "../../context/BookingContext";
 import { useNavigate } from "react-router-dom";
-import { EMERGENCY_TYPES, requestAmbulance, reverseGeocode } from "../../services/ambulanceService";
-import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+import { EMERGENCY_TYPES, requestAmbulance, reverseGeocode, GOOGLE_MAPS_API_KEY } from "../../services/ambulanceService";
+import useGoogleMapsScript from "./useGoogleMapsScript";
+import useScrollLock from "../../hooks/useScrollLock";
 
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-});
+const DEFAULT_CENTER = { lat: 20.5937, lng: 78.9629 };
 
-function LocationMarker({ position, setPosition }) {
-  const map = useMapEvents({
-    click(e) {
-      setPosition(e.latlng);
-    },
-  });
+/* ── Google Maps pickup picker: click the map or drag the pin to set location ── */
 
-  React.useEffect(() => {
-    if (position) {
-      const currentZoom = map.getZoom();
-      map.setView(position, currentZoom < 15 ? 15 : currentZoom);
+function GoogleLocationPicker({ position, onPick }) {
+  const { loaded, error } = useGoogleMapsScript(GOOGLE_MAPS_API_KEY);
+  const containerRef = React.useRef(null);
+  const mapRef = React.useRef(null);
+  const markerRef = React.useRef(null);
+  const onPickRef = React.useRef(onPick);
+  onPickRef.current = onPick;
+
+  // Create the map once the script is ready
+  useEffect(() => {
+    if (!loaded || !containerRef.current || mapRef.current) return;
+    const gm = window.google.maps;
+    const map = new gm.Map(containerRef.current, {
+      center: position || DEFAULT_CENTER,
+      zoom: position ? 15 : 4,
+      disableDefaultUI: true,
+      zoomControl: true,
+      clickableIcons: false,
+      gestureHandling: "greedy",
+    });
+    mapRef.current = map;
+
+    map.addListener("click", (e) => {
+      onPickRef.current({ lat: e.latLng.lat(), lng: e.latLng.lng() });
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loaded]);
+
+  // Keep the marker and viewport in sync with the selected position
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !position) return;
+    const gm = window.google.maps;
+
+    if (!markerRef.current) {
+      markerRef.current = new gm.Marker({ position, map, draggable: true, title: "Pickup Location" });
+      markerRef.current.addListener("dragend", (e) => {
+        onPickRef.current({ lat: e.latLng.lat(), lng: e.latLng.lng() });
+      });
+    } else {
+      markerRef.current.setPosition(position);
     }
-  }, [position, map]);
 
-  return position === null ? null : <Marker position={position} />;
+    map.panTo(position);
+    if (map.getZoom() < 15) map.setZoom(15);
+  }, [loaded, position?.lat, position?.lng]);
+
+  // Cleanup listeners on unmount
+  useEffect(() => () => {
+    if (markerRef.current) { window.google?.maps?.event.clearInstanceListeners(markerRef.current); markerRef.current.setMap(null); }
+    if (mapRef.current) window.google?.maps?.event.clearInstanceListeners(mapRef.current);
+  }, []);
+
+  if (error) {
+    return (
+      <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", color: "var(--text-muted)", fontSize: "13px", background: "var(--bg-app)" }}>
+        <MapPin size={16} /> Map unavailable — please enter your address below.
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ position: "relative", height: "100%", width: "100%" }}>
+      <div ref={containerRef} style={{ height: "100%", width: "100%" }} />
+      {!loaded && (
+        <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", color: "var(--text-muted)", fontSize: "13px", background: "var(--bg-app)" }}>
+          <Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} /> Loading map…
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Emergency type dropdown (custom, since native <select> popups can't be styled) ── */
+
+const EMERGENCY_META = {
+  cardiac:   { icon: HeartPulse, color: "#dc2626", bg: "#fef2f2" },
+  accident:  { icon: Car,        color: "#ea580c", bg: "#fff7ed" },
+  breathing: { icon: Wind,       color: "#0284c7", bg: "#f0f9ff" },
+  pregnancy: { icon: Baby,       color: "#db2777", bg: "#fdf2f8" },
+  burns:     { icon: Flame,      color: "#d97706", bg: "#fffbeb" },
+  stroke:    { icon: Brain,      color: "#7c3aed", bg: "#f5f3ff" },
+  other:     { icon: HelpCircle, color: "#475569", bg: "#f1f5f9" },
+};
+const MENU_MAX_HEIGHT = 300;
+
+function EmergencyTypeSelect({ value, onChange, hasError }) {
+  const [open, setOpen] = useState(false);
+  const [openUp, setOpenUp] = useState(false);
+  const [active, setActive] = useState(-1);
+  const wrapRef = React.useRef(null);
+  const triggerRef = React.useRef(null);
+
+  const selected = EMERGENCY_TYPES.find(t => t.value === value);
+  const selectedMeta = selected && (EMERGENCY_META[selected.value] || EMERGENCY_META.other);
+
+  // Close on outside click
+  useEffect(() => {
+    if (!open) return;
+    const onDown = e => { if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [open]);
+
+  const toggle = () => {
+    if (!open && triggerRef.current) {
+      // Flip upward when the scroll area doesn't have room below the trigger
+      const rect = triggerRef.current.getBoundingClientRect();
+      const bounds = triggerRef.current.closest(".ambulance-modal-scroll")?.getBoundingClientRect() || { top: 0, bottom: window.innerHeight };
+      const below = bounds.bottom - rect.bottom;
+      const above = rect.top - bounds.top;
+      setOpenUp(below < MENU_MAX_HEIGHT && above > below);
+      setActive(Math.max(0, EMERGENCY_TYPES.findIndex(t => t.value === value)));
+    }
+    setOpen(o => !o);
+  };
+
+  const pick = (v) => { onChange(v); setOpen(false); triggerRef.current?.focus(); };
+
+  const onKeyDown = (e) => {
+    if (!open) {
+      if (["Enter", " ", "ArrowDown", "ArrowUp"].includes(e.key)) { e.preventDefault(); toggle(); }
+      return;
+    }
+    if (e.key === "Escape") { e.preventDefault(); setOpen(false); }
+    else if (e.key === "ArrowDown") { e.preventDefault(); setActive(i => (i + 1) % EMERGENCY_TYPES.length); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); setActive(i => (i - 1 + EMERGENCY_TYPES.length) % EMERGENCY_TYPES.length); }
+    else if (e.key === "Enter" || e.key === " ") { e.preventDefault(); if (active >= 0) pick(EMERGENCY_TYPES[active].value); }
+    else if (e.key === "Tab") setOpen(false);
+  };
+
+  const borderColor = hasError ? "var(--danger)" : open ? "var(--primary)" : "var(--border)";
+  const SelectedIcon = selectedMeta?.icon;
+
+  return (
+    <div ref={wrapRef} style={{ position: "relative" }}>
+      <button ref={triggerRef} type="button" onClick={toggle} onKeyDown={onKeyDown}
+        aria-haspopup="listbox" aria-expanded={open}
+        style={{ width: "100%", display: "flex", alignItems: "center", gap: "10px", padding: "8px 14px 8px 8px", minHeight: "50px", border: `1.5px solid ${borderColor}`, borderRadius: "10px", background: "#fff", cursor: "pointer", outline: "none", textAlign: "left", fontFamily: "var(--font-sans)", transition: "border-color 0.2s, box-shadow 0.2s", boxShadow: open ? "0 0 0 4px rgba(46,102,110,0.10)" : "none" }}>
+        <span style={{ width: "32px", height: "32px", borderRadius: "8px", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: selectedMeta ? selectedMeta.bg : "var(--bg-app)", color: selectedMeta ? selectedMeta.color : "var(--text-muted)", transition: "all 0.2s" }}>
+          {SelectedIcon ? <SelectedIcon size={17} /> : <AlertTriangle size={16} />}
+        </span>
+        <span style={{ flex: 1, fontSize: "15px", fontWeight: selected ? "600" : "500", color: selected ? "var(--text-main)" : "var(--text-muted)" }}>
+          {selected ? selected.label : "Select emergency type"}
+        </span>
+        <ChevronDown size={18} color="var(--text-muted)" style={{ transition: "transform 0.2s", transform: open ? "rotate(180deg)" : "none" }} />
+      </button>
+
+      {open && (
+        <ul role="listbox" style={{ position: "absolute", left: 0, right: 0, [openUp ? "bottom" : "top"]: "calc(100% + 6px)", margin: 0, padding: "6px", listStyle: "none", background: "#fff", border: "1px solid var(--border)", borderRadius: "12px", boxShadow: "0 12px 32px rgba(15,23,42,0.16), 0 2px 6px rgba(15,23,42,0.06)", maxHeight: `${MENU_MAX_HEIGHT}px`, overflowY: "auto", zIndex: 50, animation: "emgMenuIn 0.15s ease-out", transformOrigin: openUp ? "bottom" : "top" }}>
+          {EMERGENCY_TYPES.map((t, i) => {
+            const meta = EMERGENCY_META[t.value] || EMERGENCY_META.other;
+            const Icon = meta.icon;
+            const isSel = t.value === value;
+            const isActive = i === active;
+            return (
+              <li key={t.value} role="option" aria-selected={isSel}
+                onMouseEnter={() => setActive(i)} onMouseDown={e => e.preventDefault()} onClick={() => pick(t.value)}
+                style={{ display: "flex", alignItems: "center", gap: "10px", padding: "8px 10px", borderRadius: "8px", cursor: "pointer", background: isSel ? meta.bg : isActive ? "var(--bg-app)" : "transparent", transition: "background 0.12s" }}>
+                <span style={{ width: "30px", height: "30px", borderRadius: "8px", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: meta.bg, color: meta.color }}>
+                  <Icon size={16} />
+                </span>
+                <span style={{ flex: 1, fontSize: "14.5px", fontWeight: isSel ? "700" : "500", color: isSel ? meta.color : "var(--text-main)" }}>{t.label}</span>
+                {isSel && <Check size={16} color={meta.color} strokeWidth={2.5} />}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
 }
 
 /* ── Small shared atoms ──────────────────────────────────────────────────── */
@@ -38,7 +190,7 @@ function LocationMarker({ position, setPosition }) {
 function Overlay({ children, onClose }) {
   const content = (
     <div className="ambulance-modal-overlay" onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} style={{ width: "100%", maxWidth: "860px", margin: "auto" }}>{children}</div>
+      <div onClick={e => e.stopPropagation()} style={{ width: "100%", maxWidth: "860px", margin: "auto", position: "relative" }}>{children}</div>
     </div>
   );
   if (typeof window === "undefined") return content;
@@ -64,7 +216,7 @@ function FieldError({ msg }) {
 }
 
 function Btn({ children, onClick, disabled, variant = "accent", fullWidth = true, type = "button" }) {
-  const base = { width: fullWidth ? "100%" : "auto", padding: "14px 24px", borderRadius: "10px", fontSize: "15px", fontWeight: "600", cursor: disabled ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", transition: "all 0.2s", border: "none", fontFamily: "var(--font-sans)" };
+  const base = { width: fullWidth ? "100%" : "auto", padding: "14px 24px", borderRadius: "10px", fontSize: "15px", fontWeight: "600", cursor: disabled ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", transition: "all 0.2s", border: "none", fontFamily: "var(--font-sans)" };
   const styles = {
     accent: { background: disabled ? "var(--border)" : "var(--accent)", color: disabled ? "var(--text-muted)" : "#fff", boxShadow: disabled ? "none" : "0 2px 12px rgba(251,145,63,0.25)" },
     primary: { background: disabled ? "var(--border)" : "var(--primary)", color: disabled ? "var(--text-muted)" : "#fff", boxShadow: disabled ? "none" : "0 2px 12px rgba(46,102,110,0.25)" },
@@ -98,6 +250,9 @@ export default function AmbulanceRequestModal({ onClose, onSuccess }) {
   const [err, setErr]                 = useState("");
   const [result, setResult]           = useState(null);
   const [fieldErrors, setFieldErrors] = useState({});
+  // Synchronous locks so a fast double-click can't fire duplicate requests
+  const submitLockRef = useRef(false);
+  const locateLockRef = useRef(false);
 
   const clearFieldError = (field) => {
     setFieldErrors(prev => {
@@ -123,22 +278,30 @@ export default function AmbulanceRequestModal({ onClose, onSuccess }) {
   };
 
   const handleLocate = () => {
+    if (locateLockRef.current) return;
     if (!navigator.geolocation) { setErr("Geolocation is not supported by your browser."); return; }
+    locateLockRef.current = true;
     setLocating(true); setErr("");
     navigator.geolocation.getCurrentPosition(
       async pos => {
-        const lat = pos.coords.latitude;
-        const lng = pos.coords.longitude;
-        setPickupLat(lat);
-        setPickupLng(lng);
-        const addr = await reverseGeocode(lat, lng);
-        setPickup(addr);
-        setLocating(false);
+        try {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          setPickupLat(lat);
+          setPickupLng(lng);
+          const addr = await reverseGeocode(lat, lng);
+          setPickup(addr);
+        } finally {
+          locateLockRef.current = false;
+          setLocating(false);
+        }
       },
-      () => { setErr("Unable to fetch location. Please enter manually."); setLocating(false); },
+      () => { setErr("Unable to fetch location. Please enter manually."); locateLockRef.current = false; setLocating(false); },
       { enableHighAccuracy: true, timeout: 10000 }
     );
   };
+
+  useScrollLock();
 
   useEffect(() => {
     handleLocate();
@@ -146,6 +309,7 @@ export default function AmbulanceRequestModal({ onClose, onSuccess }) {
   }, []);
 
   const handleSubmit = async () => {
+    if (submitLockRef.current) return;
     if (!patientName.trim()) { setErr("Patient name is required."); return; }
     if (!contactNumber.trim() || contactNumber.length < 10) {
       const msg = "Please enter a valid 10-digit contact number.";
@@ -166,6 +330,7 @@ export default function AmbulanceRequestModal({ onClose, onSuccess }) {
       setErr(msg);
       return;
     }
+    submitLockRef.current = true;
     setErr(""); setBusy(true);
 
     let locationKey = globalLocation?.entitylocation || globalLocation?.location_key || "";
@@ -191,7 +356,7 @@ export default function AmbulanceRequestModal({ onClose, onSuccess }) {
     }
 
     try {
-      const res = await requestAmbulance({
+      const submitted = {
         patient_id: patientId,
         patient_name: patientName.trim(),
         requester_phone: contactNumber.trim(),
@@ -200,20 +365,24 @@ export default function AmbulanceRequestModal({ onClose, onSuccess }) {
         pickup_lng: pickupLng,
         pickup_address: pickupAddress.trim(),
         location_key: locationKey
-      });
-      window.alert("Opening dialer for dummy call to 108...");
-      window.location.href = "tel:108";
-      
-      if (onSuccess) onSuccess(res);
+      };
+      const res = await requestAmbulance(submitted);
+
+      if (onSuccess) onSuccess(res, submitted);
       onClose();
-      go("/ambulance");
+      // The modal is opened from Header/Home/Ambulance; hand the booking to the
+      // Ambulance page via route state so it can show it immediately
+      go("/ambulance", { state: { bookedRequest: { res, submitted, at: Date.now() } } });
     } catch (e) { setErr(e.message || "Failed to submit request. Please try again."); }
-    finally { setBusy(false); }
+    finally { submitLockRef.current = false; setBusy(false); }
   };
+
+  // Don't let the modal be dismissed mid-request
+  const handleClose = () => { if (!busy) onClose(); };
 
   /* ── Left Panel ──────────────────────────────────────────────────────── */
   const leftPanel = (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", justifyContent: "center" }}>
+    <div className="ambulance-modal-left-content" style={{ display: "flex", flexDirection: "column", height: "100%", justifyContent: "center" }}>
       {/* Icon */}
       <div className="ambulance-modal-left-icon" style={{ width: "60px", height: "60px", borderRadius: "18px", background: "rgba(220,38,38,0.15)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "28px", border: "1px solid rgba(220,38,38,0.3)" }}>
         <Ambulance size={28} color="#ef4444" />
@@ -241,84 +410,71 @@ export default function AmbulanceRequestModal({ onClose, onSuccess }) {
   /* ── Right Panel — Form ──────────────────────────────────────────────── */
   const formPanel = (
     <div style={{ animation: "fadeIn 0.25s ease" }}>
-      <h3 style={{ fontSize: "22px", fontWeight: "700", color: "var(--text-main)", margin: "0 0 6px", fontFamily: "var(--font-display)" }}>Request Details</h3>
-      <p style={{ fontSize: "14px", color: "var(--text-muted)", margin: "0 0 24px" }}>All fields marked with * are required</p>
-      <div style={{ height: "1px", background: "var(--border)", margin: "0 0 24px" }} />
       <ErrorBanner msg={err} />
 
+      <div className="ambulance-form-row">
       {/* Patient Name */}
-      <div style={{ marginBottom: "20px" }}>
+      <div>
         <label style={{ fontSize: "12px", fontWeight: "700", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.07em", display: "block", marginBottom: "8px" }}>Patient Name *</label>
         <div style={{ display: "flex", alignItems: "center", border: `1.5px solid ${fieldErrors.patientName ? "var(--danger)" : "var(--border)"}`, borderRadius: "10px", overflow: "hidden", transition: "border-color 0.2s" }}
           onFocusCapture={e => { if (!fieldErrors.patientName) e.currentTarget.style.borderColor = "var(--primary)"; }}
           onBlurCapture={e => { if (!fieldErrors.patientName) e.currentTarget.style.borderColor = "var(--border)"; }}>
-          <div style={{ padding: "0 14px", color: "var(--text-muted)", display: "flex", alignItems: "center" }}><User size={18} /></div>
+          <div style={{ padding: "0 10px 0 12px", color: "var(--text-muted)", display: "flex", alignItems: "center" }}><User size={18} /></div>
           <input value={patientName} onChange={e => setPatientName(e.target.value.replace(/[^a-zA-Z\s]/g, ""))} placeholder="Full name of patient"
-            style={{ flex: 1, padding: "14px 14px 14px 0", border: "none", outline: "none", fontSize: "15px", color: "var(--text-main)", fontWeight: "500" }} />
+            style={{ flex: 1, padding: "12px 12px 12px 0", border: "none", outline: "none", fontSize: "15px", color: "var(--text-main)", fontWeight: "500" }} />
         </div>
         <FieldError msg={fieldErrors.patientName} />
       </div>
 
       {/* Contact Number */}
-      <div style={{ marginBottom: "20px" }}>
+      <div>
         <label style={{ fontSize: "12px", fontWeight: "700", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.07em", display: "block", marginBottom: "8px" }}>Contact Number *</label>
         <div style={{ display: "flex", alignItems: "center", border: `1.5px solid ${fieldErrors.contactNumber ? "var(--danger)" : "var(--border)"}`, borderRadius: "10px", overflow: "hidden", transition: "border-color 0.2s" }}
           onFocusCapture={e => { if (!fieldErrors.contactNumber) e.currentTarget.style.borderColor = "var(--primary)"; }}
           onBlurCapture={e => { if (!fieldErrors.contactNumber) e.currentTarget.style.borderColor = "var(--border)"; }}>
-          <div style={{ padding: "0 14px", color: "var(--text-muted)", display: "flex", alignItems: "center" }}><Phone size={18} /></div>
+          <div style={{ padding: "0 10px 0 12px", color: "var(--text-muted)", display: "flex", alignItems: "center" }}><Phone size={18} /></div>
           <input value={contactNumber} onChange={e => { setContact(e.target.value.replace(/\D/g, "").slice(0, 10)); clearFieldError("contactNumber"); }} placeholder="10-digit mobile number" type="tel"
-            style={{ flex: 1, padding: "14px 14px 14px 0", border: "none", outline: "none", fontSize: "15px", color: "var(--text-main)", fontWeight: "500", letterSpacing: "0.03em" }} />
+            style={{ flex: 1, padding: "12px 12px 12px 0", border: "none", outline: "none", fontSize: "15px", color: "var(--text-main)", fontWeight: "500", letterSpacing: "0.03em" }} />
         </div>
         <FieldError msg={fieldErrors.contactNumber} />
       </div>
+      </div>
 
       {/* Pickup Address */}
-      <div style={{ marginBottom: "20px" }}>
+      <div style={{ marginBottom: "18px" }}>
         <label style={{ fontSize: "12px", fontWeight: "700", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.07em", display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px", flexWrap: "wrap", gap: "6px" }}>
           <span>Pickup Location *</span>
-          <button type="button" onClick={handleLocate} disabled={locating}
-            style={{ background: "var(--primary-light)", color: "var(--primary)", border: "1px solid var(--primary-soft)", borderRadius: "6px", padding: "4px 10px", fontSize: "11px", fontWeight: "700", cursor: locating ? "wait" : "pointer", display: "flex", alignItems: "center", gap: "4px", transition: "all 0.2s" }}
-            onMouseEnter={e => { if (!locating) e.currentTarget.style.background = "var(--primary-soft)"; }}
+          <button type="button" onClick={handleLocate} disabled={locating || busy}
+            style={{ background: "var(--primary-light)", color: "var(--primary)", border: "1px solid var(--primary-soft)", borderRadius: "6px", padding: "4px 10px", fontSize: "11px", fontWeight: "700", cursor: locating || busy ? "default" : "pointer", opacity: locating || busy ? 0.6 : 1, display: "flex", alignItems: "center", gap: "4px", transition: "all 0.2s" }}
+            onMouseEnter={e => { if (!locating && !busy) e.currentTarget.style.background = "var(--primary-soft)"; }}
             onMouseLeave={e => { e.currentTarget.style.background = "var(--primary-light)"; }}>
-            {locating ? <><Loader2 size={12} style={{ animation: "spin 1s linear infinite" }} /> Locating…</> : <><Navigation size={12} /> Use My Location</>}
+            {locating ? <><Loader2 size={12} className="animate-spin" /> Locating…</> : <><Navigation size={12} /> Use My Location</>}
           </button>
         </label>
 
-        <div style={{ height: "200px", borderRadius: "10px", overflow: "hidden", marginBottom: "12px", border: "1px solid var(--border)", position: "relative", zIndex: 0, isolation: "isolate" }}>
-          <MapContainer center={pickupLat && pickupLng ? [pickupLat, pickupLng] : [20.5937, 78.9629]} zoom={pickupLat && pickupLng ? 15 : 4} style={{ height: "100%", width: "100%" }}>
-            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-            <LocationMarker position={pickupLat && pickupLng ? {lat: pickupLat, lng: pickupLng} : null} setPosition={handleMapClick} />
-          </MapContainer>
+        <div style={{ height: "170px", borderRadius: "10px", overflow: "hidden", marginBottom: "10px", border: "1px solid var(--border)", position: "relative", zIndex: 0, isolation: "isolate" }}>
+          <GoogleLocationPicker position={pickupLat && pickupLng ? { lat: pickupLat, lng: pickupLng } : null} onPick={handleMapClick} />
         </div>
 
         <div style={{ border: `1.5px solid ${fieldErrors.pickupAddress ? "var(--danger)" : "var(--border)"}`, borderRadius: "10px", overflow: "hidden", transition: "border-color 0.2s" }}
           onFocusCapture={e => { if (!fieldErrors.pickupAddress) e.currentTarget.style.borderColor = "var(--primary)"; }}
           onBlurCapture={e => { if (!fieldErrors.pickupAddress) e.currentTarget.style.borderColor = "var(--border)"; }}>
-          <textarea value={pickupAddress} onChange={e => { setPickup(e.target.value); clearFieldError("pickupAddress"); }} placeholder="Enter or select your pickup address on map" rows={3}
-            style={{ width: "100%", padding: "14px", border: "none", outline: "none", fontSize: "14px", color: "var(--text-main)", resize: "none", lineHeight: 1.5, fontFamily: "var(--font-sans)" }} />
+          <textarea value={pickupAddress} onChange={e => { setPickup(e.target.value); clearFieldError("pickupAddress"); }} placeholder="Enter or select your pickup address on map" rows={2}
+            style={{ width: "100%", padding: "12px 14px", border: "none", outline: "none", fontSize: "14px", color: "var(--text-main)", resize: "none", lineHeight: 1.5, fontFamily: "var(--font-sans)" }} />
         </div>
         <FieldError msg={fieldErrors.pickupAddress} />
       </div>
 
       {/* Emergency Type */}
-      <div style={{ marginBottom: "32px", position: "relative", zIndex: 20 }}>
+      <div style={{ marginBottom: "8px", position: "relative", zIndex: 20 }}>
         <label style={{ fontSize: "12px", fontWeight: "700", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.07em", display: "block", marginBottom: "8px" }}>Emergency Type *</label>
-        <div data-field-error style={{ position: "relative" }}>
-          <select value={emergencyType} onChange={e => { setEmergency(e.target.value); clearFieldError("emergencyType"); }}
-            style={{ width: "100%", padding: "14px 40px 14px 14px", border: `1.5px solid ${fieldErrors.emergencyType ? "var(--danger)" : "var(--border)"}`, borderRadius: "10px", fontSize: "15px", color: emergencyType ? "var(--text-main)" : "var(--text-muted)", fontWeight: "500", background: "#fff", outline: "none", appearance: "none", cursor: "pointer", transition: "border-color 0.2s", fontFamily: "var(--font-sans)" }}
-            onFocus={e => { if (!fieldErrors.emergencyType) e.target.style.borderColor = "var(--primary)"; }}
-            onBlur={e => { if (!fieldErrors.emergencyType) e.target.style.borderColor = "var(--border)"; }}>
-            <option value="" disabled>Select emergency type</option>
-            {EMERGENCY_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-          </select>
-          <ChevronDown size={18} color="var(--text-muted)" style={{ position: "absolute", right: "14px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
+        <div data-field-error>
+          <EmergencyTypeSelect value={emergencyType} hasError={!!fieldErrors.emergencyType}
+            onChange={v => { setEmergency(v); clearFieldError("emergencyType"); }} />
         </div>
         <FieldError msg={fieldErrors.emergencyType} />
       </div>
 
-      <Btn variant="danger" disabled={busy} onClick={handleSubmit}>
-        {busy ? <><Loader2 size={18} style={{ animation: "spin 1s linear infinite" }} /> Submitting…</> : <><Ambulance size={18} /> Call Ambulance</>}
-      </Btn>
     </div>
   );
 
@@ -360,7 +516,7 @@ export default function AmbulanceRequestModal({ onClose, onSuccess }) {
   );
 
   return (
-    <Overlay onClose={onClose}>
+    <Overlay onClose={handleClose}>
       <div className="ambulance-modal-card">
 
         {/* Left Panel */}
@@ -374,17 +530,33 @@ export default function AmbulanceRequestModal({ onClose, onSuccess }) {
 
         {/* Right Panel */}
         <div className="ambulance-modal-right">
-          <button onClick={onClose} style={{ position: "absolute", top: "16px", right: "16px", background: "var(--bg-app)", border: "1px solid var(--border)", width: "34px", height: "34px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", transition: "all 0.2s", zIndex: 10 }} onMouseEnter={e => e.currentTarget.style.background="var(--border)"} onMouseLeave={e => e.currentTarget.style.background="var(--bg-app)"}>
-            <X size={16} color="var(--text-muted)" />
-          </button>
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: step === 2 ? "center" : "flex-start", overflowY: "auto", maxHeight: "80vh", paddingRight: "10px" }}>
+          {/* Header strip stays fixed above the scrolling form */}
+          <div className="ambulance-modal-header">
+            <div style={{ minWidth: 0 }}>
+              <h3 style={{ fontSize: "22px", fontWeight: "700", color: "var(--text-main)", margin: "0 0 4px", fontFamily: "var(--font-display)" }}>{step === 1 && "Request Details"}</h3>
+              {step === 1 && <p style={{ fontSize: "13.5px", color: "var(--text-muted)", margin: 0 }}>All fields marked with * are required</p>}
+            </div>
+            <button className="ambulance-modal-close" onClick={handleClose} disabled={busy} aria-label="Close">
+              <X size={18} />
+            </button>
+          </div>
+          <div className="ambulance-modal-scroll" style={{ justifyContent: step === 2 ? "center" : "flex-start" }}>
             {step === 1 ? formPanel : successPanel}
           </div>
+          {/* Submit stays pinned below the scroll area so it's always reachable */}
+          {step === 1 && (
+            <div className="ambulance-modal-footer">
+              <Btn variant="danger" disabled={busy} onClick={handleSubmit}>
+                {busy ? <><Loader2 size={18} className="animate-spin" /> Requesting…</> : <><Ambulance size={18} /> Call Ambulance</>}
+              </Btn>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Inline keyframes for spinner */}
-      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes emgMenuIn { from { opacity: 0; transform: scaleY(0.96); } to { opacity: 1; transform: scaleY(1); } }`}</style>
     </Overlay>
   );
 }

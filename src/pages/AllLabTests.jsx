@@ -1,14 +1,26 @@
 import { 
-  Search, ChevronRight, ArrowLeft, FlaskConical, Clock, Heart, ShieldCheck, 
-   Droplets, Beaker, Stethoscope, TestTube, MapPin, ArrowRight, X, Filter, Wallet
+  Search, ChevronLeft, ChevronRight, ArrowLeft, FlaskConical, Clock, Heart, ShieldCheck, 
+   Droplets, Beaker, Stethoscope, TestTube, MapPin, ArrowRight, X, Filter, Wallet, Home, User
 } from "lucide-react";
-import { useState, useEffect, useMemo, useRef } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useState, useEffect, useRef } from "react";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import { getDiagnosticTests, getWalletAmount, createLabOrder, verifyLabPayment, loadRazorpayScript } from "../services/dataService";
 import { useBooking } from "../context/BookingContext";
 import { useAuth } from "../context/AuthContext";
 import SelectSlotUI from "../components/doctors/SelectSlotUI";
 import Modal from "../components/common/Modal";
+import LabItemIcon from "../components/labs/LabItemIcon";
+import { fallbackLabTests } from "../utils/labTests";
+
+const ITEMS_PER_PAGE = 10;
+
+// Fallback tests (same as Labs page) shown when the API returns nothing, e.g. user not logged in
+const normalizeFallbackTest = (t) => ({
+  ...t,
+  service_name: t.title,
+  title: toTitleCase(t.title),
+  rawTitle: t.title
+});
 
 function toTitleCase(str) {
   if (!str) return "";
@@ -30,14 +42,14 @@ function toTitleCase(str) {
 
 export default function AllLabTests() {
   const go = useNavigate();
-  const { setBookingType, setLabPackage, setDate, setSlot, setBookingId, globalLocation } = useBooking();
+  const location = useLocation();
+  const { setBookingType, setLabPackage, setLabVisitType, setDate, setSlot, setBookingId, globalLocation } = useBooking();
   const { user, openLoginModal } = useAuth();
 
   const [tests, setTests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
   const [appliedQuery, setAppliedQuery] = useState("");
-  const [selectedProfile, setSelectedProfile] = useState("All");
   const [selectedItem, setSelectedItem] = useState(null);
   const [visitType, setVisitType] = useState("home");
   const [walletBalance, setWalletBalance] = useState(0);
@@ -45,24 +57,49 @@ export default function AllLabTests() {
   const [walletAppliedAmount, setWalletAppliedAmount] = useState(0);
   const [loadingWallet, setLoadingWallet] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  // Synchronous lock so a fast double-click can't create two lab orders.
+  const submitLockRef = useRef(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(null);
   const isInitialMount = useRef(true);
+  const latestRequest = useRef(0);
 
-  // Fetch tests from API and apply filter upon response
-  const fetchTestsFromApi = (searchKeyword = "") => {
+  // Show one page of the static fallback tests (guest users)
+  const showFallbackPage = (page, searchKeyword = "") => {
+    const keyword = searchKeyword.toLowerCase();
+    const matches = keyword
+      ? fallbackLabTests.filter(t => (t.title || "").toLowerCase().includes(keyword))
+      : fallbackLabTests;
+    const start = (page - 1) * ITEMS_PER_PAGE;
+    setTests(matches.slice(start, start + ITEMS_PER_PAGE).map(normalizeFallbackTest));
+    setTotalCount(matches.length);
+  };
+
+  // Fetch one page of tests from API and apply filter upon response
+  const fetchTestsFromApi = (searchKeyword = "", page = 1) => {
+    const requestId = ++latestRequest.current;
     setLoading(true);
     setAppliedQuery(searchKeyword);
+    setCurrentPage(page);
 
     const payload = {
-      pageSize: 300,
-      search: searchKeyword,
-      q: searchKeyword,
-      filter: searchKeyword ? ` AND (service_name LIKE '%${searchKeyword}%' OR name LIKE '%${searchKeyword}%' OR profile_name LIKE '%${searchKeyword}%')` : ""
+      page,
+      limit: ITEMS_PER_PAGE,
+      searchQuery: searchKeyword
     };
 
     getDiagnosticTests(payload)
       .then((apiTests) => {
-        if (Array.isArray(apiTests)) {
-          const normalized = apiTests.map((t, idx) => {
+        // Ignore responses from older requests (e.g. fast page clicks)
+        if (requestId !== latestRequest.current) return;
+
+        // Not logged in → API returns 401 (empty list), show the same tests as Labs
+        if (!user && (!Array.isArray(apiTests) || apiTests.length === 0)) {
+          showFallbackPage(page, searchKeyword);
+        } else if (Array.isArray(apiTests)) {
+          const offset = (page - 1) * ITEMS_PER_PAGE;
+          const normalized = apiTests.map((t, i) => {
+            const idx = offset + i;
             const rawTitle = t.service_name || t.name || t.title || t.test_name || `Lab Test ${idx + 1}`;
             const rawCategory = t.profile_name || t.category || t.test_category_name || t.department || "Fluid & Clinical Test";
             const priceVal = parseFloat(t.price || t.cost || t.amount || 150);
@@ -81,19 +118,24 @@ export default function AllLabTests() {
             };
           });
           setTests(normalized);
+          const total = Number(apiTests.total);
+          setTotalCount(Number.isFinite(total) ? total : null);
         }
         setLoading(false);
       })
       .catch((err) => {
+        if (requestId !== latestRequest.current) return;
         console.error("AllLabTests fetch error:", err);
+        if (!user) showFallbackPage(page, searchKeyword);
         setLoading(false);
       });
   };
 
   // Initial fetch on page load
   useEffect(() => {
+    setQ("");
     fetchTestsFromApi("");
-  }, []);
+  }, [user]); // re-fetch after login/logout so guest fallback data is replaced with real API data
 
   // Trigger API and clear filter in UI when search bar input length becomes 0 (after backspace / clearing)
   useEffect(() => {
@@ -106,31 +148,26 @@ export default function AllLabTests() {
     }
   }, [q, appliedQuery]);
 
-  // Extract unique profiles/categories for filter chips
-  const profileList = useMemo(() => {
-    const set = new Set();
-    tests.forEach(t => {
-      if (t.category) set.add(t.category);
-    });
-    return ["All", ...Array.from(set)];
-  }, [tests]);
+  // Server-side Pagination - 10 cards per page.
+  // If the API doesn't send a total count, allow "Next" while a full page comes back.
+  const hasMore = tests.length === ITEMS_PER_PAGE;
+  const totalPages = totalCount != null
+    ? Math.max(1, Math.ceil(totalCount / ITEMS_PER_PAGE))
+    : currentPage + (hasMore ? 1 : 0);
+  const pageStart = (currentPage - 1) * ITEMS_PER_PAGE;
 
-  // Filtered list applied in UI ONLY after API triggers
-  const filteredTests = useMemo(() => {
-    return tests.filter(item => {
-      if (appliedQuery) {
-        const queryLower = appliedQuery.toLowerCase();
-        const matchQ = (item.title || "").toLowerCase().includes(queryLower) || 
-                       (item.category || "").toLowerCase().includes(queryLower) ||
-                       (item.rawTitle || "").toLowerCase().includes(queryLower);
-        if (!matchQ) return false;
-      }
-      if (selectedProfile !== "All") {
-        return (item.category || "").toLowerCase() === selectedProfile.toLowerCase();
-      }
-      return true;
-    });
-   }, [tests, appliedQuery, selectedProfile]);
+  const goToPage = (pageNum) => {
+    const target = Math.min(totalPages, Math.max(1, pageNum));
+    if (target === currentPage) return;
+    fetchTestsFromApi(appliedQuery, target);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  // Close the booking modal and open login; after login the user stays on this same page
+  const handleLoginToBook = () => {
+    setSelectedItem(null);
+    openLoginModal(location.pathname);
+  };
 
    useEffect(() => {
      if (!selectedItem || !user) return;
@@ -179,6 +216,8 @@ export default function AllLabTests() {
       openLoginModal("/confirmed");
       return;
     }
+    if (submitLockRef.current) return;
+    submitLockRef.current = true;
     setSubmitting(true);
     try {
       const patient_id = user?.id || user?.user_id || user?.patient_id || "";
@@ -230,6 +269,7 @@ export default function AllLabTests() {
 
       setBookingType("lab");
       setLabPackage(selectedItem);
+      setLabVisitType(visitType);
       setDate(new Date(slotData.date));
       setSlot(slotData.time);
       setApplyWallet(false);
@@ -248,12 +288,13 @@ export default function AllLabTests() {
       const res = await loadRazorpayScript();
       if (!res) {
         alert("Razorpay SDK failed to load. Are you offline?");
+        submitLockRef.current = false;
         setSubmitting(false);
         return;
       }
 
       const options = {
-        key: import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_test_TeZHDSZsRNLvz7",
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
         amount: amountToPay * 100,
         currency: "INR",
         name: "Arvaya Healthcare",
@@ -273,6 +314,7 @@ export default function AllLabTests() {
           } catch (err) {
             console.error("Payment verification failed", err);
             alert("Payment verification failed. Please contact support.");
+            submitLockRef.current = false;
             setSubmitting(false);
           }
         },
@@ -285,6 +327,7 @@ export default function AllLabTests() {
         },
         modal: {
           ondismiss: function() {
+            submitLockRef.current = false;
             setSubmitting(false);
           }
         }
@@ -300,6 +343,7 @@ export default function AllLabTests() {
       } else {
         alert("Booking failed. Please try again.");
       }
+      submitLockRef.current = false;
       setSubmitting(false);
     }
   };
@@ -310,9 +354,137 @@ export default function AllLabTests() {
       {/* Styles */}
       <style>{`
         .all-tests-hero {
+          position: relative;
+          overflow: hidden;
+          background: linear-gradient(90deg, #effaf7 0%, #e3f7f2 50%, #ccf4eb 100%);
+          border-bottom: 1px solid rgba(20, 184, 166, 0.16);
+          padding: 16px 0 18px 0;
+        }
+        .all-tests-hero-wave {
+          position: absolute;
+          right: 0;
+          top: 0;
+          width: 55%;
+          height: 100%;
+          pointer-events: none;
+        }
+        .all-tests-hero-inner {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 24px;
+        }
+        .all-tests-hero-content {
+          max-width: 680px;
+          min-width: 0;
+        }
+        .all-tests-hero-breadcrumb {
+          display: flex;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 8px;
+          font-size: 12.5px;
+          font-weight: 500;
+          color: #55738d;
+          margin-bottom: 4px;
+        }
+        .all-tests-breadcrumb-link {
+          color: #55738d;
+          text-decoration: none;
+          transition: color 0.2s ease;
+        }
+        .all-tests-breadcrumb-link:hover {
+          color: #0b2545;
+        }
+        .all-tests-breadcrumb-sep {
+          color: #7a94a9;
+          flex-shrink: 0;
+        }
+        .all-tests-hero-title-row {
+          display: flex;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 10px;
+        }
+        .all-tests-hero-title {
+          font-size: 22px;
+          font-weight: 800;
+          color: #0b2545;
+          margin: 0;
+          letter-spacing: -0.02em;
+          line-height: 1.2;
+        }
+        .all-tests-hero-chip {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 3px 10px;
+          border-radius: 999px;
+          background: rgba(255, 255, 255, 0.75);
+          border: 1px solid rgba(13, 148, 136, 0.2);
+          color: #0d9488;
+          font-size: 12.5px;
+          font-weight: 700;
+        }
+        .all-tests-hero-desc {
+          font-size: 13.5px;
+          color: #55738d;
+          margin: 2px 0 0 0;
+          line-height: 1.5;
+        }
+        .all-tests-hero-side {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          flex-shrink: 0;
+        }
+        .all-tests-back-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 6px 14px;
+          border-radius: 999px;
+          background: rgba(255, 255, 255, 0.8);
+          border: 1px solid rgba(13, 148, 136, 0.25);
+          color: #0d9488;
+          font-size: 12.5px;
+          font-weight: 700;
+          cursor: pointer;
+          transition: background 0.2s ease, border-color 0.2s ease;
+        }
+        .all-tests-back-btn:hover {
           background: #ffffff;
-          border-bottom: 1px solid var(--border);
-          padding: 24px 0 28px 0;
+          border-color: rgba(13, 148, 136, 0.45);
+        }
+        .all-tests-hero-graphic {
+          display: flex;
+        }
+        .all-tests-hero-svg {
+          width: 64px;
+          height: 64px;
+          filter: drop-shadow(0 6px 14px rgba(13, 148, 136, 0.12));
+        }
+        @media (max-width: 640px) {
+          .all-tests-hero-title {
+            font-size: 19px;
+          }
+          .all-tests-hero-desc {
+            font-size: 12.5px;
+          }
+          .all-tests-hero-svg {
+            width: 52px;
+            height: 52px;
+          }
+          .all-tests-hero-graphic {
+            display: none;
+          }
+        }
+        @media (max-width: 520px) {
+          .all-tests-hero-inner {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 10px;
+          }
         }
 
         .all-tests-card {
@@ -334,22 +506,36 @@ export default function AllLabTests() {
         }
 
         .all-tests-card-img-container {
-          height: 130px;
+          height: 146px;
           width: 100%;
+          display: grid;
+          place-items: end center;
+          padding: 47px 14px 14px;
+          box-sizing: border-box;
           background: #f0f7f7;
           overflow: hidden;
           position: relative;
         }
 
-        .all-tests-card-img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          transition: transform 0.35s;
+        .all-tests-card-visual {
+          position: relative;
+          z-index: 1;
+          display: grid;
+          width: 76px;
+          height: 76px;
+          place-items: center;
+          color: #087b73;
+          background: linear-gradient(160deg, #ffffff 0%, #f2fbf8 100%);
+          border: 1px solid #ffffff;
+          border-radius: 24px;
+          box-shadow:
+            0 12px 24px rgba(5, 73, 78, 0.13),
+            0 0 0 6px rgba(255, 255, 255, 0.45);
+          transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
-        .all-tests-card:hover .all-tests-card-img {
-          transform: scale(1.06);
+        .all-tests-card:hover .all-tests-card-visual {
+          transform: translateY(-3px) scale(1.06) rotate(-3deg);
         }
 
         .all-tests-card-tag {
@@ -461,13 +647,182 @@ export default function AllLabTests() {
 
         .all-tests-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-          gap: 20px;
+          grid-template-columns: repeat(5, 1fr);
+          gap: 16px;
+        }
+
+        @media (max-width: 1280px) {
+          .all-tests-grid {
+            grid-template-columns: repeat(4, 1fr);
+          }
+        }
+
+        @media (max-width: 1024px) {
+          .all-tests-grid {
+            grid-template-columns: repeat(3, 1fr);
+          }
+        }
+
+        /* ── Match Labs page card styling ── */
+        .all-tests-card {
+          background: linear-gradient(180deg, #ffffff 60%, #fbfefd 100%);
+          border: 1px solid rgba(8, 120, 125, 0.14);
+          border-radius: 22px;
+          box-shadow: 0 11px 28px rgba(5, 73, 78, 0.08);
+          transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease, border-color 0.3s ease;
+        }
+
+        .all-tests-card::before {
+          content: "";
+          position: absolute;
+          inset: 0 0 auto;
+          z-index: 3;
+          height: 4px;
+          background: linear-gradient(90deg, #087b73, #2bc4a6, #087b73);
+          background-size: 200% 100%;
+          transition: background-position 0.6s ease;
+        }
+
+        .all-tests-card:hover {
+          transform: translateY(-6px);
+          border-color: rgba(8, 120, 125, 0.32);
+          box-shadow: 0 22px 40px -10px rgba(5, 73, 78, 0.22), 0 6px 14px rgba(5, 73, 78, 0.06);
+        }
+
+        .all-tests-card:hover::before {
+          background-position: 100% 0;
+        }
+
+        /* Decorative rings behind the icon */
+        .all-tests-card-img-container::before,
+        .all-tests-card-img-container::after {
+          content: "";
+          position: absolute;
+          border-radius: 50%;
+          pointer-events: none;
+          z-index: 0;
+        }
+
+        .all-tests-card-img-container::before {
+          width: 150px;
+          height: 150px;
+          right: -55px;
+          top: -60px;
+          border: 1px solid rgba(8, 123, 115, 0.12);
+          background: radial-gradient(circle, rgba(52, 211, 180, 0.12), transparent 70%);
+        }
+
+        .all-tests-card-img-container::after {
+          width: 90px;
+          height: 90px;
+          left: -35px;
+          bottom: -45px;
+          border: 1px solid rgba(8, 123, 115, 0.1);
+        }
+
+        .all-tests-card-visual {
+          box-shadow:
+            0 12px 24px rgba(5, 73, 78, 0.13),
+            0 0 0 6px rgba(255, 255, 255, 0.45),
+            inset 0 -3px 0 rgba(8, 123, 115, 0.06);
+        }
+
+        .all-tests-card-tag {
+          top: 15px;
+          left: 13px;
+          z-index: 4;
+          gap: 5px;
+          padding: 5px 8px;
+          color: #087b73;
+          background: rgba(255, 255, 255, 0.85);
+          backdrop-filter: blur(8px);
+          -webkit-backdrop-filter: blur(8px);
+          border: 1px solid rgba(8, 123, 115, 0.22);
+          border-radius: 9px;
+          box-shadow: 0 6px 14px rgba(5, 73, 78, 0.08), inset 0 1px 0 #fff;
+          font-size: 9.5px;
+          font-weight: 800;
+        }
+
+        .all-tests-card-title {
+          font-family: var(--font-display);
+          font-size: 13.5px;
+          font-weight: 800;
+          min-height: 37px;
+          transition: color 0.2s ease;
+        }
+
+        .all-tests-card:hover .all-tests-card-title {
+          color: #087b73;
+        }
+
+        .all-tests-card-sub {
+          color: #087b73;
+          background: linear-gradient(90deg, #e8f6f3, #f2faf8);
+          border: 1px solid rgba(8, 123, 115, 0.14);
+          border-radius: 999px;
+          font-size: 9.5px;
+          font-weight: 750;
+        }
+
+        .all-tests-card-footer {
+          padding-top: 11px;
+          border-top: 1px dashed color-mix(in srgb, #087b73 22%, #dce8e7);
+        }
+
+        .all-tests-card-btn {
+          position: relative;
+          overflow: hidden;
+          width: 100%;
+          min-height: 35px;
+          justify-content: center;
+          border-radius: 11px;
+          background: linear-gradient(135deg, #0b8f84 0%, #087b73 50%, #0a5a5c 100%);
+          box-shadow: 0 8px 18px rgba(8, 123, 115, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .all-tests-card-btn::after {
+          content: "";
+          position: absolute;
+          top: 0;
+          bottom: 0;
+          left: -60%;
+          width: 40%;
+          background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.28), transparent);
+          transform: skewX(-20deg);
+          transition: left 0.6s ease;
+          pointer-events: none;
+        }
+
+        .all-tests-card-btn svg {
+          transition: transform 0.2s ease;
+        }
+
+        .all-tests-card-btn:hover {
+          background: linear-gradient(135deg, #0b8f84 0%, #087b73 50%, #0a5a5c 100%);
+          box-shadow: 0 12px 22px rgba(8, 123, 115, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+
+        .all-tests-card-btn:hover::after {
+          left: 130%;
+        }
+
+        .all-tests-card-btn:hover svg {
+          transform: translateX(3px);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .all-tests-card,
+          .all-tests-card-visual,
+          .all-tests-card-btn::after {
+            transition: none;
+          }
         }
 
         @media (max-width: 768px) {
           .all-tests-hero {
-            padding: 16px 0 20px 0;
+            padding: 12px 0 14px 0;
           }
           .all-tests-grid {
             grid-template-columns: repeat(2, 1fr);
@@ -502,7 +857,17 @@ export default function AllLabTests() {
             gap: 8px;
           }
           .all-tests-card-img-container {
-            height: 100px;
+            height: 118px;
+            padding: 38px 10px 10px;
+          }
+          .all-tests-card-visual {
+            width: 62px;
+            height: 62px;
+            border-radius: 20px;
+          }
+          .all-tests-card-visual svg {
+            width: 34px;
+            height: 34px;
           }
           .all-tests-card-body {
             padding: 10px 8px;
@@ -513,46 +878,89 @@ export default function AllLabTests() {
             min-height: 32px;
           }
         }
+
+        .all-tests-pagination-bar {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          flex-wrap: wrap;
+          margin-top: 28px;
+          padding-top: 16px;
+          border-top: 1px solid var(--border);
+        }
+
+        @media (max-width: 640px) {
+          .all-tests-pagination-bar {
+            flex-direction: column;
+            align-items: center;
+          }
+        }
       `}</style>
 
       {/* Hero / Header Section */}
       <div className="all-tests-hero">
-        <div className="container">
-          
-          {/* Top Breadcrumb & Back */}
-          <div className="flex items-center justify-between mb-4" style={{ flexWrap: 'wrap', gap: '12px' }}>
-            <div className="app-breadcrumbs">
-              <Link to="/">Home</Link> 
-              <ChevronRight size={12} /> 
-              <Link to="/labs">Lab Tests</Link> 
-              <ChevronRight size={12} /> 
-              <span>All Lab Tests</span>
+        <svg className="all-tests-hero-wave" viewBox="0 0 500 150" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M0,40 C150,90 320,10 500,45 L500,0 L0,0 Z" fill="rgba(255, 255, 255, 0.42)" />
+        </svg>
+
+        <div className="container" style={{ position: 'relative', zIndex: 1 }}>
+          <div className="all-tests-hero-inner">
+            <div className="all-tests-hero-content">
+              <nav aria-label="Breadcrumb" className="all-tests-hero-breadcrumb">
+                <Link to="/" className="all-tests-breadcrumb-link">Home</Link>
+                <ChevronRight size={13} className="all-tests-breadcrumb-sep" />
+                <Link to="/labs" className="all-tests-breadcrumb-link">Lab Tests</Link>
+                <ChevronRight size={13} className="all-tests-breadcrumb-sep" />
+                <span>All Lab Tests</span>
+              </nav>
+
+              <div className="all-tests-hero-title-row">
+                <h1 className="all-tests-hero-title">All Diagnostic Lab Tests</h1>
+                {!loading && totalCount > 0 && (
+                  <span className="all-tests-hero-chip">
+                    <FlaskConical size={13} /> {totalCount} {totalCount === 1 ? "test" : "tests"}
+                  </span>
+                )}
+              </div>
+              <p className="all-tests-hero-desc">
+                NABL & ISO certified diagnostic lab tests with doorstep phlebotomist collection.
+              </p>
             </div>
 
-            <button 
-              onClick={() => go('/labs')}
-              className="btn btn-secondary flex items-center gap-2"
-              style={{ fontSize: '13px', fontWeight: '700', padding: '6px 14px', borderRadius: '20px' }}
-            >
-              <ArrowLeft size={15} /> Back to Lab Tests
-            </button>
+            <div className="all-tests-hero-side">
+              <button
+                onClick={() => go('/labs')}
+                className="all-tests-back-btn"
+              >
+                <ArrowLeft size={14} /> Back to Lab Tests
+              </button>
+              <div className="all-tests-hero-graphic" aria-hidden="true">
+                <svg className="all-tests-hero-svg" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  {/* Sparkles */}
+                  <path d="M107 19C107 23.2 109.8 26 114 26C109.8 26 107 28.8 107 33C107 28.8 104.2 26 100 26C104.2 26 107 23.2 107 19Z" fill="#14b8a6" />
+                  <path d="M13 46C13 49.5 15.5 52 19 52C15.5 52 13 54.5 13 58C13 54.5 10.5 52 7 52C10.5 52 13 49.5 13 46Z" fill="#14b8a6" />
+                  <circle cx="16" cy="74" r="2" fill="#2dd4bf" />
+                  <circle cx="112" cy="45" r="1.5" fill="#2dd4bf" />
+
+                  {/* Test tubes */}
+                  <g transform="rotate(-12 44 64)">
+                    <rect x="34" y="26" width="20" height="70" rx="10" fill="#ffffff" stroke="#0d9488" strokeWidth="3.2" />
+                    <path d="M37 62H51V86C51 90 48 93 44 93C40 93 37 90 37 86V62Z" fill="#99f6e4" />
+                    <path d="M29 26H59" stroke="#0d9488" strokeWidth="3.2" strokeLinecap="round" />
+                  </g>
+                  <g transform="rotate(14 78 68)">
+                    <rect x="68" y="30" width="20" height="70" rx="10" fill="#ffffff" stroke="#0d9488" strokeWidth="3.2" />
+                    <path d="M71 58H85V90C85 94 82 97 78 97C74 97 71 94 71 90V58Z" fill="#2dd4bf" />
+                    <path d="M63 30H93" stroke="#0d9488" strokeWidth="3.2" strokeLinecap="round" />
+                  </g>
+                </svg>
+              </div>
+            </div>
           </div>
 
-          <h1 style={{ 
-            fontFamily: "'Plus Jakarta Sans', var(--font-sans)", 
-            fontWeight: 800, 
-            fontSize: '24px', 
-            color: '#12333A', 
-            margin: '0 0 6px 0' 
-          }}>
-            All Diagnostic Lab Tests
-          </h1>
-          <p style={{ fontSize: '14px', color: 'var(--text-muted)', margin: '0 0 20px 0' }}>
-            Showing NABL & ISO certified individual diagnostic lab tests with doorstep phlebotomist collection.
-          </p>
-
           {/* Search Bar & Profile Filters */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginTop: '14px' }}>
             <div style={{ 
               background: '#ffffff', 
               border: '1.5px solid var(--border)', 
@@ -615,7 +1023,7 @@ export default function AllLabTests() {
         {/* Results Bar */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
           <span style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-muted)' }}>
-            Showing {filteredTests.length} {filteredTests.length === 1 ? 'Lab Test' : 'Lab Tests'}
+            Showing {totalCount ?? tests.length} {(totalCount ?? tests.length) === 1 ? 'Lab Test' : 'Lab Tests'}
           </span>
         </div>
 
@@ -631,7 +1039,7 @@ export default function AllLabTests() {
               </div>
             ))}
           </div>
-        ) : filteredTests.length === 0 ? (
+        ) : tests.length === 0 ? (
           <div style={{ padding: '60px 0', textAlign: 'center', color: 'var(--text-muted)' }}>
             <FlaskConical size={48} style={{ opacity: 0.25, marginBottom: '12px' }} />
             <h3 style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text-main)', marginBottom: '4px' }}>No lab tests found</h3>
@@ -639,10 +1047,10 @@ export default function AllLabTests() {
           </div>
         ) : (
           <div className="all-tests-grid">
-            {filteredTests.map((test) => (
+            {tests.map((test) => (
               <div className="all-tests-card" key={test.id}>
                 <div className="all-tests-card-img-container">
-                  <img src={test.img} alt={test.title} className="all-tests-card-img" />
+                  <div className="all-tests-card-visual"><LabItemIcon item={test} size={43} /></div>
                   <span className="all-tests-card-tag"><TestTube size={10} /> Certified</span>
                 </div>
                 <div className="all-tests-card-body">
@@ -659,12 +1067,62 @@ export default function AllLabTests() {
           </div>
         )}
 
+        {/* Server-side Pagination Controls for 10 cards per page */}
+        {!loading && tests.length > 0 && (
+          <div className="all-tests-pagination-bar">
+            <span className="pagination-info-text">
+              Showing{" "}
+              <strong>{pageStart + 1}</strong>–
+              <strong>{pageStart + tests.length}</strong>
+              {totalCount != null && <> of <strong>{totalCount}</strong></>} tests
+            </span>
+
+            {totalPages > 1 && (
+              <div className="pagination-controls">
+                <button
+                  type="button"
+                  className="pagination-btn"
+                  disabled={currentPage === 1}
+                  onClick={() => goToPage(currentPage - 1)}
+                  aria-label="Previous page"
+                >
+                  <ChevronLeft size={14} /> Prev
+                </button>
+
+                <div className="pagination-pages-list">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+                    <button
+                      key={pageNum}
+                      type="button"
+                      className={`pagination-num-btn ${currentPage === pageNum ? "active" : ""}`}
+                      onClick={() => goToPage(pageNum)}
+                      aria-label={`Page ${pageNum}`}
+                    >
+                      {pageNum}
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  type="button"
+                  className="pagination-btn"
+                  disabled={currentPage === totalPages}
+                  onClick={() => goToPage(currentPage + 1)}
+                  aria-label="Next page"
+                >
+                  Next <ChevronRight size={14} />
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
       </div>
 
       {/* Booking Modal */}
       <Modal
         isOpen={!!selectedItem}
-        onClose={() => { setSelectedItem(null); setApplyWallet(false); setWalletAppliedAmount(0); }}
+        onClose={() => { if (submitting) return; setSelectedItem(null); setApplyWallet(false); setWalletAppliedAmount(0); }}
         title="Schedule Lab Test"
         maxWidth="680px"
       >
@@ -709,7 +1167,7 @@ export default function AllLabTests() {
              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border)', paddingTop: '16px' }}>
                <span style={{ color: 'var(--text-main)', fontSize: '14px', fontWeight: '500' }}>Apply wallet balance</span>
                <div 
-                 onClick={() => { if(walletBalance > 0) setApplyWallet(!applyWallet) }}
+                 onClick={() => { if(walletBalance > 0 && !submitting) setApplyWallet(!applyWallet) }}
                  style={{
                    width: '40px',
                    height: '22px',
@@ -759,6 +1217,137 @@ export default function AllLabTests() {
            </div>
          )}
 
+        {!user ? (
+          <div className="lab-guest">
+            <style>{`
+              .lab-guest {
+                padding: 24px 22px 20px;
+                text-align: center;
+                background: radial-gradient(circle at 50% 0%, rgba(46, 102, 110, 0.12), transparent 65%), #ffffff;
+                border: 1px solid var(--border);
+                border-radius: 18px;
+                box-shadow: 0 8px 24px -14px rgba(5, 73, 78, 0.25);
+              }
+              .lab-guest-art {
+                position: relative;
+                width: 64px;
+                height: 64px;
+                margin: 0 auto 12px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: var(--primary);
+                background: var(--primary-light);
+              }
+              .lab-guest-art::after {
+                content: "";
+                position: absolute;
+                inset: 0;
+                border-radius: 50%;
+                border: 2px solid rgba(46, 102, 110, 0.3);
+                animation: labGuestPulse 2.4s ease-out infinite;
+              }
+              .lab-guest-title {
+                margin: 0 0 6px;
+                font-size: 17px;
+                font-weight: 800;
+                letter-spacing: -0.015em;
+                color: var(--text-main);
+              }
+              .lab-guest-text {
+                margin: 0 auto 16px;
+                max-width: 380px;
+                font-size: 13px;
+                line-height: 1.55;
+                color: var(--text-muted);
+              }
+              .lab-guest-perks {
+                display: flex;
+                justify-content: center;
+                flex-wrap: wrap;
+                gap: 8px;
+                margin: 0 auto 18px;
+              }
+              .lab-guest-perk {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                padding: 6px 11px;
+                border-radius: 999px;
+                font-size: 11.5px;
+                font-weight: 650;
+                color: var(--text-main);
+                background: #f7fbfa;
+                border: 1px solid var(--border);
+              }
+              .lab-guest-perk svg { color: var(--primary); }
+              .lab-guest-btn {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+                padding: 11px 24px;
+                border: none;
+                border-radius: 12px;
+                font-size: 14px;
+                font-weight: 700;
+                color: #fff;
+                cursor: pointer;
+                background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+                box-shadow: 0 6px 16px -6px rgba(46, 102, 110, 0.6);
+                transition: transform 0.2s ease, filter 0.2s ease;
+              }
+              .lab-guest-btn:hover { transform: translateY(-1px); filter: brightness(1.08); }
+              .lab-guest-btn svg:last-child { transition: transform 0.2s ease; }
+              .lab-guest-btn:hover svg:last-child { transform: translateX(3px); }
+              .lab-guest-foot {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 6px;
+                margin-top: 12px;
+                font-size: 11.5px;
+                color: var(--text-muted);
+              }
+              @keyframes labGuestPulse {
+                0% { transform: scale(1); opacity: 0.9; }
+                100% { transform: scale(1.35); opacity: 0; }
+              }
+              @media (max-width: 560px) {
+                .lab-guest { padding: 20px 14px 18px; }
+                .lab-guest-btn { width: 100%; }
+              }
+              @media (prefers-reduced-motion: reduce) {
+                .lab-guest-art::after { animation: none; }
+              }
+            `}</style>
+
+            <div className="lab-guest-art" aria-hidden="true">
+              <FlaskConical size={28} />
+            </div>
+            <h3 className="lab-guest-title">
+              You're one step away from booking this {selectedItem?.tests ? "package" : "test"}
+            </h3>
+            <p className="lab-guest-text">
+              Sign in to your account to continue with your booking.
+            </p>
+
+            <div className="lab-guest-perks">
+              <span className="lab-guest-perk"><Home size={13} /> Home sample collection</span>
+              <span className="lab-guest-perk"><Clock size={13} /> Reports in {selectedItem?.reportTime || "24 Hours"}</span>
+            </div>
+
+            <button type="button" className="lab-guest-btn" onClick={handleLoginToBook}>
+              <User size={16} /> Sign in to Continue <ArrowRight size={16} />
+            </button>
+
+            <div className="lab-guest-foot">
+              <ShieldCheck size={13} color="var(--primary)" /> Takes less than a minute. Your details stay private.
+            </div>
+          </div>
+        ) : (
+        <>
          <div style={{ marginBottom: "24px" }}>
           <label style={{ display: "block", fontSize: "14px", fontWeight: "700", color: "var(--text-main)", marginBottom: "12px" }}>
             Select Collection Preference
@@ -804,6 +1393,8 @@ export default function AllLabTests() {
         </div>
 
         <SelectSlotUI onConfirm={confirmBooking} type="lab" submitting={submitting} />
+        </>
+        )}
       </Modal>
 
     </main>

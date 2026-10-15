@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { QrCode, CreditCard, User, Users, Plus, LogOut, Download, CheckCircle2, Copy, MapPin, Calendar, ShieldCheck, UserCircle, RefreshCcw, ZoomIn, ZoomOut, RotateCcw, Loader2 } from "lucide-react";
 import { fetchImageBlob } from "../../../services/uploadService";
 
@@ -8,6 +8,9 @@ export function AbhaTab({ abhaData, onShowQr, onLogout, onSwitch, onCreate }) {
   const [phrBlobUrl, setPhrBlobUrl] = useState(null);
   const [cardLoading, setCardLoading] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1);
+  const [loggingOut, setLoggingOut] = useState(false);
+  // Synchronous lock so a fast double-click can't fire logout twice
+  const logoutLockRef = useRef(false);
 
   useEffect(() => {
     const rawUrl = abhaData?.phrCardUrl;
@@ -52,6 +55,18 @@ export function AbhaTab({ abhaData, onShowQr, onLogout, onSwitch, onCreate }) {
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
+    }
+  };
+
+  const handleLogoutClick = async () => {
+    if (logoutLockRef.current) return;
+    logoutLockRef.current = true;
+    setLoggingOut(true);
+    try {
+      await onLogout?.();
+    } finally {
+      logoutLockRef.current = false;
+      setLoggingOut(false);
     }
   };
 
@@ -344,7 +359,7 @@ export function AbhaTab({ abhaData, onShowQr, onLogout, onSwitch, onCreate }) {
       {/* ── Bottom Action Row ── */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "24px" }}>
         
-        <button onClick={onSwitch} style={{ display: "flex", alignItems: "center", gap: "12px", padding: "16px", background: "#fff", border: "1px solid #e5e7eb", borderRadius: "8px", cursor: "pointer", transition: "border-color 0.15s, box-shadow 0.15s", textAlign: "left" }} onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--primary)"; e.currentTarget.style.boxShadow = "0 2px 4px rgba(0,0,0,0.05)" }} onMouseLeave={e => { e.currentTarget.style.borderColor = "#e5e7eb"; e.currentTarget.style.boxShadow = "none" }}>
+        <button onClick={onSwitch} disabled={loggingOut} style={{ display: "flex", alignItems: "center", gap: "12px", padding: "16px", background: "#fff", border: "1px solid #e5e7eb", borderRadius: "8px", cursor: loggingOut ? "default" : "pointer", opacity: loggingOut ? 0.6 : 1, transition: "border-color 0.15s, box-shadow 0.15s", textAlign: "left" }} onMouseEnter={e => { if (loggingOut) return; e.currentTarget.style.borderColor = "var(--primary)"; e.currentTarget.style.boxShadow = "0 2px 4px rgba(0,0,0,0.05)" }} onMouseLeave={e => { e.currentTarget.style.borderColor = "#e5e7eb"; e.currentTarget.style.boxShadow = "none" }}>
           <div style={{ width: "36px", height: "36px", borderRadius: "6px", background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", color: "#4b5563" }}><RefreshCcw size={18} /></div>
           <div>
             <div style={{ fontSize: "14px", fontWeight: "600", color: "#111827" }}>Switch Profile</div>
@@ -352,7 +367,7 @@ export function AbhaTab({ abhaData, onShowQr, onLogout, onSwitch, onCreate }) {
           </div>
         </button>
 
-        <button onClick={onCreate} style={{ display: "flex", alignItems: "center", gap: "12px", padding: "16px", background: "#fff", border: "1px solid #e5e7eb", borderRadius: "8px", cursor: "pointer", transition: "border-color 0.15s, box-shadow 0.15s", textAlign: "left" }} onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--primary)"; e.currentTarget.style.boxShadow = "0 2px 4px rgba(0,0,0,0.05)" }} onMouseLeave={e => { e.currentTarget.style.borderColor = "#e5e7eb"; e.currentTarget.style.boxShadow = "none" }}>
+        <button onClick={onCreate} disabled={loggingOut} style={{ display: "flex", alignItems: "center", gap: "12px", padding: "16px", background: "#fff", border: "1px solid #e5e7eb", borderRadius: "8px", cursor: loggingOut ? "default" : "pointer", opacity: loggingOut ? 0.6 : 1, transition: "border-color 0.15s, box-shadow 0.15s", textAlign: "left" }} onMouseEnter={e => { if (loggingOut) return; e.currentTarget.style.borderColor = "var(--primary)"; e.currentTarget.style.boxShadow = "0 2px 4px rgba(0,0,0,0.05)" }} onMouseLeave={e => { e.currentTarget.style.borderColor = "#e5e7eb"; e.currentTarget.style.boxShadow = "none" }}>
           <div style={{ width: "36px", height: "36px", borderRadius: "6px", background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", color: "#4b5563" }}><Plus size={18} /></div>
           <div>
             <div style={{ fontSize: "14px", fontWeight: "600", color: "#111827" }}>Create Address</div>
@@ -360,10 +375,10 @@ export function AbhaTab({ abhaData, onShowQr, onLogout, onSwitch, onCreate }) {
           </div>
         </button>
 
-        <button onClick={onLogout} style={{ display: "flex", alignItems: "center", gap: "12px", padding: "16px", background: "#fff", border: "1px solid #fecaca", borderRadius: "8px", cursor: "pointer", transition: "border-color 0.15s, box-shadow 0.15s", textAlign: "left" }} onMouseEnter={e => { e.currentTarget.style.borderColor = "#ef4444"; e.currentTarget.style.boxShadow = "0 2px 4px rgba(239,68,68,0.1)" }} onMouseLeave={e => { e.currentTarget.style.borderColor = "#fecaca"; e.currentTarget.style.boxShadow = "none" }}>
-          <div style={{ width: "36px", height: "36px", borderRadius: "6px", background: "#fef2f2", display: "flex", alignItems: "center", justifyContent: "center", color: "#ef4444" }}><LogOut size={18} /></div>
+        <button onClick={handleLogoutClick} disabled={loggingOut} aria-busy={loggingOut} style={{ display: "flex", alignItems: "center", gap: "12px", padding: "16px", background: "#fff", border: "1px solid #fecaca", borderRadius: "8px", cursor: loggingOut ? "default" : "pointer", opacity: loggingOut ? 0.6 : 1, transition: "border-color 0.15s, box-shadow 0.15s", textAlign: "left" }} onMouseEnter={e => { if (loggingOut) return; e.currentTarget.style.borderColor = "#ef4444"; e.currentTarget.style.boxShadow = "0 2px 4px rgba(239,68,68,0.1)" }} onMouseLeave={e => { e.currentTarget.style.borderColor = "#fecaca"; e.currentTarget.style.boxShadow = "none" }}>
+          <div style={{ width: "36px", height: "36px", borderRadius: "6px", background: "#fef2f2", display: "flex", alignItems: "center", justifyContent: "center", color: "#ef4444" }}>{loggingOut ? <Loader2 size={18} className="animate-spin" /> : <LogOut size={18} />}</div>
           <div>
-            <div style={{ fontSize: "14px", fontWeight: "600", color: "#991b1b" }}>Logout Profile</div>
+            <div style={{ fontSize: "14px", fontWeight: "600", color: "#991b1b" }}>{loggingOut ? "Logging out..." : "Logout Profile"}</div>
             <div style={{ fontSize: "12px", color: "#ef4444" }}>Unlink current session</div>
           </div>
         </button>

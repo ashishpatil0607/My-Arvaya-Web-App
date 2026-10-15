@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { 
   CheckCircle2, 
   User, 
@@ -11,17 +11,120 @@ import {
   Mail, 
   Building2, 
   MapPin, 
-  ShieldCheck, 
   CreditCard, 
   ChevronLeft, 
-  Check 
+  Check,
+  Timer,
+  Loader2
 } from "lucide-react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { useBooking } from "../../context/BookingContext";
 import { useAuth } from "../../context/AuthContext";
-import { bookAppointment, getWalletAmount, checkVisitType, verifyPayment } from "../../services/dataService";
+import { bookAppointment, getWalletAmount, checkVisitType, verifyPayment, releaseSlot } from "../../services/dataService";
+import { stripTitle } from "../../utils/formatName";
 import BookingLayout from "../../components/layout/BookingLayout";
 import Toast from "../../components/common/Toast";
+import { toDisplayTime } from "../../utils/formatTime";
+
+const SLOT_HOLD_KEY = "arvaya_slot_hold_expiry";
+const SLOT_HOLD_MS = 5 * 60 * 1000;
+
+function getHoldExpiry() {
+  try {
+    const saved = parseInt(sessionStorage.getItem(SLOT_HOLD_KEY), 10);
+    if (saved) return saved;
+    // No hold started (e.g. direct navigation) — start a fresh one
+    const expiry = Date.now() + SLOT_HOLD_MS;
+    sessionStorage.setItem(SLOT_HOLD_KEY, String(expiry));
+    return expiry;
+  } catch (e) {
+    return Date.now() + SLOT_HOLD_MS;
+  }
+}
+
+function clearHoldExpiry() {
+  try { sessionStorage.removeItem(SLOT_HOLD_KEY); } catch (e) {}
+}
+
+// Razorpay locks page scroll by setting overflow/contain on both <html> and <body>.
+// Snapshot them before opening checkout so they can be restored if we tear it down ourselves.
+function getScrollLockStyles() {
+  const html = document.documentElement.style;
+  const body = document.body.style;
+  return {
+    htmlOverflow: html.overflow, htmlContain: html.contain,
+    bodyOverflow: body.overflow, bodyContain: body.contain
+  };
+}
+
+// rzp.close() is unreliable once checkout is open, so also remove Razorpay's overlay from the DOM
+// and undo the scroll lock it applied.
+function forceCloseRazorpay(rzp, savedStyles) {
+  if (rzp) {
+    try { rzp.close(); } catch (e) {}
+  }
+  document.querySelectorAll('.razorpay-container, .razorpay-backdrop').forEach(el => el.remove());
+
+  const s = savedStyles || { htmlOverflow: '', htmlContain: '', bodyOverflow: '', bodyContain: '' };
+  const html = document.documentElement.style;
+  const body = document.body.style;
+  html.overflow = s.htmlOverflow;
+  html.contain = s.htmlContain;
+  body.overflow = s.bodyOverflow;
+  body.contain = s.bodyContain;
+}
+
+// Slot-hold countdown with a progress bar that drains as time runs out.
+// `floating` renders it as a solid card for use over the Razorpay overlay.
+function HoldTimerBanner({ secondsLeft, floating = false }) {
+  const urgent = secondsLeft <= 60;
+  const label = `${String(Math.floor(secondsLeft / 60)).padStart(2, '0')}:${String(secondsLeft % 60).padStart(2, '0')}`;
+  const percent = Math.min(100, (secondsLeft / (SLOT_HOLD_MS / 1000)) * 100);
+
+  return (
+    <div
+      role="timer"
+      style={{
+        position: 'relative', overflow: 'hidden',
+        display: 'flex', alignItems: 'center', gap: '8px',
+        padding: '10px 14px 13px', borderRadius: '10px', fontSize: '13px', fontWeight: '600',
+        color: urgent ? '#b91c1c' : 'var(--primary)',
+        border: `1px solid ${urgent ? 'rgba(220, 38, 38, 0.25)' : 'rgba(46, 102, 110, 0.2)'}`,
+        ...(floating
+          ? { background: urgent ? '#fef2f2' : '#f0f7f7', boxShadow: '0 8px 24px rgba(0, 0, 0, 0.25)' }
+          : { background: urgent ? 'rgba(220, 38, 38, 0.08)' : 'rgba(46, 102, 110, 0.08)', marginBottom: '14px' })
+      }}
+    >
+      <Timer size={16} style={{ flexShrink: 0 }} />
+      <span>
+        Your slot is reserved for <strong style={{ fontVariantNumeric: 'tabular-nums' }}>{label}</strong>.{' '}
+        {floating ? 'Complete the payment before the timer runs out.' : 'Complete the booking before the timer runs out.'}
+      </span>
+      <div
+        role="progressbar"
+        aria-label="Time remaining to complete booking"
+        aria-valuemin={0}
+        aria-valuemax={SLOT_HOLD_MS / 1000}
+        aria-valuenow={secondsLeft}
+        style={{
+          position: 'absolute', left: 0, right: 0, bottom: 0, height: '4px',
+          background: urgent ? 'rgba(220, 38, 38, 0.12)' : 'rgba(46, 102, 110, 0.12)'
+        }}
+      >
+        <div
+          style={{
+            height: '100%',
+            width: `${percent}%`,
+            background: urgent ? '#dc2626' : 'var(--primary)',
+            borderRadius: '0 2px 2px 0',
+            transition: 'width 1s linear, background-color 0.3s ease'
+          }}
+        />
+      </div>
+    </div>
+  );
+}
 
 export default function BookingReview() {
   const { doctor, date, slot, setBookingId, bookingHospital, bookingSpecialty, bookingVisitType } = useBooking();
@@ -38,6 +141,15 @@ export default function BookingReview() {
   
   const [applyWallet, setApplyWallet] = useState(false);
   const [walletAppliedAmount, setWalletAppliedAmount] = useState(0);
+
+  const [holdExpiry] = useState(getHoldExpiry);
+  const [secondsLeft, setSecondsLeft] = useState(() => Math.max(0, Math.ceil((holdExpiry - Date.now()) / 1000)));
+  const holdReleasedRef = useRef(false);
+  const razorpayRef = useRef(null);
+  const scrollStylesRef = useRef(null);
+  const [paymentOpen, setPaymentOpen] = useState(false);
+  // Synchronous guard so a fast double-click can't fire two bookings
+  const submitLockRef = useRef(false);
 
   useEffect(() => {
     async function loadData() {
@@ -101,6 +213,9 @@ export default function BookingReview() {
               message: "This slot is currently being booked by another user. Please try again in a few minutes or select another slot.",
               type: "error"
             });
+            // Slot is held by someone else — nothing of ours to release
+            holdReleasedRef.current = true;
+            clearHoldExpiry();
             setSlotConflict(true);
           } else {
             console.error("checkVisitType error:", err);
@@ -124,6 +239,103 @@ export default function BookingReview() {
       return () => clearTimeout(timer);
     }
   }, [slotConflict, navigate]);
+
+  // Tick the slot-hold countdown
+  useEffect(() => {
+    const id = setInterval(() => {
+      setSecondsLeft(Math.max(0, Math.ceil((holdExpiry - Date.now()) / 1000)));
+    }, 1000);
+    return () => clearInterval(id);
+  }, [holdExpiry]);
+
+  const buildReleasePayload = () => {
+    if (!user || !doctor || !date || !slot) return null;
+    const dStr = date instanceof Date
+      ? `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+      : String(date);
+    const start = (slot.includes('-') ? slot.split('-')[0] : slot).trim().replace(/\s*(AM|PM|am|pm)\s*$/i, '');
+    return {
+      patient_id: user?.id || user?.user_id || user?.patient_id,
+      drkey: doctor.id || doctor.drkey,
+      date: dStr,
+      entitylocation: doctor.locations?.[0]?.location_key || "",
+      start
+    };
+  };
+
+  // Releases the held slot once (on expiry, Back, or leaving the page)
+  const releaseHeldSlot = () => {
+    if (holdReleasedRef.current) return;
+    holdReleasedRef.current = true;
+    clearHoldExpiry();
+
+    const payload = buildReleasePayload();
+    if (payload) {
+      releaseSlot(payload).catch(err => console.error("releaseSlot error:", err));
+    }
+  };
+
+  // Always call the latest release function from effect cleanups / window listeners
+  const releaseHeldSlotRef = useRef(releaseHeldSlot);
+  releaseHeldSlotRef.current = releaseHeldSlot;
+  const buildReleasePayloadRef = useRef(buildReleasePayload);
+  buildReleasePayloadRef.current = buildReleasePayload;
+
+  // Leaving the Review page any other way (browser back, header links, etc.) releases the slot.
+  // A successful booking sets holdReleasedRef first, so going to the confirmation page does not.
+  // The deferred release ignores StrictMode's dev-only unmount/remount.
+  const pendingUnmountReleaseRef = useRef(null);
+  useEffect(() => {
+    clearTimeout(pendingUnmountReleaseRef.current);
+    return () => {
+      // Never leave an open checkout behind on another page
+      if (razorpayRef.current) {
+        forceCloseRazorpay(razorpayRef.current, scrollStylesRef.current);
+        razorpayRef.current = null;
+      }
+      pendingUnmountReleaseRef.current = setTimeout(() => releaseHeldSlotRef.current(), 0);
+    };
+  }, []);
+
+  // Tab close / refresh: send the release with keepalive so it survives the page unloading.
+  // The timer is kept, so a refresh resumes the same countdown and re-holds the slot on load.
+  useEffect(() => {
+    const onPageHide = () => {
+      if (holdReleasedRef.current) return;
+      const payload = buildReleasePayloadRef.current();
+      if (payload) releaseSlot(payload, { keepalive: true }).catch(() => {});
+    };
+    window.addEventListener("pagehide", onPageHide);
+    return () => window.removeEventListener("pagehide", onPageHide);
+  }, []);
+
+  const handleBack = () => {
+    if (submitting) return;
+    releaseHeldSlot();
+    navigate(-1);
+  };
+
+  // Hold expired: close any open payment window, release the slot and send the user back to Date & Time
+  useEffect(() => {
+    if (secondsLeft > 0 || holdReleasedRef.current) return;
+
+    if (razorpayRef.current) {
+      forceCloseRazorpay(razorpayRef.current, scrollStylesRef.current);
+      razorpayRef.current = null;
+    }
+    setPaymentOpen(false);
+    setSubmitting(false);
+    releaseHeldSlot();
+
+    setToast({
+      isOpen: true,
+      message: "Your slot hold has expired. Please select a time slot again.",
+      type: "error"
+    });
+    const t = setTimeout(() => navigate("/doctors/schedule"), 1500);
+    return () => clearTimeout(t);
+  }, [secondsLeft, navigate]);
+
 
   const maxWalletApplicable = Math.min(walletBalance, consultationFee);
   
@@ -161,9 +373,10 @@ export default function BookingReview() {
       openLoginModal("/doctors/review");
       return;
     }
-    if (slotConflict) {
+    if (slotConflict || submitLockRef.current) {
       return;
     }
+    submitLockRef.current = true;
     setSubmitting(true);
     try {
       const patient_id = user?.id || user?.user_id || user?.patient_id || "";
@@ -200,9 +413,16 @@ export default function BookingReview() {
         extphid: user?.external_id || "",
         fname: user?.name || "Guest",
         phone: user?.mobile || user?.phone || "N/A",
-        wallet_amount_used: applyWallet ? walletAppliedAmount : 0
+        title: user?.title || "",
+        age: user?.age || "",
+        altphone: user?.altphone || user?.alt_phone || "",
+        email: user?.email || "",
+        amount: consultationFee,
+        wallet_amount_used: applyWallet ? walletAppliedAmount : 0,
+        drname: doctor?.name ? (doctor.name.startsWith("Dr") ? doctor.name : `Dr.${doctor.name}`) : "",
+        patient_name: stripTitle(user?.name) || "Guest"
       };
-      
+
       const result = await bookAppointment(payload);
 
       const amountToPay = consultationFee - (applyWallet ? walletAppliedAmount : 0);
@@ -219,6 +439,8 @@ export default function BookingReview() {
         );
         setBookingId(orderRef);
         try { sessionStorage.setItem("arvaya_booking_id", orderRef); } catch(e) {}
+        holdReleasedRef.current = true;
+        clearHoldExpiry();
         navigate("/doctors/confirmed");
         return;
       }
@@ -231,19 +453,28 @@ export default function BookingReview() {
       }
 
       const options = {
-        key: import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_test_TeZHDSZsRNLvz7",
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
         amount: amountToPay * 100,
         currency: "INR",
         name: "Arvaya Healthcare",
         description: "Doctor Consultation",
         order_id: result.razorpay_order_id,
+        // Razorpay's own expiry: checkout stops accepting payment when the slot hold runs out
+        timeout: Math.max(1, Math.floor((holdExpiry - Date.now()) / 1000)),
         handler: async function (response) {
+          // Payment captured — stop the hold timer so a paid slot is never released
+          holdReleasedRef.current = true;
+          razorpayRef.current = null;
+          setPaymentOpen(false);
+          clearHoldExpiry();
           try {
+            const { amount, wallet_amount_used, ...verifyPayload } = payload;
             await verifyPayment({
               razorpay_order_id: response.razorpay_order_id,
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_signature: response.razorpay_signature,
-              ...payload
+              token_no: result.token_no || 1,
+              ...verifyPayload
             });
             const orderRef = (
               result.order_id || 
@@ -257,6 +488,7 @@ export default function BookingReview() {
             );
             setBookingId(orderRef);
             try { sessionStorage.setItem("arvaya_booking_id", orderRef); } catch(e) {}
+            clearHoldExpiry();
             navigate("/doctors/confirmed");
           } catch (err) {
             console.error("Payment verification failed", err);
@@ -273,13 +505,18 @@ export default function BookingReview() {
         },
         modal: {
           ondismiss: function() {
+            razorpayRef.current = null;
+            setPaymentOpen(false);
             setSubmitting(false);
           }
         }
       };
 
+      scrollStylesRef.current = getScrollLockStyles();
       const paymentObject = new window.Razorpay(options);
+      razorpayRef.current = paymentObject;
       paymentObject.open();
+      setPaymentOpen(true);
 
     } catch (err) {
       console.error(err);
@@ -289,6 +526,8 @@ export default function BookingReview() {
         alert("Booking failed. Please try again.");
       }
       setSubmitting(false);
+    } finally {
+      submitLockRef.current = false;
     }
   };
 
@@ -315,7 +554,6 @@ export default function BookingReview() {
   const hospitalName = bookingHospital?.name || doctor?.locations?.[0]?.name || doctor?.hospital || "Arvaya Healthcare Center";
   const hospitalAddress = bookingHospital?.address || bookingHospital?.address_line_1 || bookingHospital?.address1 || doctor?.locations?.[0]?.address || bookingHospital?.city || "";
 
-  const patient_id = user?.id || user?.user_id || user?.patient_id || 20546;
   const patientName = user?.name || "Guest Patient";
   const patientPhone = user?.mobile || user?.phone || "N/A";
   const patientEmail = user?.email || "";
@@ -355,6 +593,7 @@ export default function BookingReview() {
         subtitle="Please review your appointment details before confirming."
       >
         <div className="booking-review-container">
+          <HoldTimerBanner secondsLeft={secondsLeft} />
           <div className="booking-review-scroll styled-scrollbar">
             {loadingData ? (
               <div style={{ padding: '60px 0', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '14px' }}>
@@ -430,7 +669,7 @@ export default function BookingReview() {
                         <span className="review-info-label">
                           <Clock size={11} /> Time Slot
                         </span>
-                        <span className="review-info-value review-slot-pill" style={{ whiteSpace: 'normal', wordBreak: 'break-word', overflow: 'visible' }} title={slot}>{slot}</span>
+                        <span className="review-info-value review-slot-pill" style={{ whiteSpace: 'nowrap', overflow: 'visible' }} title={toDisplayTime(slot)}>{toDisplayTime(slot)}</span>
                       </div>
 
                       <div className="review-info-item">
@@ -454,7 +693,6 @@ export default function BookingReview() {
                           <p className="review-card-subtitle">Appointment booked for</p>
                         </div>
                       </div>
-                      <span className="review-uhid-badge">ID: #{patient_id}</span>
                     </div>
 
                     <div className="review-patient-grid">
@@ -510,15 +748,17 @@ export default function BookingReview() {
                       <div 
                         role="switch"
                         aria-checked={applyWallet}
-                        tabIndex={walletBalance > 0 ? 0 : -1}
-                        onClick={() => { if (walletBalance > 0) setApplyWallet(!applyWallet); }}
+                        aria-disabled={submitting || walletBalance <= 0}
+                        tabIndex={walletBalance > 0 && !submitting ? 0 : -1}
+                        onClick={() => { if (walletBalance > 0 && !submitting) setApplyWallet(!applyWallet); }}
                         onKeyDown={(e) => {
-                          if ((e.key === "Enter" || e.key === " ") && walletBalance > 0) {
+                          if ((e.key === "Enter" || e.key === " ") && walletBalance > 0 && !submitting) {
                             e.preventDefault();
                             setApplyWallet(!applyWallet);
                           }
                         }}
                         className={`wallet-switch-track ${applyWallet ? "active" : ""} ${walletBalance <= 0 ? "disabled" : ""}`}
+                        style={submitting ? { opacity: 0.6, cursor: 'default' } : undefined}
                         title={walletBalance <= 0 ? "Zero balance in wallet" : "Toggle wallet balance"}
                       >
                         <div className="wallet-switch-thumb" />
@@ -535,6 +775,7 @@ export default function BookingReview() {
                               className="wallet-amount-input"
                               value={walletAppliedAmount} 
                               onChange={handleWalletInputChange}
+                              disabled={submitting}
                               min="0"
                               max={maxWalletApplicable}
                               aria-label="Wallet amount to apply"
@@ -575,11 +816,6 @@ export default function BookingReview() {
                           <span className="payment-line-value">- ₹{walletAppliedAmount}</span>
                         </div>
                       )}
-
-                      <div className="payment-line-item">
-                        <span>Convenience Fee</span>
-                        <span className="payment-free-badge">FREE</span>
-                      </div>
                     </div>
 
                     <div style={{ marginTop: 'auto' }}>
@@ -591,8 +827,10 @@ export default function BookingReview() {
                       <div className="review-actions-row">
                         <button 
                           type="button"
-                          onClick={() => navigate(-1)}
+                          onClick={handleBack}
+                          disabled={submitting}
                           className="btn-review-back"
+                          style={submitting ? { opacity: 0.6, cursor: 'default' } : undefined}
                         >
                           <ChevronLeft size={16} /> Back
                         </button>
@@ -601,10 +839,12 @@ export default function BookingReview() {
                           onClick={confirm}
                           disabled={submitting}
                           className="btn-review-confirm"
+                          aria-busy={submitting}
+                          style={submitting ? { cursor: 'default', boxShadow: 'none' } : undefined}
                         >
                           {submitting ? (
                             <>
-                              <div className="spinner" style={{ width: '15px', height: '15px', borderTopColor: '#fff', border: '2px solid rgba(255,255,255,0.25)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }}></div>
+                              <Loader2 size={16} className="animate-spin" />
                               <span>Processing...</span>
                             </>
                           ) : (
@@ -615,9 +855,6 @@ export default function BookingReview() {
                         </button>
                       </div>
 
-                      <div className="review-trust-note">
-                        <ShieldCheck size={13} /> 256-Bit SSL Encrypted & Secure Checkout
-                      </div>
                       <p className="review-terms-note">
                         By confirming, you agree to our booking terms & cancellation policy.
                       </p>
@@ -637,6 +874,21 @@ export default function BookingReview() {
         type={toast.type}
         onClose={() => setToast({ ...toast, isOpen: false })}
       />
+
+      {/* Razorpay checkout is a cross-origin iframe, so the countdown floats above its overlay instead.
+          Portaled to <body> after checkout opens so it stacks over Razorpay's container. */}
+      {paymentOpen && createPortal(
+        <div
+          style={{
+            position: 'fixed', top: '12px', left: '50%', transform: 'translateX(-50%)',
+            width: 'max-content', maxWidth: 'calc(100vw - 32px)',
+            zIndex: 2147483647, pointerEvents: 'none'
+          }}
+        >
+          <HoldTimerBanner secondsLeft={secondsLeft} floating />
+        </div>,
+        document.body
+      )}
     </>
   );
 }

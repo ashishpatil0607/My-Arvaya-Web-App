@@ -1,9 +1,10 @@
-import { ArrowLeft, CheckCircle2, FileText, BadgePercent } from "lucide-react";
-import { useState } from "react";
+import { ArrowLeft, CheckCircle2, FileText, BadgePercent, Loader2 } from "lucide-react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useBooking } from "../context/BookingContext";
 import { useAuth } from "../context/AuthContext";
 import { bookAppointment, verifyPayment } from "../services/dataService";
+import { stripTitle } from "../utils/formatName";
 import Steps from "../components/common/Steps";
 import Avatar from "../components/common/Avatar";
 
@@ -12,6 +13,8 @@ export default function Review() {
     go = useNavigate();
   const { user } = useAuth();
   const [submitting, setSubmitting] = useState(false);
+  // Synchronous lock so a fast double-click can't create two bookings.
+  const submitLockRef = useRef(false);
 
   const loadRazorpayScript = () => {
     return new Promise((resolve) => {
@@ -28,6 +31,8 @@ export default function Review() {
   };
 
   let confirm = async () => {
+    if (submitLockRef.current) return;
+    submitLockRef.current = true;
     setSubmitting(true);
     try {
       const patient_id = user?.id || user?.user_id || user?.patient_id || "";
@@ -52,7 +57,14 @@ export default function Review() {
         extphid: "",
         fname: user?.name || "Guest",
         phone: user?.mobile || user?.phone || "N/A",
-        wallet_amount_used: 0
+        title: user?.title || "",
+        age: user?.age || "",
+        altphone: user?.altphone || user?.alt_phone || "",
+        email: user?.email || "",
+        amount: parseInt(doctor.fee) || 0,
+        wallet_amount_used: 0,
+        drname: doctor?.name ? (doctor.name.startsWith("Dr") ? doctor.name : `Dr.${doctor.name}`) : "",
+        patient_name: stripTitle(user?.name) || "Guest"
       };
 
       const result = await bookAppointment(payload);
@@ -68,12 +80,13 @@ export default function Review() {
       const res = await loadRazorpayScript();
       if (!res) {
         alert("Razorpay SDK failed to load. Are you offline?");
+        submitLockRef.current = false;
         setSubmitting(false);
         return;
       }
 
       const options = {
-        key: import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_test_TeZHDSZsRNLvz7",
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
         amount: amountToPay * 100,
         currency: "INR",
         name: "Arvaya Healthcare",
@@ -81,17 +94,20 @@ export default function Review() {
         order_id: result.razorpay_order_id,
         handler: async function (response) {
           try {
+            const { amount, wallet_amount_used, ...verifyPayload } = payload;
             await verifyPayment({
               razorpay_order_id: response.razorpay_order_id,
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_signature: response.razorpay_signature,
-              ...payload
+              token_no: result.token_no || 1,
+              ...verifyPayload
             });
             setBookingId(result.razorpay_order_id || result.bookingId || "APMNT" + Date.now().toString().slice(-8));
             go("/confirmed");
           } catch (err) {
             console.error("Payment verification failed", err);
             alert("Payment verification failed. Please contact support.");
+            submitLockRef.current = false;
             setSubmitting(false);
           }
         },
@@ -104,6 +120,7 @@ export default function Review() {
         },
         modal: {
           ondismiss: function() {
+            submitLockRef.current = false;
             setSubmitting(false);
           }
         }
@@ -119,6 +136,7 @@ export default function Review() {
       } else {
         alert("Booking failed. Please try again.");
       }
+      submitLockRef.current = false;
       setSubmitting(false);
     }
   };
@@ -144,6 +162,7 @@ export default function Review() {
           @media (max-width: 900px) { .review-layout { grid-template-columns: 1fr; } }
           .summary-row { display: flex; justify-content: space-between; align-items: center; padding: 16px 0; border-bottom: 1px dashed var(--border); }
           .summary-row:last-child { border-bottom: none; }
+          .review-confirm-btn:disabled { opacity: 0.6; cursor: default; transform: none !important; box-shadow: none !important; }
         `}</style>
 
         <div className="review-layout">
@@ -214,8 +233,8 @@ export default function Review() {
               <b style={{ fontSize: '28px', color: 'var(--text-main)' }}>₹{doctor.fee || "0"}</b>
             </div>
 
-            <button className="btn btn-primary" onClick={confirm} disabled={submitting} style={{ padding: '16px', width: '100%', justifyContent: 'center', fontSize: '16px', fontWeight: '700', boxShadow: '0 8px 24px rgba(46, 102, 110, 0.25)', height: '56px' }}>
-              {submitting ? <div className="loading-spinner"></div> : "Confirm Booking"}
+            <button className="btn btn-primary review-confirm-btn" onClick={confirm} disabled={submitting} style={{ padding: '16px', width: '100%', justifyContent: 'center', fontSize: '16px', fontWeight: '700', boxShadow: '0 8px 24px rgba(46, 102, 110, 0.25)', height: '56px' }}>
+              {submitting ? <><Loader2 size={18} className="animate-spin" /> Booking...</> : "Confirm Booking"}
             </button>
             <p className="text-muted text-center mt-4" style={{ fontSize: '12px' }}>By confirming, you agree to our terms and conditions.</p>
           </aside>

@@ -7,7 +7,9 @@ import AppRoutes from "./routes/AppRoutes";
 import ScrollToTop from "./components/common/ScrollToTop";
 import { useAuth } from "./context/AuthContext";
 import ChatBot from "./components/chatbot/ChatBot";
+import PushNotifications from "./components/common/PushNotifications";
 import Login from "./pages/Login";
+import FeedbackModal from "./components/FeedbackModal";
 
 export default function App() {
   const { user, openLoginModal } = useAuth();
@@ -31,9 +33,10 @@ export default function App() {
       </div>
       <Footer />
       <ChatBot />
+      <PushNotifications />
       {/* Kept outside the route tree so auth can open above any workspace page. */}
       <Login modalHost />
-
+      <FeedbackModal />
     </div>
   );
 }

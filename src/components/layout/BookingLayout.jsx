@@ -1,4 +1,4 @@
-import { Building2, Stethoscope, User, FileText, CalendarDays, CheckCircle2, ClipboardCheck, ChevronRight, ShieldCheck, Clock, Heart } from "lucide-react";
+import { Building2, Stethoscope, User, FileText, CalendarDays, CheckCircle2, ClipboardCheck, ChevronRight, ShieldCheck, Clock, Heart, Sparkles } from "lucide-react";
 import { useBooking } from "../../context/BookingContext";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useRef } from "react";
@@ -47,18 +47,27 @@ export default function BookingLayout({ currentStep, title, subtitle, children }
         {/* Booking Flow Hero Banner */}
         <div className="booking-hero-banner">
           <div className="booking-hero-left">
-            <div className="booking-hero-icon"><CalendarDays size={24} /></div>
+            <div className="booking-hero-icon" aria-hidden="true"><CalendarDays size={26} /></div>
             <div className="booking-hero-copy">
-              <h1>Book Your Appointment</h1>
-              <p>Choose your preferred medical center and book in minutes.</p>
+              <div className="booking-hero-pill-tag">
+                <Sparkles size={13} /> Verified Hospitals & Specialists
+              </div>
+              <h1>Book your doctor appointment in minutes.</h1>
+              <p>Choose your preferred medical center, specialty and time slot.</p>
               <div className="booking-hero-badges">
-                <span><ShieldCheck size={12} color="#4ade80" /> Verified Hospitals</span>
-                <span><Clock size={12} color="#67e8f9" /> Real-time Availability</span>
-                <span><Heart size={12} color="#fb923c" /> Trusted Healthcare</span>
+                <span><ShieldCheck size={14} color="#4ade80" /> Verified Hospitals</span>
+                <span><Clock size={14} color="#67e8f9" /> Real-time Availability</span>
+                <span><Heart size={14} color="#fb923c" /> Trusted Healthcare</span>
               </div>
             </div>
           </div>
-          <img src="/images/consult-doctor.png" alt="" className="booking-hero-img" aria-hidden="true" />
+          <div className="booking-hero-img-wrap" aria-hidden="true">
+            <img src="/images/consult-doctor.png" alt="" className="booking-hero-img" />
+            <div className="booking-hero-stat-badge">
+              <CheckCircle2 size={14} />
+              <span>Instant Confirmation</span>
+            </div>
+          </div>
         </div>
 
         {/* Body Split: Left Vertical Stepper Sidebar & Right Content */}

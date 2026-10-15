@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { CreditCard, CheckCircle2, FileText, ChevronRight, Download, Clock } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
@@ -11,6 +11,8 @@ export default function Payments() {
   const [activeTab, setActiveTab] = useState(checkoutAmount ? "checkout" : "history");
   const [paymentMethod, setPaymentMethod] = useState("upi");
   const [isProcessing, setIsProcessing] = useState(false);
+  // Synchronous lock so a fast double-click can't start two payments.
+  const payLockRef = useRef(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
   const mockTransactions = [
@@ -20,8 +22,11 @@ export default function Payments() {
   ];
 
   const handlePay = () => {
+    if (payLockRef.current) return;
+    payLockRef.current = true;
     setIsProcessing(true);
     setTimeout(() => {
+      payLockRef.current = false;
       setIsProcessing(false);
       setIsSuccess(true);
       setTimeout(() => {
@@ -86,7 +91,7 @@ export default function Payments() {
                   </label>
                 </div>
 
-                <button className="btn btn-accent flex items-center justify-center gap-2" style={{ width: '100%', padding: '16px', fontSize: '16px' }} onClick={handlePay} disabled={isProcessing}>
+                <button className="btn btn-accent flex items-center justify-center gap-2 payments-pay-btn" style={{ width: '100%', padding: '16px', fontSize: '16px' }} onClick={handlePay} disabled={isProcessing}>
                   {isProcessing ? <span className="pulse-dot" style={{ background: 'white' }}></span> : <CreditCard size={20} />}
                   {isProcessing ? 'Processing Payment...' : `Pay ₹${checkoutAmount} Securely`}
                 </button>
@@ -150,6 +155,9 @@ export default function Payments() {
         )}
 
       </div>
+      <style>{`
+        .payments-pay-btn:disabled { opacity: 0.6; cursor: default; transform: none !important; box-shadow: none !important; }
+      `}</style>
     </main>
   );
 }

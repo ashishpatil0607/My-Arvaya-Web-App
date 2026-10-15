@@ -1,4 +1,4 @@
-import { Phone, PhoneCall, Mail, MapPin, Clock, HelpCircle, FileText, ChevronDown, Send, Search, Zap, Users } from "lucide-react";
+import { Phone, PhoneCall, Mail, Clock, HelpCircle, FileText, ChevronDown, Send, Search, Zap, Users, Sparkles, CheckCircle2 } from "lucide-react";
 import { useState } from "react";
 
 export default function Support() {
@@ -19,52 +19,49 @@ export default function Support() {
 
   return (
     <main className="page support-page animate-fade-in-up">
-      <header style={{ padding: '16px 0 0' }}>
+      <header className="wallet-top-shell">
         <div className="container">
-          <div
-            style={{
-              position: 'relative',
-              overflow: 'hidden',
-              borderRadius: '26px',
-              padding: '24px 32px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '16px',
-              flexWrap: 'wrap',
-              color: '#fff',
-              background:
-                'linear-gradient(120deg, rgba(255,255,255,0.08), transparent 45%), linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 62%, #133a41 100%)',
-              border: '1px solid rgba(255,255,255,0.15)',
-              boxShadow: '0 20px 44px rgba(31, 79, 87, 0.28)',
-            }}
-          >
-            <div style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', gap: '16px' }}>
-              <div style={{
-                width: '52px', height: '52px', borderRadius: '16px', flexShrink: 0,
-                background: '#fff', color: 'var(--primary-dark)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: '0 12px 24px rgba(0,60,55,0.2)', transform: 'rotate(-6deg)'
-              }}>
+          <div className="wallet-hero-banner">
+            <div className="wallet-hero-content">
+              <div className="wallet-hero-icon" aria-hidden="true">
                 <HelpCircle size={26} />
               </div>
+
               <div>
-                <h1 style={{ fontSize: '24px', fontWeight: '800', margin: '0 0 4px', color: '#fff', letterSpacing: '-0.02em' }}>Help &amp; Support</h1>
-                <p style={{ margin: '0 0 10px', fontSize: '13px', color: 'rgba(255,255,255,0.82)' }}>Get assistance with your appointments, reports, wallet, and services.</p>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                  {[
-                    { icon: Zap, label: 'Quick Assistance', color: '#fbbf24' },
-                    { icon: Users, label: 'Multiple Services', color: '#5eead4' },
-                  ].map(({ icon: Icon, label, color }) => (
-                    <span key={label} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 10px', color: '#fff', background: 'rgba(18,51,58,0.5)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '10px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', fontSize: '11.5px', fontWeight: '650', backdropFilter: 'blur(10px)' }}>
-                      <Icon size={13} color={color} /> {label}
-                    </span>
-                  ))}
+                <div className="wallet-hero-pill-tag">
+                  <Sparkles size={13} /> Arvaya Care &middot; Help Center
+                </div>
+
+                <h1 className="wallet-hero-title">
+                  Help &amp; Support, whenever you need it.
+                </h1>
+                <p className="wallet-hero-subtitle">
+                  Get assistance with your appointments, reports, wallet, and services.
+                </p>
+
+                <div className="wallet-hero-badges">
+                  <span className="wallet-hero-badge">
+                    <Zap size={14} color="#fbbf24" /> Quick Assistance
+                  </span>
+                  <span className="wallet-hero-badge">
+                    <Users size={14} color="#67e8f9" /> Multiple Services
+                  </span>
+                  <span className="wallet-hero-badge">
+                    <Clock size={14} color="#fb923c" /> 24/7 Helpline
+                  </span>
                 </div>
               </div>
             </div>
 
-            <img src="/images/help-support.png" alt="" className="support-hero-img" aria-hidden="true" />
+            <div className="wallet-hero-img-col">
+              <div className="wallet-hero-img-wrap" aria-hidden="true">
+                <img src="/images/help-support.png" alt="" className="wallet-hero-photo" />
+                <div className="wallet-hero-stat-badge">
+                  <CheckCircle2 size={14} />
+                  <span>Support team online</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </header>
@@ -72,8 +69,8 @@ export default function Support() {
       <div className="container support-shell">
         <section className="support-contact-grid" aria-label="Contact Arvaya support">
           <a className="support-contact-card" href="tel:18001234567">
-            <PhoneCall className="support-contact-decor" size={190} strokeWidth={1.4} aria-hidden="true" />
-            <span className="support-contact-icon"><Phone size={24} /></span>
+            <PhoneCall className="support-contact-decor" size={130} strokeWidth={1.5} aria-hidden="true" />
+            <span className="support-contact-icon"><Phone size={20} /></span>
             <span className="support-contact-copy">
               <small>24/7 Helpline</small>
               <strong>1800-123-4567</strong>
@@ -82,13 +79,12 @@ export default function Support() {
                 <span className="support-contact-dot" /> Available 24/7
               </span>
             </span>
-            <span className="support-contact-action"><Send size={17} /></span>
+            <span className="support-contact-action"><Send size={15} /></span>
           </a>
 
           <a className="support-contact-card" href="mailto:support@arvaya.com">
-            <Mail className="support-contact-decor" size={190} strokeWidth={1.4} aria-hidden="true" />
-            <MapPin className="support-contact-decor support-contact-decor-pin" size={54} strokeWidth={1.6} aria-hidden="true" />
-            <span className="support-contact-icon accent"><Mail size={24} /></span>
+            <Mail className="support-contact-decor" size={130} strokeWidth={1.5} aria-hidden="true" />
+            <span className="support-contact-icon accent"><Mail size={20} /></span>
             <span className="support-contact-copy">
               <small>Email Support</small>
               <strong>support@arvaya.com</strong>
@@ -97,7 +93,7 @@ export default function Support() {
                 <Clock size={13} /> Usually replies in 2-4 hours
               </span>
             </span>
-            <span className="support-contact-action"><Send size={17} /></span>
+            <span className="support-contact-action"><Send size={15} /></span>
           </a>
         </section>
 

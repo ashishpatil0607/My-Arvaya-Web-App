@@ -1,4 +1,4 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import ProtectedRoute from "../components/common/ProtectedRoute";
 import Signup from "../pages/Signup";
 import Home from "../pages/Home";
@@ -38,6 +38,8 @@ import BookingConfirmed from "../pages/booking/BookingConfirmed";
 import PackageDetails from "../pages/PackageDetails";
 import Login from "../pages/Login";
 import AccountDeletion from "../pages/AccountDeletion";
+import About from "../pages/About";
+import Terms from "../pages/Terms";
 
 function P({ children }) {
   return <ProtectedRoute>{children}</ProtectedRoute>;
@@ -90,6 +92,9 @@ export default function AppRoutes() {
       <Route path="/ai-assistant" element={<P><AIAssistant /></P>} />
       <Route path="/doctors/review" element={<P><BookingReview /></P>} />
       <Route path="/doctors/confirmed" element={<P><BookingConfirmed /></P>} />
+      <Route path="/about" element={<About />} />
+      <Route path="/terms-and-conditions" element={<Terms />} />
+      <Route path="/terms" element={<Navigate to="/terms-and-conditions" replace />} />
     </Routes>
   );
 }

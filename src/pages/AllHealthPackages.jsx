@@ -1,45 +1,65 @@
 import { 
-  Search, ChevronRight, ArrowLeft, FlaskConical, Clock, Heart, ShieldCheck, 
+  Search, ChevronLeft, ChevronRight, ArrowLeft, FlaskConical, Clock, Heart, ShieldCheck, 
   Droplets, Beaker, Stethoscope, TestTube, MapPin, ArrowRight, X, Sparkles 
 } from "lucide-react";
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { getDiagnosticPackages } from "../services/dataService";
+import { fallbackHealthPackages } from "../utils/healthPackages";
 import { useBooking } from "../context/BookingContext";
 import { useAuth } from "../context/AuthContext";
 import SelectSlotUI from "../components/doctors/SelectSlotUI";
 import Modal from "../components/common/Modal";
 
+const ITEMS_PER_PAGE = 10;
+
 export default function AllHealthPackages() {
   const go = useNavigate();
-  const { setBookingType, setLabPackage, setDate, setSlot, setBookingId } = useBooking();
+  const { setBookingType, setLabPackage, setLabVisitType, setDate, setSlot, setBookingId } = useBooking();
   const { user, openLoginModal } = useAuth();
 
   const [packages, setPackages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
   const [appliedQuery, setAppliedQuery] = useState("");
-  const [selectedFilter, setSelectedFilter] = useState("All");
   const [selectedItem, setSelectedItem] = useState(null);
   const [visitType, setVisitType] = useState("home");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(null);
   const isInitialMount = useRef(true);
+  const latestRequest = useRef(0);
 
-  // Fetch health packages from API and apply filter upon response
-  const fetchPackagesFromApi = (searchKeyword = "") => {
+  // Fetch one page of health packages from API and apply filter upon response
+  const fetchPackagesFromApi = (searchKeyword = "", page = 1) => {
+    const requestId = ++latestRequest.current;
     setLoading(true);
     setAppliedQuery(searchKeyword);
+    setCurrentPage(page);
 
     const payload = {
-      pageSize: 200,
-      search: searchKeyword,
-      q: searchKeyword,
-      filter: searchKeyword ? ` AND (package_name LIKE '%${searchKeyword}%' OR name LIKE '%${searchKeyword}%')` : ""
+      page,
+      limit: ITEMS_PER_PAGE,
+      searchQuery: searchKeyword
     };
 
     getDiagnosticPackages(payload)
       .then((apiPkgs) => {
-        if (Array.isArray(apiPkgs)) {
-          const normalized = apiPkgs.map((p, idx) => {
+        // Ignore responses from older requests (e.g. fast page clicks)
+        if (requestId !== latestRequest.current) return;
+
+        // Not logged in → API returns 401 (empty list), show the same packages as Home & Labs
+        if (!user && (!Array.isArray(apiPkgs) || apiPkgs.length === 0)) {
+          const keyword = searchKeyword.toLowerCase();
+          const matches = keyword
+            ? fallbackHealthPackages.filter(p => (p.title || "").toLowerCase().includes(keyword))
+            : fallbackHealthPackages;
+          const start = (page - 1) * ITEMS_PER_PAGE;
+          setPackages(matches.slice(start, start + ITEMS_PER_PAGE));
+          setTotalCount(matches.length);
+        } else if (Array.isArray(apiPkgs)) {
+          const offset = (page - 1) * ITEMS_PER_PAGE;
+          const normalized = apiPkgs.map((p, i) => {
+            const idx = offset + i;
             let rawTitle = p.package_name || p.name || p.title || `Health Package ${idx + 1}`;
             if (rawTitle.includes('-')) rawTitle = rawTitle.split('-')[0].trim();
             const priceVal = parseFloat(p.package_price || p.price || p.cost || p.amount || 999);
@@ -62,10 +82,13 @@ export default function AllHealthPackages() {
             };
           });
           setPackages(normalized);
+          const total = Number(apiPkgs.total);
+          setTotalCount(Number.isFinite(total) ? total : null);
         }
         setLoading(false);
       })
       .catch((err) => {
+        if (requestId !== latestRequest.current) return;
         console.error("AllHealthPackages fetch error:", err);
         setLoading(false);
       });
@@ -74,7 +97,7 @@ export default function AllHealthPackages() {
   // Initial fetch on page load
   useEffect(() => {
     fetchPackagesFromApi("");
-  }, []);
+  }, [user]);
 
   // Trigger API and clear filter in UI when search bar input length becomes 0 (after backspace / clearing)
   useEffect(() => {
@@ -87,26 +110,25 @@ export default function AllHealthPackages() {
     }
   }, [q, appliedQuery]);
 
-  // Filtered list applied in UI ONLY after API triggers
-  const filteredPackages = useMemo(() => {
-    return packages.filter(item => {
-      if (appliedQuery) {
-        const queryLower = appliedQuery.toLowerCase();
-        const matchQ = (item.title || "").toLowerCase().includes(queryLower) || 
-                       (item.category || "").toLowerCase().includes(queryLower);
-        if (!matchQ) return false;
-      }
-      if (selectedFilter !== "All") {
-        return (item.title || "").toLowerCase().includes(selectedFilter.toLowerCase()) ||
-               (item.category || "").toLowerCase().includes(selectedFilter.toLowerCase());
-      }
-      return true;
-    });
-  }, [packages, appliedQuery, selectedFilter]);
+  // Server-side Pagination - 10 cards per page.
+  // If the API doesn't send a total count, allow "Next" while a full page comes back.
+  const hasMore = packages.length === ITEMS_PER_PAGE;
+  const totalPages = totalCount != null
+    ? Math.max(1, Math.ceil(totalCount / ITEMS_PER_PAGE))
+    : currentPage + (hasMore ? 1 : 0);
+  const pageStart = (currentPage - 1) * ITEMS_PER_PAGE;
+
+  const goToPage = (pageNum) => {
+    const target = Math.min(totalPages, Math.max(1, pageNum));
+    if (target === currentPage) return;
+    fetchPackagesFromApi(appliedQuery, target);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   const confirmBooking = (slotData) => {
     setBookingType("lab");
     setLabPackage(selectedItem);
+    setLabVisitType(visitType);
     setDate(new Date(slotData.date));
     setSlot(slotData.time);
     if (!user) return openLoginModal("/confirmed");
@@ -119,19 +141,148 @@ export default function AllHealthPackages() {
       
       {/* Styles */}
       <style>{`
-        .all-pkg-hero {
+        .pkg-hero-banner {
+          position: relative;
+          overflow: hidden;
+          background: linear-gradient(90deg, #effaf7 0%, #e3f7f2 50%, #ccf4eb 100%);
+          border-bottom: 1px solid rgba(20, 184, 166, 0.16);
+          padding: 16px 0;
+        }
+        .pkg-hero-wave {
+          position: absolute;
+          right: 0;
+          top: 0;
+          width: 55%;
+          height: 100%;
+          pointer-events: none;
+        }
+        .pkg-hero-inner {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 24px;
+          position: relative;
+          z-index: 1;
+        }
+        .pkg-hero-content {
+          max-width: 760px;
+        }
+        .pkg-hero-breadcrumb {
+          display: flex;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 8px;
+          font-size: 12.5px;
+          font-weight: 500;
+          color: #55738d;
+          margin-bottom: 4px;
+        }
+        .pkg-breadcrumb-link {
+          color: #55738d;
+          text-decoration: none;
+          transition: color 0.2s ease;
+        }
+        .pkg-breadcrumb-link:hover {
+          color: #0b2545;
+        }
+        .pkg-breadcrumb-sep {
+          color: #7a94a9;
+          flex-shrink: 0;
+        }
+        .pkg-hero-title-row {
+          display: flex;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 10px;
+        }
+        .pkg-hero-title {
+          font-size: 22px;
+          font-weight: 800;
+          color: #0b2545;
+          margin: 0;
+          letter-spacing: -0.02em;
+          line-height: 1.2;
+        }
+        .pkg-hero-chip {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 3px 10px;
+          border-radius: 999px;
+          background: rgba(255, 255, 255, 0.75);
+          border: 1px solid rgba(13, 148, 136, 0.2);
+          color: #0d9488;
+          font-size: 12.5px;
+          font-weight: 700;
+        }
+        .pkg-hero-desc {
+          font-size: 13.5px;
+          color: #55738d;
+          margin: 2px 0 0 0;
+          line-height: 1.5;
+        }
+        .pkg-hero-side {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          flex-shrink: 0;
+        }
+        .pkg-back-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 6px 14px;
+          border-radius: 999px;
+          background: rgba(255, 255, 255, 0.8);
+          border: 1px solid rgba(13, 148, 136, 0.25);
+          color: #0d9488;
+          font-size: 12.5px;
+          font-weight: 700;
+          cursor: pointer;
+          transition: background 0.2s ease, border-color 0.2s ease;
+        }
+        .pkg-back-btn:hover {
           background: #ffffff;
-          border-bottom: 1px solid var(--border);
-          padding: 24px 0 28px 0;
+          border-color: rgba(13, 148, 136, 0.45);
+        }
+        .pkg-hero-graphic {
+          display: flex;
+        }
+        .pkg-hero-svg {
+          width: 64px;
+          height: 64px;
+          filter: drop-shadow(0 6px 14px rgba(13, 148, 136, 0.12));
+        }
+        @media (max-width: 768px) {
+          .pkg-hero-banner { padding: 12px 0 14px 0; }
+        }
+        @media (max-width: 640px) {
+          .pkg-hero-title { font-size: 19px; }
+          .pkg-hero-desc { font-size: 12.5px; }
+          .pkg-hero-svg { width: 52px; height: 52px; }
+          .pkg-hero-graphic { display: none; }
+        }
+        @media (max-width: 520px) {
+          .pkg-hero-inner {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 10px;
+          }
         }
 
         .all-pkg-grid {
           display: grid;
-          grid-template-columns: repeat(4, 1fr);
-          gap: 20px;
+          grid-template-columns: repeat(5, 1fr);
+          gap: 16px;
         }
 
-        @media (max-width: 1200px) {
+        @media (max-width: 1280px) {
+          .all-pkg-grid {
+            grid-template-columns: repeat(4, 1fr);
+          }
+        }
+
+        @media (max-width: 1024px) {
           .all-pkg-grid {
             grid-template-columns: repeat(3, 1fr);
           }
@@ -287,6 +438,62 @@ export default function AllHealthPackages() {
           transform: translateY(-1px);
         }
 
+        /* ── Match Labs page "View Details" button ── */
+        .all-pkg-card-btn {
+          position: relative;
+          overflow: hidden;
+          width: 100%;
+          min-height: 35px;
+          padding: 10px 14px;
+          justify-content: center;
+          gap: 6px;
+          font-size: 12.5px;
+          box-shadow: 0 8px 18px rgba(8, 123, 115, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .all-pkg-card-btn::after {
+          content: "";
+          position: absolute;
+          top: 0;
+          bottom: 0;
+          left: -60%;
+          width: 40%;
+          background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.28), transparent);
+          transform: skewX(-20deg);
+          transition: left 0.6s ease;
+          pointer-events: none;
+        }
+
+        .all-pkg-card-btn svg {
+          transition: transform 0.2s ease;
+        }
+
+        .all-pkg-card-btn:hover {
+          box-shadow: 0 12px 22px rgba(8, 123, 115, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+
+        .all-pkg-card-btn:hover::after {
+          left: 130%;
+        }
+
+        .all-pkg-card-btn:hover svg {
+          transform: translateX(3px);
+        }
+
+        /* No price shown — "View Details" spans the full card width */
+        .all-pkg-card-footer .all-pkg-card-btn {
+          width: 100%;
+          padding: 11px 14px;
+          font-size: 13px;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .all-pkg-card-btn::after {
+            transition: none;
+          }
+        }
+
         .all-pkg-chip {
           display: inline-flex;
           align-items: center;
@@ -314,109 +521,145 @@ export default function AllHealthPackages() {
           border-color: var(--primary);
           box-shadow: 0 4px 12px rgba(46, 102, 110, 0.25);
         }
+
+        .all-pkg-pagination-bar {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          flex-wrap: wrap;
+          margin-top: 28px;
+          padding-top: 16px;
+          border-top: 1px solid var(--border);
+        }
+
+        @media (max-width: 640px) {
+          .all-pkg-pagination-bar {
+            flex-direction: column;
+            align-items: center;
+          }
+        }
       `}</style>
 
-      {/* Hero Header */}
-      <div className="all-pkg-hero">
-        <div className="container">
-          
-          {/* Top Breadcrumb & Back */}
-          <div className="flex items-center justify-between mb-4" style={{ flexWrap: 'wrap', gap: '12px' }}>
-            <div className="app-breadcrumbs">
-              <Link to="/">Home</Link> 
-              <ChevronRight size={12} /> 
-              <Link to="/labs">Lab Tests</Link> 
-              <ChevronRight size={12} /> 
-              <span>All Health Packages</span>
+      {/* ── Internal Hero Banner ── */}
+      <div className="pkg-hero-banner">
+        <svg className="pkg-hero-wave" viewBox="0 0 500 150" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M0,40 C150,90 320,10 500,45 L500,0 L0,0 Z" fill="rgba(255, 255, 255, 0.42)" />
+        </svg>
+
+        <div className="container" style={{ position: 'relative', zIndex: 1 }}>
+          <div className="pkg-hero-inner">
+            <div className="pkg-hero-content">
+              <nav aria-label="Breadcrumb" className="pkg-hero-breadcrumb">
+                <Link to="/" className="pkg-breadcrumb-link">Home</Link>
+                <ChevronRight size={13} className="pkg-breadcrumb-sep" />
+                <Link to="/labs" className="pkg-breadcrumb-link">Lab Tests</Link>
+                <ChevronRight size={13} className="pkg-breadcrumb-sep" />
+                <span>All Health Packages</span>
+              </nav>
+
+              <div className="pkg-hero-title-row">
+                <h1 className="pkg-hero-title">All Health Checkup Packages</h1>
+                {!loading && totalCount > 0 && (
+                  <span className="pkg-hero-chip">
+                    <FlaskConical size={13} /> {totalCount} {totalCount === 1 ? "package" : "packages"}
+                  </span>
+                )}
+              </div>
+              <p className="pkg-hero-desc">Book full body health screening & specialized diagnostic checkups with doctor consultation.</p>
             </div>
 
-            <button 
-              onClick={() => go('/labs')}
-              className="btn btn-secondary flex items-center gap-2"
-              style={{ fontSize: '13px', fontWeight: '700', padding: '6px 14px', borderRadius: '20px' }}
-            >
-              <ArrowLeft size={15} /> Back to Lab Tests
-            </button>
-          </div>
-
-          <h1 style={{ 
-            fontFamily: "'Plus Jakarta Sans', var(--font-sans)", 
-            fontWeight: 800, 
-            fontSize: '24px', 
-            color: '#12333A', 
-            margin: '0 0 6px 0' 
-          }}>
-            All Health Checkup Packages
-          </h1>
-          <p style={{ fontSize: '14px', color: 'var(--text-muted)', margin: '0 0 20px 0' }}>
-            Book full body health screening & specialized diagnostic checkups with doctor consultation.
-          </p>
-
-          {/* Search Bar & Category Filters */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <div style={{ 
-              background: '#ffffff', 
-              border: '1.5px solid var(--border)', 
-              borderRadius: '16px', 
-              padding: '6px 16px', 
-              display: 'flex', 
-              alignItems: 'center', 
-              boxShadow: '0 2px 10px rgba(0,0,0,0.03)'
-            }}>
-              <Search size={20} color="var(--text-muted)" style={{ marginRight: '12px', flexShrink: 0 }} />
-              <form 
-                onSubmit={(e) => { 
-                  e.preventDefault(); 
-                  fetchPackagesFromApi(q.trim()); 
-                }} 
-                style={{ flex: 1, display: 'flex', alignItems: 'center' }}
+            <div className="pkg-hero-side">
+              <button
+                onClick={() => go('/labs')}
+                className="pkg-back-btn"
               >
-                <input
-                  placeholder="Search health packages (e.g. Ortho, Diabetes, Cardiac, Senior)..."
-                  value={q}
-                  onChange={(e) => setQ(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      fetchPackagesFromApi(q.trim());
-                    }
-                  }}
-                  style={{ 
-                    border: 'none', 
-                    background: 'transparent', 
-                    outline: 'none', 
-                    width: '100%', 
-                    fontSize: '14.5px', 
-                    color: 'var(--text-main)', 
-                    padding: '10px 0',
-                    fontWeight: '500'
-                  }}
-                />
-              </form>
-              {q && (
-                <button 
-                  onClick={() => {
-                    setQ("");
-                    fetchPackagesFromApi("");
-                  }} 
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
-                >
-                  <X size={18} />
-                </button>
-              )}
+                <ArrowLeft size={14} /> Back to Lab Tests
+              </button>
+              <div className="pkg-hero-graphic" aria-hidden="true">
+                <svg className="pkg-hero-svg" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  {/* Sparkles */}
+                  <path d="M107 19C107 23.2 109.8 26 114 26C109.8 26 107 28.8 107 33C107 28.8 104.2 26 100 26C104.2 26 107 23.2 107 19Z" fill="#14b8a6" />
+                  <path d="M13 46C13 49.5 15.5 52 19 52C15.5 52 13 54.5 13 58C13 54.5 10.5 52 7 52C10.5 52 13 49.5 13 46Z" fill="#14b8a6" />
+                  <circle cx="16" cy="74" r="2" fill="#2dd4bf" />
+                  <circle cx="112" cy="45" r="1.5" fill="#2dd4bf" />
+
+                  {/* Shield with medical cross */}
+                  <path d="M60 16L92 28V56C92 77 78 94 60 102C42 94 28 77 28 56V28L60 16Z" fill="#ffffff" stroke="#0d9488" strokeWidth="3.2" strokeLinejoin="round" />
+                  <path d="M60 26L84 35V56C84 72 74 85 60 92" stroke="#99f6e4" strokeWidth="3" strokeLinecap="round" />
+                  <rect x="54" y="42" width="12" height="32" rx="3" fill="#2dd4bf" />
+                  <rect x="44" y="52" width="32" height="12" rx="3" fill="#2dd4bf" />
+
+                  {/* Pulse line */}
+                  <path d="M8 96H34L40 86L48 104L54 96H66" stroke="#0d9488" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
             </div>
           </div>
 
+          {/* Search Bar */}
+          <div style={{
+            background: '#ffffff',
+            border: '1.5px solid var(--border)',
+            borderRadius: '16px',
+            padding: '6px 16px',
+            display: 'flex',
+            alignItems: 'center',
+            boxShadow: '0 2px 10px rgba(0,0,0,0.03)',
+            marginTop: '14px'
+          }}>
+            <Search size={20} color="var(--text-muted)" style={{ marginRight: '12px', flexShrink: 0 }} />
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                fetchPackagesFromApi(q.trim());
+              }}
+              style={{ flex: 1, display: 'flex', alignItems: 'center' }}
+            >
+              <input
+                placeholder="Search health packages (e.g. Ortho, Diabetes, Cardiac, Senior)..."
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    fetchPackagesFromApi(q.trim());
+                  }
+                }}
+                style={{
+                  border: 'none',
+                  background: 'transparent',
+                  outline: 'none',
+                  width: '100%',
+                  fontSize: '14.5px',
+                  color: 'var(--text-main)',
+                  padding: '10px 0',
+                  fontWeight: '500'
+                }}
+              />
+            </form>
+            {q && (
+              <button
+                onClick={() => {
+                  setQ("");
+                  fetchPackagesFromApi("");
+                }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
+              >
+                <X size={18} />
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Main Grid Content */}
-      <div className="container" style={{ padding: '32px 16px 64px 16px' }}>
+      <div className="container" style={{ padding: '24px 16px 64px 16px' }}>
 
         {/* Results Bar */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
           <span style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-muted)' }}>
-            Showing {filteredPackages.length} {filteredPackages.length === 1 ? 'Health Package' : 'Health Packages'}
+            Showing {totalCount ?? packages.length} {(totalCount ?? packages.length) === 1 ? 'Health Package' : 'Health Packages'}
           </span>
         </div>
 
@@ -432,7 +675,7 @@ export default function AllHealthPackages() {
               </div>
             ))}
           </div>
-        ) : filteredPackages.length === 0 ? (
+        ) : packages.length === 0 ? (
           <div style={{ padding: '60px 0', textAlign: 'center', color: 'var(--text-muted)' }}>
             <Stethoscope size={48} style={{ opacity: 0.25, marginBottom: '12px' }} />
             <h3 style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text-main)', marginBottom: '4px' }}>No health packages found</h3>
@@ -440,11 +683,10 @@ export default function AllHealthPackages() {
           </div>
         ) : (
           <div className="all-pkg-grid">
-            {filteredPackages.map((pkg) => (
+            {packages.map((pkg) => (
               <div className="all-pkg-card" key={pkg.id}>
                 <div className="all-pkg-card-img-container">
                   <img src={pkg.img} alt={pkg.title} className="all-pkg-card-img" />
-                  {pkg.badge && <div className="all-pkg-card-badge">{pkg.badge}</div>}
                 </div>
                 <div className="all-pkg-card-body">
                   <div className="all-pkg-card-title">{pkg.title}</div>
@@ -453,12 +695,62 @@ export default function AllHealthPackages() {
                   </div>
                   <div className="all-pkg-card-footer">
                     <button className="all-pkg-card-btn" onClick={() => go(`/labs/package-details/${encodeURIComponent(pkg.id)}`, { state: { package: pkg } })}>
-                      View Details <ArrowRight size={13} />
+                      View Details <ArrowRight size={14} />
                     </button>
                   </div>
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Frontend Pagination Controls for 10 cards per page */}
+        {!loading && packages.length > 0 && (
+          <div className="all-pkg-pagination-bar">
+            <span className="pagination-info-text">
+              Showing{" "}
+              <strong>{pageStart + 1}</strong>–
+              <strong>{pageStart + packages.length}</strong>
+              {totalCount != null && <> of <strong>{totalCount}</strong></>} packages
+            </span>
+
+            {totalPages > 1 && (
+              <div className="pagination-controls">
+                <button
+                  type="button"
+                  className="pagination-btn"
+                  disabled={currentPage === 1}
+                  onClick={() => goToPage(currentPage - 1)}
+                  aria-label="Previous page"
+                >
+                  <ChevronLeft size={14} /> Prev
+                </button>
+
+                <div className="pagination-pages-list">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+                    <button
+                      key={pageNum}
+                      type="button"
+                      className={`pagination-num-btn ${currentPage === pageNum ? "active" : ""}`}
+                      onClick={() => goToPage(pageNum)}
+                      aria-label={`Page ${pageNum}`}
+                    >
+                      {pageNum}
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  type="button"
+                  className="pagination-btn"
+                  disabled={currentPage === totalPages}
+                  onClick={() => goToPage(currentPage + 1)}
+                  aria-label="Next page"
+                >
+                  Next <ChevronRight size={14} />
+                </button>
+              </div>
+            )}
           </div>
         )}
 

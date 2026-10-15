@@ -2,13 +2,16 @@ import {
   CheckCircle2, 
   CalendarDays, 
   Clock, 
-  MapPin,
-  AlertCircle,
-  Building2,
-  Stethoscope
+  MapPin, 
+  AlertCircle, 
+  Building2, 
+  Stethoscope,
+  ArrowLeft
 } from "lucide-react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useBooking } from "../../context/BookingContext";
+import { toDisplayTime } from "../../utils/formatTime";
 
 export default function BookingConfirmed() {
   const { 
@@ -22,6 +25,26 @@ export default function BookingConfirmed() {
   } = useBooking();
   
   const navigate = useNavigate();
+
+  const handleBackToBooking = () => {
+    if (clearBooking) clearBooking();
+    navigate("/doctors", { replace: true });
+  };
+
+  useEffect(() => {
+    // Intercept browser back button to redirect back to the BookingLayout flow (/doctors)
+    window.history.pushState(null, "", window.location.href);
+
+    const handlePopState = () => {
+      if (clearBooking) clearBooking();
+      navigate("/doctors", { replace: true });
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, [navigate, clearBooking]);
 
   const handleViewAppointments = () => {
     if (clearBooking) clearBooking();
@@ -82,11 +105,11 @@ export default function BookingConfirmed() {
 
               <h1 className="confirmed-title">Appointment Confirmed!</h1>
               <p className="confirmed-subtitle">
-                Your consultation has been reserved. A confirmation with appointment instructions has been sent via SMS & email.
+                Your consultation has been reserved. A confirmation with appointment instructions has been sent via SMS & WhatsApp.
               </p>
             </div>
 
-{/* Actions Group */}
+            {/* Actions Group */}
             <div className="confirmed-actions-group">
               <button 
                 type="button"
@@ -94,6 +117,14 @@ export default function BookingConfirmed() {
                 onClick={handleViewAppointments}
               >
                 <span>View My Appointments</span>
+              </button>
+              <button 
+                type="button"
+                className="confirmed-btn-secondary" 
+                onClick={handleBackToBooking}
+              >
+                <ArrowLeft size={16} />
+                <span>Back to Booking</span>
               </button>
             </div>
           </div>
@@ -157,7 +188,7 @@ export default function BookingConfirmed() {
                   </div>
                   <div className="confirmed-meta-text">
                     <span className="confirmed-meta-label">Time Slot</span>
-                    <span className="confirmed-meta-val">{slot || "Not specified"}</span>
+                    <span className="confirmed-meta-val">{toDisplayTime(slot) || "Not specified"}</span>
                   </div>
                 </div>
               </div>

@@ -24,8 +24,8 @@ export function getStoredUserId() {
 export function buildFiltersArray(filtersParam = {}, defaultFilters = []) {
   let filtersArray = [];
   const nonFilterKeys = [
-    "pageIndex", "pageSize", "sortKey", "sortValue", 
-    "page_index", "page_size", "sort_key", "sort_value", 
+    "pageIndex", "pageSize", "sortKey", "sortValue",
+    "page_index", "page_size", "sort_key", "sort_value",
     "filters", "filter", "filterQuery", "page", "limit", "sort", "order"
   ];
 
@@ -251,7 +251,7 @@ let cachedLocationsPromise = null;
 
 export async function getLocations(pageIndex = 1, pageSize = 10, filter = "") {
   const isCacheable = pageIndex === 1 && !filter && pageSize >= 10;
-  
+
   if (isCacheable && cachedLocationsPromise) {
     return cachedLocationsPromise;
   }
@@ -421,19 +421,29 @@ export async function getLabPackages(filters = {}) {
 
 export async function getDiagnosticTests(filters = {}) {
   try {
+    const { pageIndex, pageSize, page, limit, searchQuery } = filters;
     const payload = {
-      pageIndex: filters.pageIndex || 1,
-      pageSize: filters.pageSize || 300,
-      sortKey: filters.sortKey || "id",
-      sortValue: filters.sortValue || "desc",
-      filter: filters.filter || "",
-      search: filters.search || filters.q || "",
-      q: filters.q || filters.search || "",
-      ...filters
+      page: page || pageIndex || 1,
+      limit: limit || pageSize || 300,
+      searchQuery: searchQuery || ""
     };
     const res = await api.post("/api/diagnostic/getTests", payload);
     const list = res?.data || res?.tests || res?.list || res?.result || res || [];
-    return Array.isArray(list) ? list : [];
+    const resultList = Array.isArray(list) ? list : [];
+
+    // Total record count for server-side pagination (undefined when the API doesn't send one)
+    resultList.total =
+      res?.totalRecords ??
+      res?.data?.totalRecords ??
+      res?.count ??
+      res?.totalCount ??
+      res?.total ??
+      res?.total_records ??
+      res?.total_count ??
+      res?.data?.count ??
+      res?.data?.totalCount ??
+      res?.data?.total;
+    return resultList;
   } catch (err) {
     console.error("getDiagnosticTests API error:", err);
     return [];
@@ -442,19 +452,29 @@ export async function getDiagnosticTests(filters = {}) {
 
 export async function getDiagnosticPackages(filters = {}) {
   try {
+    const { pageIndex, pageSize, page, limit, searchQuery } = filters;
     const payload = {
-      pageIndex: filters.pageIndex || 1,
-      pageSize: filters.pageSize || 200,
-      sortKey: filters.sortKey || "id",
-      sortValue: filters.sortValue || "desc",
-      filter: filters.filter || "",
-      search: filters.search || filters.q || "",
-      q: filters.q || filters.search || "",
-      ...filters
+      page: page || pageIndex || 1,
+      limit: limit || pageSize || 200,
+      searchQuery: searchQuery || ""
     };
     const res = await api.post("/api/diagnostic/getPackages", payload);
     const list = res?.data || res?.packages || res?.list || res?.result || res || [];
-    return Array.isArray(list) ? list : [];
+    const resultList = Array.isArray(list) ? list : [];
+
+    // Total record count for server-side pagination (undefined when the API doesn't send one)
+    resultList.total =
+      res?.totalRecords ??
+      res?.data?.totalRecords ??
+      res?.count ??
+      res?.totalCount ??
+      res?.total ??
+      res?.total_records ??
+      res?.total_count ??
+      res?.data?.count ??
+      res?.data?.totalCount ??
+      res?.data?.total;
+    return resultList;
   } catch (err) {
     console.error("getDiagnosticPackages API error:", err);
     return [];
@@ -464,16 +484,67 @@ export async function getDiagnosticPackages(filters = {}) {
 export async function getLabOrderHistory(patient_id, options = {}) {
   try {
     const extraParams = typeof options === 'object' && options !== null ? options : { pageSize: options };
+    const pSize = Number(extraParams.pageSize) || 10;
+    const pNum = Number(extraParams.page || extraParams.pageIndex) || 1;
+    const offset = (pNum - 1) * pSize;
+
     const payload = {
       patient_id,
-      pageSize: 10,
-      pageIndex: 1,
-      page: 1,
+      pageSize: pSize,
+      pageIndex: pNum,
+      page: pNum,
+      limit: pSize,
+      offset: offset,
       ...extraParams
     };
+
     const res = await api.post("/api/lims/laborder/history", payload);
-    const list = res?.data || res?.list || res?.orders || res?.result || res || [];
-    return Array.isArray(list) ? list : [];
+
+    // Extract list: handles { "data": [...], "count": 17 } exactly matching backend response
+    const rawList =
+      (Array.isArray(res?.data) ? res.data : null) ||
+      res?.data?.orders ||
+      res?.data?.list ||
+      (Array.isArray(res?.data?.data) ? res.data.data : null) ||
+      res?.list ||
+      res?.orders ||
+      res?.result ||
+      (Array.isArray(res) ? res : []);
+
+    const allItems = Array.isArray(rawList) ? rawList : [];
+
+    // Extract total count from { "count": 17 } or fallback count properties
+    const totalCount =
+      res?.count ??
+      res?.totalCount ??
+      res?.total ??
+      res?.total_records ??
+      res?.total_count ??
+      res?.data?.count ??
+      res?.data?.totalCount ??
+      res?.data?.total ??
+      allItems.length;
+
+    // If server returned all records in one array (e.g. 17 items all at once),
+    // dynamically slice for the requested page so exactly pSize (10) records are returned:
+    let pageItems = allItems;
+    if (allItems.length > pSize) {
+      pageItems = allItems.slice(offset, offset + pSize);
+    }
+
+    const resultList = pageItems.map((item, idx) => ({
+      ...item,
+      id: item.order_id || item.lab_order_id || item.id || `LAB-${item.created_at || (offset + idx)}-${offset + idx}`,
+    }));
+
+    resultList.total = totalCount;
+    resultList.count = totalCount;
+    resultList.totalPages = Math.max(1, Math.ceil(totalCount / pSize));
+    resultList.page = pNum;
+    resultList.pageSize = pSize;
+    resultList.raw = res;
+
+    return resultList;
   } catch (err) {
     console.error("getLabOrderHistory API error:", err);
     return [];
@@ -670,6 +741,12 @@ export async function checkVisitType(payload) {
   return res?.data || res || {};
 }
 
+// keepalive lets the request finish even if the tab is closing
+export async function releaseSlot(payload, { keepalive = false } = {}) {
+  const res = await api.post("/api/appointments/release-slot", payload, {}, { keepalive });
+  return res?.data || res || {};
+}
+
 /* ─── Reports ─── */
 export async function getPatientPaymentsReport(filters = {}) {
   if (USE_MOCK) {
@@ -816,7 +893,7 @@ export async function getAppointments(filters = {}) {
     const res = await api.post("/api/appointments/getPatientAppointments", payload);
     const rawList = res?.data || res?.list || res?.appointments || res?.result || (Array.isArray(res) ? res : []);
 
-    return Array.isArray(rawList) ? rawList.map(apt => {
+    const mapped = Array.isArray(rawList) ? rawList.map(apt => {
       let mappedStatus = (apt.appointment_status || apt.status || "upcoming").toLowerCase();
       if (mappedStatus === "confirmed") mappedStatus = "upcoming";
 
@@ -836,6 +913,11 @@ export async function getAppointments(filters = {}) {
         raw: apt
       };
     }) : [];
+
+    mapped.count = res?.count ?? mapped.length;
+    mapped.total = res?.count ?? res?.total ?? mapped.length;
+    mapped.totalPages = res?.totalPages ?? Math.max(1, Math.ceil((mapped.total || mapped.length) / (filters.pageSize || 10)));
+    return mapped;
   } catch (err) {
     console.error("getAppointments error:", err);
     return [];
@@ -915,3 +997,13 @@ export async function getDocumentTypes(filtersParam = {}) {
   }
 }
 
+export async function upsertPatientReview(data) {
+  const payload = {
+    patient_id: data.patient_id,
+    ratings: data.ratings,
+    review: data.review,
+    is_active: data.is_active ?? 1,
+  };
+  const res = await api.post("/api/patientReview/upsert", payload);
+  return res.data || res;
+}

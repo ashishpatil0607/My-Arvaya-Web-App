@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { User, Phone, Calendar, ArrowRight, Droplet, Building, ChevronDown, CheckCircle2, Search } from "lucide-react";
+import { User, Phone, Calendar, ArrowRight, Droplet, Building, ChevronDown, CheckCircle2, Search, Loader2 } from "lucide-react";
 import { getLocations } from "../services/dataService";
 
 export default function Signup() {
@@ -24,6 +24,8 @@ export default function Signup() {
   const dropdownRef = useRef(null);
 
   const fetchedRef = useRef(false);
+  // Synchronous guard so a fast double-click can't submit registration twice
+  const submitLockRef = useRef(false);
 
   useEffect(() => {
     if (fetchedRef.current) return;
@@ -54,6 +56,7 @@ export default function Signup() {
 
   async function handleSubmit(e) {
     e.preventDefault();
+    if (submitLockRef.current) return;
     if (!firstName.trim()) {
       const msg = "Please enter your First Name";
       setError(msg);
@@ -92,17 +95,23 @@ export default function Signup() {
     }
 
     const genderCode = gender === "Female" ? "F" : gender === "Male" ? "M" : "O";
+    const tempTitle = title.includes(".") ? title.replace(".", "") : title;
 
-    const ok = await register({
-      title: title,
-      name: `${firstName.trim()} ${lastName.trim()}`,
-      gender: genderCode,
-      date_of_birth: dob,
-      mobile_number: phone.trim(),
-      blood_group: bloodGroup,
-      entitylocation: selectedBranch
-    });
-    if (ok) go(location.state?.from || "/");
+    submitLockRef.current = true;
+    try {
+      const ok = await register({
+        title: tempTitle,
+        name: `${firstName.trim()} ${lastName.trim()}`,
+        gender: genderCode,
+        date_of_birth: dob,
+        mobile_number: phone.trim(),
+        blood_group: bloodGroup,
+        entitylocation: selectedBranch
+      });
+      if (ok) go(location.state?.from || "/");
+    } finally {
+      submitLockRef.current = false;
+    }
   }
 
   const inputWrap = {
@@ -164,7 +173,7 @@ export default function Signup() {
         {/* Card Header */}
         <div style={{ textAlign: "center", marginBottom: "18px" }}>
           <div style={{ background: '#ffffff', padding: '6px 14px', borderRadius: '12px', display: 'inline-flex', marginBottom: '8px', boxShadow: '0 2px 10px rgba(0,0,0,0.04)', border: '1px solid var(--border)' }}>
-            <img src="/logo.png" alt="Arvaya" style={{ height: "30px", objectFit: 'contain' }} />
+            <img src="/secure-hospitals-logo.png" alt="Secure Hospitals – Arvaya Healthcare Ltd." style={{ height: "30px", objectFit: 'contain' }} />
           </div>
           <h1 style={{ fontSize: "22px", color: "var(--text-main)", margin: "0 0 4px", fontWeight: "800", letterSpacing: "-0.01em" }}>
             Complete Registration
@@ -303,110 +312,110 @@ export default function Signup() {
 
           {/* Branch */}
           <div ref={dropdownRef} style={{ position: 'relative' }}>
-              <label style={{ fontSize: "12px", fontWeight: "700", color: "var(--text-main)", display: "block", marginBottom: "5px" }}>
-                Branch *
-              </label>
-              <div 
-                 onClick={() => { setBranchOpen(!branchOpen); if (branchOpen) setBranchSearch(""); }}
-                style={{ 
-                  ...inputWrap, 
-                  cursor: "pointer", 
-                  padding: "10px 12px",
-                  border: branchOpen ? "1.5px solid var(--primary)" : "1.5px solid #edf1f6"
-                }}
-              >
-                <Building size={15} color="var(--primary)" style={{ flexShrink: 0, marginLeft: "2px" }} />
-                <div style={{ flex: 1, fontSize: "14px", color: selectedLoc ? "var(--text-main)" : "#9ca3af", fontWeight: "600", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  {selectedLoc ? getBranchLabel(selectedLoc) : "Select Branch"}
-                </div>
-                <ChevronDown size={16} color="var(--text-muted)" style={{ transition: "transform 0.2s", transform: branchOpen ? "rotate(180deg)" : "rotate(0deg)" }} />
+            <label style={{ fontSize: "12px", fontWeight: "700", color: "var(--text-main)", display: "block", marginBottom: "5px" }}>
+              Branch *
+            </label>
+            <div
+              onClick={() => { setBranchOpen(!branchOpen); if (branchOpen) setBranchSearch(""); }}
+              style={{
+                ...inputWrap,
+                cursor: "pointer",
+                padding: "10px 12px",
+                border: branchOpen ? "1.5px solid var(--primary)" : "1.5px solid #edf1f6"
+              }}
+            >
+              <Building size={15} color="var(--primary)" style={{ flexShrink: 0, marginLeft: "2px" }} />
+              <div style={{ flex: 1, fontSize: "14px", color: selectedLoc ? "var(--text-main)" : "#9ca3af", fontWeight: "600", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                {selectedLoc ? getBranchLabel(selectedLoc) : "Select Branch"}
               </div>
+              <ChevronDown size={16} color="var(--text-muted)" style={{ transition: "transform 0.2s", transform: branchOpen ? "rotate(180deg)" : "rotate(0deg)" }} />
+            </div>
 
-              {/* Custom Dropdown Menu */}
-              {branchOpen && (
-                <div style={{
-                  position: "absolute", top: "calc(100% + 8px)", left: 0, right: 0,
-                  background: "#fff", borderRadius: "14px", border: "1px solid #edf1f6",
-                  boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)",
-                  maxHeight: "240px", overflowY: "auto", zIndex: 50, padding: "8px"
-                }}>
-                  {/* Search Box */}
-                  <div style={{ display: "flex", alignItems: "center", background: "var(--bg-surface)", border: "1px solid var(--border)", borderRadius: "10px", padding: "8px 12px", marginBottom: "6px" }}>
-                    <Search size={16} color="var(--primary)" />
-                    <input
-                      type="text"
-                      placeholder="Search branches..."
-                      value={branchSearch}
-                      onChange={e => setBranchSearch(e.target.value)}
-                      onClick={e => e.stopPropagation()}
-                      style={{ border: "none", background: "transparent", outline: "none", width: "100%", fontSize: "13px", paddingLeft: "8px", color: "var(--text-main)" }}
-                    />
-                  </div>
+            {/* Custom Dropdown Menu */}
+            {branchOpen && (
+              <div style={{
+                position: "absolute", top: "calc(100% + 8px)", left: 0, right: 0,
+                background: "#fff", borderRadius: "14px", border: "1px solid #edf1f6",
+                boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)",
+                maxHeight: "240px", overflowY: "auto", zIndex: 50, padding: "8px"
+              }}>
+                {/* Search Box */}
+                <div style={{ display: "flex", alignItems: "center", background: "var(--bg-surface)", border: "1px solid var(--border)", borderRadius: "10px", padding: "8px 12px", marginBottom: "6px" }}>
+                  <Search size={16} color="var(--primary)" />
+                  <input
+                    type="text"
+                    placeholder="Search branches..."
+                    value={branchSearch}
+                    onChange={e => setBranchSearch(e.target.value)}
+                    onClick={e => e.stopPropagation()}
+                    style={{ border: "none", background: "transparent", outline: "none", width: "100%", fontSize: "13px", paddingLeft: "8px", color: "var(--text-main)" }}
+                  />
+                </div>
 
-                  {locations.length === 0 ? (
-                    <div style={{ padding: "12px", textAlign: "center", fontSize: "13px", color: "var(--text-muted)" }}>Loading branches...</div>
-                  ) : (
-                    locations
-                      .filter(loc => {
-                        if (!branchSearch.trim()) return true;
-                        const q = branchSearch.toLowerCase();
-                        return (
-                          loc.alt_name?.toLowerCase().includes(q) ||
-                          loc.name?.toLowerCase().includes(q) ||
-                          loc.city?.toLowerCase().includes(q) ||
-                          loc.area?.toLowerCase().includes(q) ||
-                          loc.street?.toLowerCase().includes(q) ||
-                          loc.landmark?.toLowerCase().includes(q) ||
-                          loc.entitylocation?.toLowerCase().includes(q)
-                        );
-                      })
-                      .map(loc => {
-                        const isSelected = selectedBranch === loc.entitylocation;
-                        return (
-                          <button
-                            key={loc.entitylocation}
-                            type="button"
-                            onClick={() => { setSelectedBranch(loc.entitylocation); setBranchOpen(false); setBranchSearch(""); }}
-                            style={{
-                              display: "flex", alignItems: "flex-start", gap: "10px",
-                              padding: "12px", borderRadius: "10px", border: "none",
-                              background: isSelected ? "var(--primary-light)" : "transparent",
-                              cursor: "pointer", textAlign: "left", transition: "all 0.2s",
-                              width: "100%"
-                            }}
-                            onMouseEnter={(e) => !isSelected && (e.currentTarget.style.background = "#f8fafc")}
-                            onMouseLeave={(e) => !isSelected && (e.currentTarget.style.background = "transparent")}
-                          >
-                            <div style={{ flex: 1 }}>
-                              <div style={{ fontSize: "13px", fontWeight: isSelected ? "700" : "600", color: isSelected ? "var(--primary-dark)" : "var(--text-main)", lineHeight: "1.4" }}>
-                                {getBranchLabel(loc)}
-                              </div>
+                {locations.length === 0 ? (
+                  <div style={{ padding: "12px", textAlign: "center", fontSize: "13px", color: "var(--text-muted)" }}>Loading branches...</div>
+                ) : (
+                  locations
+                    .filter(loc => {
+                      if (!branchSearch.trim()) return true;
+                      const q = branchSearch.toLowerCase();
+                      return (
+                        loc.alt_name?.toLowerCase().includes(q) ||
+                        loc.name?.toLowerCase().includes(q) ||
+                        loc.city?.toLowerCase().includes(q) ||
+                        loc.area?.toLowerCase().includes(q) ||
+                        loc.street?.toLowerCase().includes(q) ||
+                        loc.landmark?.toLowerCase().includes(q) ||
+                        loc.entitylocation?.toLowerCase().includes(q)
+                      );
+                    })
+                    .map(loc => {
+                      const isSelected = selectedBranch === loc.entitylocation;
+                      return (
+                        <button
+                          key={loc.entitylocation}
+                          type="button"
+                          onClick={() => { setSelectedBranch(loc.entitylocation); setBranchOpen(false); setBranchSearch(""); }}
+                          style={{
+                            display: "flex", alignItems: "flex-start", gap: "10px",
+                            padding: "12px", borderRadius: "10px", border: "none",
+                            background: isSelected ? "var(--primary-light)" : "transparent",
+                            cursor: "pointer", textAlign: "left", transition: "all 0.2s",
+                            width: "100%"
+                          }}
+                          onMouseEnter={(e) => !isSelected && (e.currentTarget.style.background = "#f8fafc")}
+                          onMouseLeave={(e) => !isSelected && (e.currentTarget.style.background = "transparent")}
+                        >
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: "13px", fontWeight: isSelected ? "700" : "600", color: isSelected ? "var(--primary-dark)" : "var(--text-main)", lineHeight: "1.4" }}>
+                              {getBranchLabel(loc)}
                             </div>
-                            {isSelected && <CheckCircle2 size={16} color="var(--primary)" style={{ flexShrink: 0, marginTop: "2px" }} />}
-                          </button>
-                        );
-                      })
-                  )}
-                  {locations.length > 0 && locations.filter(loc => {
-                    if (!branchSearch.trim()) return true;
-                    const q = branchSearch.toLowerCase();
-                    return (
-                      loc.alt_name?.toLowerCase().includes(q) ||
-                      loc.name?.toLowerCase().includes(q) ||
-                      loc.city?.toLowerCase().includes(q) ||
-                      loc.area?.toLowerCase().includes(q) ||
-                      loc.street?.toLowerCase().includes(q) ||
-                      loc.landmark?.toLowerCase().includes(q) ||
-                      loc.entitylocation?.toLowerCase().includes(q)
-                    );
-                  }).length === 0 && (
+                          </div>
+                          {isSelected && <CheckCircle2 size={16} color="var(--primary)" style={{ flexShrink: 0, marginTop: "2px" }} />}
+                        </button>
+                      );
+                    })
+                )}
+                {locations.length > 0 && locations.filter(loc => {
+                  if (!branchSearch.trim()) return true;
+                  const q = branchSearch.toLowerCase();
+                  return (
+                    loc.alt_name?.toLowerCase().includes(q) ||
+                    loc.name?.toLowerCase().includes(q) ||
+                    loc.city?.toLowerCase().includes(q) ||
+                    loc.area?.toLowerCase().includes(q) ||
+                    loc.street?.toLowerCase().includes(q) ||
+                    loc.landmark?.toLowerCase().includes(q) ||
+                    loc.entitylocation?.toLowerCase().includes(q)
+                  );
+                }).length === 0 && (
                     <div style={{ padding: "16px", textAlign: "center", fontSize: "13px", color: "var(--text-muted)" }}>
                       No branches found matching your search.
                     </div>
                   )}
-                </div>
-              )}
-            </div>
+              </div>
+            )}
+          </div>
 
           {error && (
             <div style={{
@@ -420,12 +429,12 @@ export default function Signup() {
           <button type="submit" disabled={loading} style={{
             background: "linear-gradient(135deg, #2e666e, #1f474d)",
             color: "#ffffff", border: "none", padding: "14px", borderRadius: "12px",
-            fontSize: "15px", fontWeight: "700", cursor: loading ? "wait" : "pointer",
+            fontSize: "15px", fontWeight: "700", cursor: loading ? "default" : "pointer",
             display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
-            opacity: loading ? 0.7 : 1, transition: "all 0.25s", marginTop: "6px",
-            boxShadow: "0 6px 18px rgba(46, 102, 110, 0.3)", width: "100%"
+            opacity: loading ? 0.6 : 1, transition: "all 0.25s", marginTop: "6px",
+            boxShadow: loading ? "none" : "0 6px 18px rgba(46, 102, 110, 0.3)", width: "100%"
           }}>
-            {loading ? "Creating Account..." : <span style={{ color: "#ffffff", display: "flex", alignItems: "center", gap: "8px", fontWeight: "700" }}>Complete Registration <ArrowRight size={17} color="#ffffff" /></span>}
+            {loading ? <><Loader2 size={17} className="animate-spin" /> Creating Account...</> : <span style={{ color: "#ffffff", display: "flex", alignItems: "center", gap: "8px", fontWeight: "700" }}>Complete Registration <ArrowRight size={17} color="#ffffff" /></span>}
           </button>
         </form>
 

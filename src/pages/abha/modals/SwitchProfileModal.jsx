@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { X, ArrowLeft, CheckCircle2, Users, Phone } from "lucide-react";
+import { X, ArrowLeft, CheckCircle2, Users, Phone, Loader2 } from "lucide-react";
 import { useAuth } from "../../../context/AuthContext";
 import { abhaSendOtp, abhaVerifyOtp, abhaGetSuggestions, abhaConfirmAddress } from "../../../services/abhaService";
 import { Overlay } from "./SharedComponents";
@@ -27,6 +27,14 @@ export function SwitchProfileModal({ onClose }) {
   const [canResend, setCanResend]     = useState(false);
   const [switchedProfile, setSwitchedProfile] = useState(null);
   const otpRefs = useRef([]);
+  // Synchronous lock so a fast double-click can't fire the same request twice
+  const requestLockRef = useRef(false);
+
+  // Block closing the modal while a request is in flight
+  const handleClose = () => {
+    if (requestLockRef.current) return;
+    onClose();
+  };
 
   /* ── Countdown timer (step 2) ── */
   useEffect(() => {
@@ -39,6 +47,7 @@ export function SwitchProfileModal({ onClose }) {
 
   /* ── Step 1: Send OTP to mobile ── */
   const handleSendOtp = async () => {
+    if (requestLockRef.current) return;
     const cleanMobile = mobile.replace(/\D/g, "");
     if (!cleanMobile || !/^[6-9]\d{9}$/.test(cleanMobile)) {
       const msg = "Mobile number must start with a digit between 6 and 9";
@@ -46,6 +55,7 @@ export function SwitchProfileModal({ onClose }) {
       if (showToast) showToast(msg, "error");
       return;
     }
+    requestLockRef.current = true;
     setErr(""); setBusy(true);
     try {
       const res = await abhaSendOtp(cleanMobile);
@@ -58,17 +68,19 @@ export function SwitchProfileModal({ onClose }) {
       setErr(msg);
       if (showToast) showToast(msg, "error");
     }
-    finally { setBusy(false); }
+    finally { setBusy(false); requestLockRef.current = false; }
   };
 
   /* ── Step 2: Verify OTP ── */
   const handleVerifyOtp = async () => {
+    if (requestLockRef.current) return;
     if (otp.length < 6) {
       const msg = "Enter the 6-digit OTP.";
       setErr(msg);
       if (showToast) showToast(msg, "error");
       return;
     }
+    requestLockRef.current = true;
     setErr(""); setBusy(true);
     try {
       const res = await abhaVerifyOtp(otp, txnId);
@@ -87,17 +99,19 @@ export function SwitchProfileModal({ onClose }) {
       setErr(msg);
       if (showToast) showToast(msg, "error");
     }
-    finally { setBusy(false); }
+    finally { setBusy(false); requestLockRef.current = false; }
   };
 
   /* ── Step 3: Confirm address & switch ── */
   const handleConfirm = async () => {
+    if (requestLockRef.current) return;
     if (!selected) {
       const msg = "Please select an ABHA address.";
       setErr(msg);
       if (showToast) showToast(msg, "error");
       return;
     }
+    requestLockRef.current = true;
     setErr(""); setBusy(true);
     try {
       const res = await abhaConfirmAddress(selected, "", txnId);
@@ -116,7 +130,7 @@ export function SwitchProfileModal({ onClose }) {
       setErr(msg);
       if (showToast) showToast(msg, "error");
     }
-    finally { setBusy(false); }
+    finally { setBusy(false); requestLockRef.current = false; }
   };
 
   /* ── OTP input grid ── */
@@ -144,7 +158,7 @@ export function SwitchProfileModal({ onClose }) {
   const stepLabels = ["Mobile Number", "Verify OTP", "Select Address", "Done"];
 
   return (
-    <Overlay onClose={onClose}>
+    <Overlay onClose={handleClose}>
       <div style={{
         background: "#fff", borderRadius: "24px", width: "100%", maxWidth: "520px",
         position: "relative", boxShadow: "0 30px 60px -12px rgba(0,0,0,0.4)",
@@ -154,7 +168,7 @@ export function SwitchProfileModal({ onClose }) {
 
         {/* ── Header ── */}
         <div style={{ background: "linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%)", padding: "24px 28px" }}>
-          <button onClick={onClose} style={{ position: "absolute", top: "16px", right: "16px", background: "rgba(255,255,255,0.15)", border: "none", cursor: "pointer", color: "#fff", width: "32px", height: "32px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <button onClick={handleClose} disabled={busy} style={{ position: "absolute", top: "16px", right: "16px", background: "rgba(255,255,255,0.15)", border: "none", cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1, color: "#fff", width: "32px", height: "32px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <X size={18} />
           </button>
           <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "20px" }}>
@@ -213,11 +227,11 @@ export function SwitchProfileModal({ onClose }) {
                 width: "100%", padding: "15px", background: busy || mobile.length < 10 ? "var(--border)" : "var(--accent)",
                 color: busy || mobile.length < 10 ? "var(--text-muted)" : "#fff",
                 border: "none", borderRadius: "12px", fontSize: "15px", fontWeight: "700",
-                cursor: busy || mobile.length < 10 ? "not-allowed" : "pointer", transition: "all 0.2s",
+                cursor: busy || mobile.length < 10 ? "default" : "pointer", transition: "all 0.2s",
                 boxShadow: busy || mobile.length < 10 ? "none" : "0 4px 14px rgba(251,145,63,0.35)",
                 display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
               }}>
-                <Phone size={16} />{busy ? "Sending OTP..." : "Send OTP"}
+                {busy ? <><Loader2 size={16} className="animate-spin" /> Sending OTP...</> : <><Phone size={16} /> Send OTP</>}
               </button>
             </div>
           )}
@@ -226,7 +240,7 @@ export function SwitchProfileModal({ onClose }) {
           {step === 2 && (
             <div style={{ animation: "fadeIn 0.3s ease-in-out" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "6px" }}>
-                <button onClick={() => { setStep(1); setErr(""); }} style={{ background: "var(--bg-app)", border: "none", cursor: "pointer", width: "30px", height: "30px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <button onClick={() => { setStep(1); setErr(""); }} disabled={busy} style={{ background: "var(--bg-app)", border: "none", cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1, width: "30px", height: "30px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <ArrowLeft size={16} color="var(--text-main)" />
                 </button>
                 <h3 style={{ fontSize: "18px", fontWeight: "800", color: "var(--text-main)", margin: 0 }}>Verify OTP</h3>
@@ -266,8 +280,8 @@ export function SwitchProfileModal({ onClose }) {
                   {canResend ? "Didn't receive the code?" : `Resend in ${fmt(countdown)}`}
                 </span>
                 {canResend && (
-                  <button onClick={() => { setOtp(""); setCountdown(600); setCanResend(false); handleSendOtp(); }}
-                    style={{ color: "var(--primary)", fontWeight: "700", fontSize: "13px", background: "none", border: "none", cursor: "pointer" }}>
+                  <button disabled={busy} onClick={() => { if (requestLockRef.current) return; setOtp(""); setCountdown(600); setCanResend(false); handleSendOtp(); }}
+                    style={{ color: "var(--primary)", fontWeight: "700", fontSize: "13px", background: "none", border: "none", cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1 }}>
                     Resend OTP
                   </button>
                 )}
@@ -278,10 +292,11 @@ export function SwitchProfileModal({ onClose }) {
                 background: busy || otp.length < 6 ? "var(--border)" : "var(--primary)",
                 color: busy || otp.length < 6 ? "var(--text-muted)" : "#fff",
                 border: "none", borderRadius: "12px", fontSize: "15px", fontWeight: "700",
-                cursor: busy || otp.length < 6 ? "not-allowed" : "pointer", transition: "all 0.2s",
+                cursor: busy || otp.length < 6 ? "default" : "pointer", transition: "all 0.2s",
                 boxShadow: busy || otp.length < 6 ? "none" : "0 4px 14px rgba(46,102,110,0.28)",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
               }}>
-                {busy ? "Verifying..." : "Verify OTP"}
+                {busy ? <><Loader2 size={16} className="animate-spin" /> Verifying...</> : "Verify OTP"}
               </button>
             </div>
           )}
@@ -290,7 +305,7 @@ export function SwitchProfileModal({ onClose }) {
           {step === 3 && (
             <div style={{ animation: "fadeIn 0.3s ease-in-out" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "6px" }}>
-                <button onClick={() => { setStep(2); setErr(""); }} style={{ background: "var(--bg-app)", border: "none", cursor: "pointer", width: "30px", height: "30px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <button onClick={() => { setStep(2); setErr(""); }} disabled={busy} style={{ background: "var(--bg-app)", border: "none", cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1, width: "30px", height: "30px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <ArrowLeft size={16} color="var(--text-main)" />
                 </button>
                 <h3 style={{ fontSize: "18px", fontWeight: "800", color: "var(--text-main)", margin: 0 }}>Select ABHA Address</h3>
@@ -304,11 +319,12 @@ export function SwitchProfileModal({ onClose }) {
                   const val = addr.address || addr.id || addr;
                   const isSel = selected === val;
                   return (
-                    <button key={i} onClick={() => setSelected(val)} style={{
+                    <button key={i} onClick={() => setSelected(val)} disabled={busy} style={{
                       display: "flex", alignItems: "center", gap: "12px", padding: "14px 16px",
                       borderRadius: "12px", border: isSel ? "2px solid var(--primary)" : "1.5px solid var(--border)",
                       background: isSel ? "var(--primary-light)" : "var(--bg-app)",
-                      cursor: "pointer", textAlign: "left", transition: "all 0.2s", width: "100%",
+                      cursor: busy ? "default" : "pointer", textAlign: "left", transition: "all 0.2s", width: "100%",
+                      opacity: busy && !isSel ? 0.6 : 1,
                     }}>
                       <div style={{ width: "18px", height: "18px", borderRadius: "50%", border: isSel ? "5px solid var(--primary)" : "2px solid var(--border)", transition: "all 0.2s", background: "white", flexShrink: 0 }} />
                       <div style={{ flex: 1 }}>
@@ -326,11 +342,11 @@ export function SwitchProfileModal({ onClose }) {
                 background: busy || !selected ? "var(--border)" : "var(--accent)",
                 color: busy || !selected ? "var(--text-muted)" : "#fff",
                 border: "none", borderRadius: "12px", fontSize: "15px", fontWeight: "700",
-                cursor: busy || !selected ? "not-allowed" : "pointer", transition: "all 0.2s",
+                cursor: busy || !selected ? "default" : "pointer", transition: "all 0.2s",
                 boxShadow: busy || !selected ? "none" : "0 4px 14px rgba(251,145,63,0.35)",
                 display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
               }}>
-                <Users size={17} />{busy ? "Switching..." : "Switch to This Profile"}
+                {busy ? <><Loader2 size={17} className="animate-spin" /> Switching...</> : <><Users size={17} /> Switch to This Profile</>}
               </button>
             </div>
           )}

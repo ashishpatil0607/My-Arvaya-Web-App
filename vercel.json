@@ -2,6 +2,10 @@
     "$schema": "https://openapi.vercel.sh/vercel.json",
     "rewrites": [
         {
+            "source": "/antwork-api/:path*",
+            "destination": "https://secure-ant.ant.works/secure-api/:path*"
+        },
+        {
             "source": "/(.*)",
             "destination": "/index.html"
         }

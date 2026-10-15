@@ -1,13 +1,10 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
+import useScrollLock from "../../../hooks/useScrollLock";
 
 export function Overlay({ children, onClose }) {
-  useEffect(() => {
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = previousOverflow; };
-  }, []);
+  useScrollLock();
 
   const overlay = (
     <div style={{ position: "fixed", inset: 0, background: "rgba(18, 51, 58, 0.5)", backdropFilter: "blur(6px)", display: "flex", alignItems: "flex-start", justifyContent: "center", zIndex: 10000, padding: "16px", overflowY: "auto" }}

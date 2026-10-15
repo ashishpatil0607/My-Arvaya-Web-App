@@ -1,26 +1,25 @@
 import { X } from "lucide-react";
-import { useEffect } from "react";
+import { createContext, useContext, useState } from "react";
 import { createPortal } from "react-dom";
+import useScrollLock from "../../hooks/useScrollLock";
+
+// Children can portal content (e.g. a confirm button) into this element so it stays
+// pinned below the scrolling body, like the Call Ambulance modal footer.
+const ModalFooterContext = createContext(null);
+export const useModalFooter = () => useContext(ModalFooterContext);
 
 export default function Modal({ isOpen, onClose, title, children, maxWidth = "600px", hideHeader = false }) {
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      if (isOpen) {
-        document.body.style.overflow = 'hidden';
-      } else {
-        document.body.style.overflow = 'unset';
-      }
-      return () => { document.body.style.overflow = 'unset'; };
-    }
-  }, [isOpen]);
+  const [footerEl, setFooterEl] = useState(null);
+
+  useScrollLock(isOpen);
 
   if (!isOpen) return null;
 
   const content = (
     <div className="modal-overlay" onClick={onClose}>
-      <div 
-        className="modal-content" 
-        onClick={(e) => e.stopPropagation()} 
+      <div
+        className="modal-content"
+        onClick={(e) => e.stopPropagation()}
         style={{ maxWidth }}
       >
         {!hideHeader && (
@@ -31,9 +30,12 @@ export default function Modal({ isOpen, onClose, title, children, maxWidth = "60
             </button>
           </div>
         )}
-        <div className="modal-body">
-          {children}
-        </div>
+        <ModalFooterContext.Provider value={footerEl}>
+          <div className="modal-body">
+            {children}
+          </div>
+        </ModalFooterContext.Provider>
+        <div className="modal-footer-slot" ref={setFooterEl} />
       </div>
     </div>
   );
