@@ -51,6 +51,38 @@ import { getImageUrl, fetchImageBlob } from "../services/uploadService";
 import { useAuth } from "../context/AuthContext";
 import CardsSkeleton from "../components/labs/CardsSkeleton";
 
+// "just now", "5 minutes ago", "1 week ago", ... from a timestamp string;
+// anything older than two weeks shows the exact date and time
+function formatTimeAgo(dateStr) {
+  if (!dateStr) return "";
+  const then = new Date(dateStr).getTime();
+  if (Number.isNaN(then)) return "";
+  const seconds = Math.max(0, Math.floor((Date.now() - then) / 1000));
+  if (seconds < 60) return "just now";
+  // older than two weeks: show the exact date and time instead
+  if (seconds > 14 * 24 * 3600) {
+    return new Date(then).toLocaleString("en-IN", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+  }
+  const units = [
+    ["week", 7 * 24 * 3600],
+    ["day", 24 * 3600],
+    ["hour", 3600],
+    ["minute", 60],
+  ];
+  for (const [label, size] of units) {
+    const n = Math.floor(seconds / size);
+    if (n >= 1) return `${n} ${label}${n > 1 ? "s" : ""} ago`;
+  }
+  return "just now";
+}
+
 // Clamps long review text to a few lines; "Read more" opens the full review
 function ReviewText({ text, onReadMore }) {
   const textRef = useRef(null);
@@ -117,6 +149,7 @@ function ReviewModal({ review, accent, onClose }) {
             <span>
               <ShieldCheck size={14} /> {review.role}
             </span>
+            {review.time && <small className="review-modal-time">{review.time}</small>}
           </div>
         </div>
 
@@ -243,6 +276,7 @@ export default function Home() {
               role: "Verified Patient",
               text: r.review || "",
               rating: r.ratings || 5,
+              time: formatTimeAgo(r.created_at),
             }));
             setReviews(normalized);
           }
@@ -1069,6 +1103,7 @@ export default function Home() {
                       <div>
                         <b>{t.name}</b>
                         <span>{t.role}</span>
+                        {t.time && <small className="home-review-time">{t.time}</small>}
                       </div>
                     </div>
                   </article>

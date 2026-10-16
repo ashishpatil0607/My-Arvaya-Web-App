@@ -1029,43 +1029,90 @@ export default function AmbulancePage() {
           <div className={`amb-empty${user ? "" : " amb-empty--guest"}`}>
             <style>{`
               .amb-empty {
-                max-width: 520px;
+                position: relative;
+                overflow: hidden;
+                max-width: 540px;
                 margin: 0 auto;
-                padding: 28px 28px 26px;
+                padding: 0 28px 24px;
                 text-align: center;
-                background: radial-gradient(circle at 50% 0%, rgba(46, 102, 110, 0.08), transparent 60%), var(--bg-surface);
-                border: 1px solid var(--border);
-                border-radius: 22px;
-                box-shadow: 0 10px 30px -16px rgba(5, 73, 78, 0.25);
+                background:
+                  radial-gradient(circle at 50% 100%, rgba(46, 102, 110, 0.07), transparent 55%),
+                  var(--bg-surface);
+                border: 1px solid rgba(46, 102, 110, 0.16);
+                border-radius: 24px;
+                box-shadow: 0 24px 48px -24px rgba(5, 73, 78, 0.45), 0 2px 6px rgba(5, 73, 78, 0.05);
               }
-              .amb-empty--guest {
-                background: radial-gradient(circle at 50% 0%, rgba(220, 38, 38, 0.06), transparent 60%), var(--bg-surface);
+              .amb-empty::before {
+                content: "";
+                position: absolute;
+                inset: 0 0 auto 0;
+                height: 112px;
+                background:
+                  radial-gradient(circle at 12% 18%, rgba(255, 255, 255, 0.16) 0 34px, transparent 35px),
+                  radial-gradient(circle at 90% 95%, rgba(255, 255, 255, 0.12) 0 58px, transparent 59px),
+                  radial-gradient(circle at 74% 22%, rgba(255, 255, 255, 0.1) 0 12px, transparent 13px),
+                  linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+                border-radius: 0 0 50% 50% / 0 0 26px 26px;
               }
+              .amb-empty--guest::before {
+                background:
+                  radial-gradient(circle at 12% 18%, rgba(255, 255, 255, 0.16) 0 34px, transparent 35px),
+                  radial-gradient(circle at 90% 95%, rgba(255, 255, 255, 0.12) 0 58px, transparent 59px),
+                  radial-gradient(circle at 74% 22%, rgba(255, 255, 255, 0.1) 0 12px, transparent 13px),
+                  linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+              }
+              .amb-empty > * { position: relative; z-index: 1; }
               .amb-empty-art {
                 position: relative;
-                width: 76px;
-                height: 76px;
-                margin: 0 auto 14px;
+                width: 96px;
+                height: 96px;
+                margin: 58px auto 16px;
                 border-radius: 50%;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                background: var(--primary-light);
+                background: linear-gradient(180deg, #ffffff 0%, var(--primary-light) 100%);
+                border: 4px solid var(--bg-surface);
+                box-shadow: 0 14px 28px -12px rgba(5, 73, 78, 0.55);
               }
-              .amb-empty--guest .amb-empty-art { background: #fdecec; }
+              .amb-empty--guest .amb-empty-art {
+                background: linear-gradient(180deg, #ffffff 0%, #fdecec 100%);
+                box-shadow: 0 14px 28px -12px rgba(185, 28, 28, 0.5);
+              }
+              .amb-empty-art svg { width: 62px; height: 52px; }
               .amb-empty-art::after {
                 content: "";
                 position: absolute;
-                inset: 0;
+                inset: -4px;
                 border-radius: 50%;
-                border: 2px solid var(--amb-ring, rgba(46, 102, 110, 0.3));
+                border: 2px solid var(--amb-ring, rgba(46, 102, 110, 0.35));
                 animation: ambEmptyPulse 2.4s ease-out infinite;
               }
-              .amb-empty--guest .amb-empty-art { --amb-ring: rgba(220, 38, 38, 0.3); }
+              .amb-empty--guest .amb-empty-art { --amb-ring: rgba(220, 38, 38, 0.35); }
+              .amb-empty-perks {
+                display: flex;
+                justify-content: center;
+                flex-wrap: wrap;
+                gap: 8px;
+                margin: 0 auto 20px;
+              }
+              .amb-empty-perk {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                padding: 6px 12px;
+                border-radius: 999px;
+                font-size: 12px;
+                font-weight: 700;
+                color: var(--primary-dark);
+                background: var(--primary-light);
+                border: 1px solid rgba(46, 102, 110, 0.18);
+              }
+              .amb-empty-perk svg { color: var(--primary); }
               .amb-empty-title {
                 margin: 0 0 6px;
                 font-family: var(--font-display);
-                font-size: 18px;
+                font-size: 19px;
                 font-weight: 800;
                 letter-spacing: -0.015em;
                 color: var(--text-main);
@@ -1104,15 +1151,15 @@ export default function AmbulancePage() {
                 align-items: center;
                 justify-content: center;
                 gap: 8px;
-                padding: 11px 22px;
+                padding: 12px 24px;
                 border: none;
-                border-radius: 12px;
+                border-radius: 14px;
                 font-size: 14px;
                 font-weight: 700;
                 color: #fff;
                 cursor: pointer;
-                background: #dc2626;
-                box-shadow: 0 6px 16px -6px rgba(220, 38, 38, 0.6);
+                background: linear-gradient(135deg, #ef4444 0%, #dc2626 55%, #b91c1c 100%);
+                box-shadow: 0 10px 22px -8px rgba(220, 38, 38, 0.65);
                 transition: transform 0.2s ease, filter 0.2s ease;
               }
               .amb-empty--guest .amb-empty-btn {
@@ -1129,7 +1176,7 @@ export default function AmbulancePage() {
                 100% { transform: scale(1.35); opacity: 0; }
               }
               @media (max-width: 560px) {
-                .amb-empty { padding: 24px 16px 22px; margin: 0 auto 24px; }
+                .amb-empty { padding: 0 16px 22px; margin: 0 auto 24px; }
                 .amb-empty-btn { width: 100%; }
               }
               @media (prefers-reduced-motion: reduce) {
@@ -1265,6 +1312,11 @@ export default function AmbulancePage() {
                   If you or someone you love ever needs urgent care, we'll send help and
                   stay with you every step of the way.
                 </p>
+                <div className="amb-empty-perks">
+                  <span className="amb-empty-perk"><Clock size={13} /> 24/7 available</span>
+                  <span className="amb-empty-perk"><MapPin size={13} /> Live tracking</span>
+                  <span className="amb-empty-perk"><ShieldCheck size={13} /> Trained paramedics</span>
+                </div>
               </>
             ) : (
               <>
