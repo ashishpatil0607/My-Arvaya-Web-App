@@ -36,7 +36,6 @@ import BookingReview from "../pages/booking/BookingReview";
 import BookingConfirmed from "../pages/booking/BookingConfirmed";
 
 import PackageDetails from "../pages/PackageDetails";
-import Login from "../pages/Login";
 import AccountDeletion from "../pages/AccountDeletion";
 import About from "../pages/About";
 import Terms from "../pages/Terms";
@@ -50,7 +49,8 @@ export default function AppRoutes() {
     <Routes>
       {/* Public */}
       <Route path="/signup" element={<Signup />} />
-      <Route path="/login" element={<Login />} />
+      {/* Login is shown as a modal only — block direct access to /login */}
+      <Route path="/login" element={<Navigate to="/" replace />} />
 
       {/* Public Pages */}
       <Route path="/" element={<Home />} />

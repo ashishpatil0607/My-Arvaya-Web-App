@@ -330,7 +330,6 @@ export default function Header() {
     try {
       await logout();
       closeMenu();
-      go("/");
     } finally {
       accountActionLockRef.current = false;
       setLoggingOut(false);
