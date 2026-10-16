@@ -17,8 +17,18 @@ function formatGender(g) {
   return g;
 }
 
-const TITLES = ["Mr", "Mrs", "Ms", "Miss", "Baby", "Dr"];
-const TITLE_PREFIX_RE = new RegExp(`^(${TITLES.join("|")})\\.?\\s+`, "i");
+// Same salutation format as the signup form ("Mr.", "Dr."); Miss/Baby aren't abbreviations
+const TITLES = ["Mr.", "Mrs.", "Ms.", "Miss", "Baby", "Dr."];
+const TITLE_KEYS = TITLES.map(t => t.replace(/\.$/, ""));
+const TITLE_PREFIX_RE = new RegExp(`^(${TITLE_KEYS.join("|")})\\.?\\s+`, "i");
+
+// "mr" / "Mr" / "Mr." -> "Mr." so older saved titles still match the dropdown options
+function normalizeTitle(title) {
+  const raw = String(title || "").trim();
+  const key = raw.replace(/\.+$/, "").toLowerCase();
+  const idx = TITLE_KEYS.findIndex(t => t.toLowerCase() === key);
+  return idx >= 0 ? TITLES[idx] : raw;
+}
 
 // Remove a leading title (e.g. "Mr Snehal" -> "Snehal") so it isn't shown or saved twice
 function stripTitle(name) {
@@ -29,8 +39,8 @@ function stripTitle(name) {
 function splitTitle(name, title) {
   const raw = String(name || "").trim();
   const match = raw.match(TITLE_PREFIX_RE);
-  const detected = match ? TITLES.find(t => t.toLowerCase() === match[1].toLowerCase()) : "";
-  return { title: title || detected || "", name: raw.replace(TITLE_PREFIX_RE, "") };
+  const detected = match ? normalizeTitle(match[1]) : "";
+  return { title: normalizeTitle(title) || detected || "", name: raw.replace(TITLE_PREFIX_RE, "") };
 }
 
 function withTitle(title, name) {
@@ -333,7 +343,7 @@ export default function Profile() {
       app_user_id: member.app_user_id || "",
       primary_account_id: member.primary_account_id || "",
       entitylocation: member.entitylocation || member.entity_location || "",
-      title: member.title || ""
+      title: normalizeTitle(member.title)
     });
     setIsMemberModalOpen(true);
   };
@@ -1106,9 +1116,9 @@ export default function Profile() {
                     </button>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                    {/* Row 1: Title + Full Name & Email Address */}
-                    <div className="profile-form-row-2col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: '110px 1fr', gap: '12px' }}>
+                    {/* Row 1: Title + Full Name & Gender */}
+                    <div className="profile-form-row-3col profile-form-row-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px' }}>
+                      <div className="profile-form-span-2" style={{ display: 'grid', gridTemplateColumns: '110px 1fr', gap: '12px', gridColumn: 'span 2' }}>
                         <div className="flex flex-col gap-2">
                           <label className="text-muted" style={{ fontSize: '13px', fontWeight: '600' }}>Title <em className="profile-req">*</em></label>
                           <ProfileSelect
@@ -1126,19 +1136,30 @@ export default function Profile() {
                         </div>
                       </div>
                       <div className="flex flex-col gap-2">
-                        <label className="text-muted" style={{ fontSize: '13px', fontWeight: '600' }}>Email Address</label>
-                        <input name="email" value={profile.email || ""} onChange={handleChange} readOnly={isFieldLocked} className="input-field" style={inputStyle} placeholder="Enter email address" />
+                        <label className="text-muted" style={{ fontSize: '13px', fontWeight: '600' }}>Gender <em className="profile-req">*</em></label>
+                        <ProfileSelect
+                          name="gender"
+                          value={profile.gender}
+                          onChange={handleChange}
+                          disabled={isFieldLocked}
+                          style={inputStyle}
+                          options={["Male", "Female", "Other"].map(v => ({ value: v, label: v }))}
+                        />
                       </div>
                     </div>
 
-                    {/* Row 2: Phone Number & Date of Birth */}
-                    <div className="profile-form-row-2col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                    {/* Row 2: Phone Number, Email Address & Date of Birth */}
+                    <div className="profile-form-row-3col profile-form-row-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px' }}>
                       <div className="flex flex-col gap-2">
                         <label className="text-muted" style={{ fontSize: '13px', fontWeight: '600' }}>Phone Number <em className="profile-req">*</em></label>
                         <div style={{ position: 'relative' }}>
                           <input name="phone" value={profile.phone} readOnly className="input-field" style={{ background: 'var(--bg-app)', borderColor: 'transparent', color: 'var(--text-main)', padding: '12px 40px 12px 16px', cursor: isEditing ? 'not-allowed' : undefined, width: '100%' }} />
                           <Lock size={15} className="profile-input-lock" aria-label="Phone number cannot be changed" />
                         </div>
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <label className="text-muted" style={{ fontSize: '13px', fontWeight: '600' }}>Email Address</label>
+                        <input name="email" value={profile.email || ""} onChange={handleChange} readOnly={isFieldLocked} className="input-field" style={inputStyle} placeholder="Enter email address" />
                       </div>
                       <div className="flex flex-col gap-2">
                         <label className="text-muted" style={{ fontSize: '13px', fontWeight: '600' }}>Date of Birth <em className="profile-req">*</em></label>
@@ -1156,19 +1177,8 @@ export default function Profile() {
                       </div>
                     </div>
 
-                    {/* Row 3: Gender, Blood Group, Height (cm), Weight (kg) in 1 Row */}
-                    <div className="profile-form-row-4col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '16px' }}>
-                      <div className="flex flex-col gap-2">
-                        <label className="text-muted" style={{ fontSize: '13px', fontWeight: '600' }}>Gender <em className="profile-req">*</em></label>
-                        <ProfileSelect
-                          name="gender"
-                          value={profile.gender}
-                          onChange={handleChange}
-                          disabled={isFieldLocked}
-                          style={inputStyle}
-                          options={["Male", "Female", "Other"].map(v => ({ value: v, label: v }))}
-                        />
-                      </div>
+                    {/* Row 3: Blood Group, Height (cm), Weight (kg) */}
+                    <div className="profile-form-row-3col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px' }}>
                       <div className="flex flex-col gap-2">
                         <label className="text-muted" style={{ fontSize: '13px', fontWeight: '600' }}>Blood Group <em className="profile-req">*</em></label>
                         <ProfileSelect
@@ -1182,11 +1192,11 @@ export default function Profile() {
                       </div>
                       <div className="flex flex-col gap-2">
                         <label className="text-muted" style={{ fontSize: '13px', fontWeight: '600' }}>Height (cm)</label>
-                        <input name="height" type="number" value={profile.height} onChange={handleChange} readOnly={isFieldLocked} className="input-field" style={inputStyle} placeholder="E.g., 175" />
+                        <input name="height" type="number" value={profile.height} onChange={handleChange} readOnly={isFieldLocked} className="input-field" style={inputStyle} placeholder="e.g. 175" />
                       </div>
                       <div className="flex flex-col gap-2">
                         <label className="text-muted" style={{ fontSize: '13px', fontWeight: '600' }}>Weight (kg)</label>
-                        <input name="weight" type="number" value={profile.weight} onChange={handleChange} readOnly={isFieldLocked} className="input-field" style={inputStyle} placeholder="E.g., 70" />
+                        <input name="weight" type="number" value={profile.weight} onChange={handleChange} readOnly={isFieldLocked} className="input-field" style={inputStyle} placeholder="e.g. 70" />
                       </div>
                     </div>
                   </div>
@@ -1218,11 +1228,11 @@ export default function Profile() {
                     </div>
                     <div className="flex flex-col gap-2">
                       <label className="text-muted" style={{ fontSize: '13px', fontWeight: '600' }}>Allergies</label>
-                      <input name="allergies" value={profile.allergies} onChange={handleChange} readOnly={true} className="input-field" style={{ background: 'var(--bg-app)', borderColor: 'transparent', color: 'var(--text-main)', padding: '12px 16px' }} placeholder="E.g., Peanuts, Dust" />
+                      <input name="allergies" value={profile.allergies} onChange={handleChange} readOnly={true} className="input-field" style={{ background: 'var(--bg-app)', borderColor: 'transparent', color: 'var(--text-main)', padding: '12px 16px' }} placeholder="e.g. Peanuts, Dust" />
                     </div>
                     <div className="flex flex-col gap-2" style={{ gridColumn: '1 / -1' }}>
                       <label className="text-muted" style={{ fontSize: '13px', fontWeight: '600' }}>Chronic Diseases</label>
-                      <input name="chronicDiseases" value={profile.chronicDiseases} onChange={handleChange} readOnly={true} className="input-field" style={{ background: 'var(--bg-app)', borderColor: 'transparent', color: 'var(--text-main)', padding: '12px 16px' }} placeholder="E.g., Asthma, Diabetes" />
+                      <input name="chronicDiseases" value={profile.chronicDiseases} onChange={handleChange} readOnly={true} className="input-field" style={{ background: 'var(--bg-app)', borderColor: 'transparent', color: 'var(--text-main)', padding: '12px 16px' }} placeholder="e.g. Asthma, Diabetes" />
                     </div>
                     <div className="flex flex-col gap-2" style={{ gridColumn: '1 / -1' }}>
                       <label className="text-muted" style={{ fontSize: '13px', fontWeight: '600' }}>Current Medications</label>
@@ -1475,7 +1485,7 @@ export default function Profile() {
                     Personal Details
                   </div>
 
-                  <div className="modal-form-3col" style={{ display: 'grid', gridTemplateColumns: '1fr 2fr 1.6fr', gap: '12px' }}>
+                  <div className="modal-form-3col" style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '12px' }}>
                     <div className="flex flex-col family-modal-field">
                       <label className="family-modal-label">Title <em>*</em></label>
                       <ProfileSelect
@@ -1492,7 +1502,9 @@ export default function Profile() {
                       <label className="family-modal-label">Name <em>*</em></label>
                       <input name="name" value={memberForm.name} onChange={handleMemberFormChange} placeholder="Full Name" className="input-field" disabled={savingMember} />
                     </div>
+                  </div>
 
+                  <div className="modal-form-3col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.3fr', gap: '12px' }}>
                     <div className="flex flex-col family-modal-field">
                       <label className="family-modal-label">Relation <em>*</em></label>
                       <ProfileSelect
@@ -1504,9 +1516,7 @@ export default function Profile() {
                         options={[{ value: "", label: "None" }, ...["Spouse", "Son", "Daughter", "Father", "Mother", "Brother", "Sister", "Other"].map(v => ({ value: v, label: v }))]}
                       />
                     </div>
-                  </div>
 
-                  <div className="modal-form-3col" style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr', gap: '12px' }}>
                     <div className="flex flex-col family-modal-field">
                       <label className="family-modal-label">Date of Birth <em>*</em></label>
                       <input type="date" name="dob" value={memberForm.dob} max={new Date().toISOString().split('T')[0]} onChange={handleMemberFormChange} className="input-field" disabled={savingMember} />
@@ -3037,6 +3047,9 @@ export default function Profile() {
             grid-template-columns: 1fr 1fr !important;
             gap: 16px !important;
           }
+          .profile-form-row-3col {
+            gap: 16px !important;
+          }
         }
         @media (max-width: 900px) {
           .profile-grid { grid-template-columns: 1fr !important; gap: 24px !important; }
@@ -3055,6 +3068,16 @@ export default function Profile() {
             grid-template-columns: 1fr 1fr !important;
             gap: 12px !important;
           }
+          .profile-form-row-3col {
+            gap: 12px !important;
+          }
+          .profile-form-row-stack {
+            grid-template-columns: 1fr !important;
+            gap: 16px !important;
+          }
+          .profile-form-row-stack .profile-form-span-2 {
+            grid-column: auto !important;
+          }
         }
         @media (max-width: 480px) {
           .profile-form-card {
@@ -3062,6 +3085,9 @@ export default function Profile() {
           }
           .profile-form-row-4col {
             grid-template-columns: 1fr 1fr !important;
+            gap: 10px !important;
+          }
+          .profile-form-row-3col:not(.profile-form-row-stack) {
             gap: 10px !important;
           }
           .modal-form-2col, .modal-form-3col {

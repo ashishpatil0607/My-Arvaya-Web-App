@@ -1,8 +1,101 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { User, Phone, Calendar, ArrowRight, Droplet, Building, ChevronDown, CheckCircle2, Search, Loader2 } from "lucide-react";
+import { User, Phone, ArrowRight, Droplet, Building, ChevronDown, Search, Loader2, Check, VenusAndMars } from "lucide-react";
 import { getLocations } from "../services/dataService";
+
+// Custom dropdown styled like ProfileSelect on the Profile page
+function SignupSelect({ icon, value, options, onChange, wrapStyle }) {
+  const [open, setOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
+  const wrapRef = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handleOutside = (e) => {
+      if (!wrapRef.current?.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handleOutside);
+    return () => document.removeEventListener("mousedown", handleOutside);
+  }, [open]);
+
+  const openMenu = () => {
+    setActiveIndex(Math.max(0, options.indexOf(value)));
+    setOpen(true);
+  };
+
+  const choose = (opt) => {
+    onChange(opt);
+    setOpen(false);
+  };
+
+  const handleKeyDown = (e) => {
+    if (!open) {
+      if (["Enter", " ", "ArrowDown", "ArrowUp"].includes(e.key)) {
+        e.preventDefault();
+        openMenu();
+      }
+      return;
+    }
+    if (e.key === "Escape") {
+      e.preventDefault();
+      setOpen(false);
+    } else if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setActiveIndex(i => (i + 1) % options.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setActiveIndex(i => (i - 1 + options.length) % options.length);
+    } else if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      if (options[activeIndex]) choose(options[activeIndex]);
+    } else if (e.key === "Tab") {
+      setOpen(false);
+    }
+  };
+
+  return (
+    <div ref={wrapRef} style={{ position: "relative" }}>
+      <button
+        type="button"
+        className={`signup-field signup-select-trigger${open ? " is-open" : ""}`}
+        style={{ ...wrapStyle, cursor: "pointer", font: "inherit", textAlign: "left" }}
+        onClick={() => (open ? setOpen(false) : openMenu())}
+        onKeyDown={handleKeyDown}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+      >
+        {icon}
+        <span style={{ flex: 1, fontSize: "14px", fontWeight: 500, color: value ? "var(--text-main)" : "#8AA0A4", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {value || "Select"}
+        </span>
+        <ChevronDown size={16} className="signup-select-chevron" />
+      </button>
+      {open && (
+        <ul className="signup-select-menu" role="listbox">
+          {options.map((opt, i) => {
+            const isSelected = opt === value;
+            return (
+              <li
+                key={opt}
+                role="option"
+                aria-selected={isSelected}
+                className={`signup-select-option${isSelected ? " is-selected" : ""}${i === activeIndex ? " is-active" : ""}`}
+                onMouseEnter={() => setActiveIndex(i)}
+                onMouseDown={(e) => { e.preventDefault(); choose(opt); }}
+              >
+                <span>{opt}</span>
+                {isSelected && <Check size={15} />}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+const BRANCH_MENU_MAX = 300;
 
 export default function Signup() {
   const [searchParams] = useSearchParams();
@@ -22,6 +115,8 @@ export default function Signup() {
   const go = useNavigate();
   const location = useLocation();
   const dropdownRef = useRef(null);
+  const pageRef = useRef(null);
+  const [branchMenu, setBranchMenu] = useState({ up: false, maxHeight: BRANCH_MENU_MAX });
 
   const fetchedRef = useRef(false);
   // Synchronous guard so a fast double-click can't submit registration twice
@@ -114,17 +209,29 @@ export default function Signup() {
     }
   }
 
+  // Field styles mirror .input-field in global.css so Signup matches Login
+  const FIELD_HEIGHT = "46px";
   const inputWrap = {
-    display: "flex", alignItems: "center", gap: "8px",
-    border: "1.5px solid #edf1f6", borderRadius: "12px", padding: "0 12px",
-    background: "#fbfcfc", transition: "all 0.2s", minWidth: 0,
+    position: "relative",
+    display: "flex", alignItems: "center", gap: "10px",
+    height: FIELD_HEIGHT,
+    border: "1.5px solid var(--border)", borderRadius: "var(--radius-md)", padding: "0 14px",
+    background: "var(--bg-surface)", transition: "all 0.2s var(--ease-out)", minWidth: 0,
     width: "100%", boxSizing: "border-box"
   };
   const inputStyle = {
-    flex: 1, border: "none", outline: "none", padding: "10px 0",
-    fontSize: "14px", background: "transparent", color: "#2d3748",
+    flex: 1, border: "none", outline: "none", padding: 0, height: "100%",
+    fontSize: "14px", fontWeight: "500", background: "transparent", color: "var(--text-main)",
     minWidth: 0, width: "100%"
   };
+  // Uppercase muted labels with a red asterisk, matching the Profile page
+  const labelStyle = {
+    fontSize: "12px", fontWeight: "700", color: "#55738d",
+    textTransform: "uppercase", letterSpacing: "0.04em",
+    display: "block", marginBottom: "6px"
+  };
+  const reqStyle = { fontStyle: "normal", color: "#e11d48" };
+  const iconProps = { size: 16, color: "var(--primary)", style: { flexShrink: 0 } };
 
   const cleanText = (str) => {
     if (!str) return '';
@@ -141,300 +248,233 @@ export default function Signup() {
 
   const selectedLoc = locations.find(l => l.entitylocation === selectedBranch);
 
+  const branchQuery = branchSearch.trim().toLowerCase();
+  const filteredLocations = !branchQuery ? locations : locations.filter(loc =>
+    [loc.alt_name, loc.name, loc.city, loc.area, loc.street, loc.landmark, loc.entitylocation]
+      .some(v => v?.toLowerCase().includes(branchQuery))
+  );
+
+  // The page footer follows this container in normal flow, so the menu must fit within
+  // the container (and the viewport) — open upward when there isn't room below
+  const toggleBranch = () => {
+    if (branchOpen) {
+      setBranchOpen(false);
+      setBranchSearch("");
+      return;
+    }
+    const trigger = dropdownRef.current?.getBoundingClientRect();
+    const page = pageRef.current?.getBoundingClientRect();
+    if (trigger && page) {
+      const GAP = 8;
+      const spaceBelow = Math.min(window.innerHeight, page.bottom) - trigger.bottom - GAP * 2;
+      const spaceAbove = trigger.top - Math.max(0, page.top) - GAP * 2;
+      const up = spaceBelow < BRANCH_MENU_MAX && spaceAbove > spaceBelow;
+      setBranchMenu({ up, maxHeight: Math.max(160, Math.min(BRANCH_MENU_MAX, up ? spaceAbove : spaceBelow)) });
+    }
+    setBranchOpen(true);
+  };
+
   return (
-    <div style={{
+    <div ref={pageRef} className="signup-page" style={{
       minHeight: "calc(100vh - 130px)",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      background: "linear-gradient(150deg, var(--bg-app) 0%, #f0f7f7 100%)",
+      background: "var(--bg-app)",
       padding: "20px 16px",
       boxSizing: "border-box"
     }}>
-      <div style={{
+      <div className="signup-card" style={{
         width: "100%",
         maxWidth: "530px",
-        background: "#ffffff",
-        borderRadius: "22px",
-        boxShadow: "0 18px 45px rgba(46, 102, 110, 0.12), 0 4px 16px rgba(0,0,0,0.04)",
+        background: "var(--bg-surface)",
+        borderRadius: "var(--radius-xl)",
+        boxShadow: "var(--shadow-lg)",
         border: "1px solid var(--border)",
-        padding: "28px 32px",
+        padding: "32px",
         position: "relative",
         overflow: "visible", // Changed for dropdown
         boxSizing: "border-box"
       }}>
-        {/* Decorative Top Accent Bar */}
-        <div style={{
-          position: "absolute", top: 0, left: 0, right: 0, height: "4px",
-          background: "linear-gradient(90deg, var(--accent), var(--primary))",
-          borderTopLeftRadius: "22px", borderTopRightRadius: "22px"
-        }} />
-
         {/* Card Header */}
-        <div style={{ textAlign: "center", marginBottom: "18px" }}>
-          <div style={{ background: '#ffffff', padding: '6px 14px', borderRadius: '12px', display: 'inline-flex', marginBottom: '8px', boxShadow: '0 2px 10px rgba(0,0,0,0.04)', border: '1px solid var(--border)' }}>
-            <img src="/secure-hospitals-logo.png" alt="Secure Hospitals – Arvaya Healthcare Ltd." style={{ height: "30px", objectFit: 'contain' }} />
-          </div>
-          <h1 style={{ fontSize: "22px", color: "var(--text-main)", margin: "0 0 4px", fontWeight: "800", letterSpacing: "-0.01em" }}>
+        <div className="signup-header" style={{ textAlign: "center", marginBottom: "22px" }}>
+          <h1 className="signup-title" style={{ fontFamily: "var(--font-display)", fontSize: "22px", color: "var(--text-main)", margin: "0 0 6px", fontWeight: "800", letterSpacing: "-0.02em" }}>
             Complete Registration
           </h1>
-          <p style={{ color: "var(--text-muted)", fontSize: "13px", margin: 0 }}>
+          <p style={{ color: "var(--text-muted)", fontSize: "14px", margin: 0 }}>
             Enter your details to create your Arvaya account
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
           {/* Title, First Name & Last Name in Row */}
           <div>
-            <label style={{ fontSize: "12px", fontWeight: "700", color: "var(--text-main)", display: "block", marginBottom: "5px" }}>
-              Full Name *
-            </label>
-            <div className="signup-name-row" style={{ display: "grid", gridTemplateColumns: "84px 1fr 1fr", gap: "10px", width: "100%" }}>
+            <label style={labelStyle}>Full Name <em style={reqStyle}>*</em></label>
+            <div className="signup-name-row" style={{ display: "grid", gridTemplateColumns: "92px 1fr 1fr", gap: "10px", width: "100%" }}>
               {/* Title */}
-              <div style={{ minWidth: 0 }}>
-                <div style={{ ...inputWrap, padding: "0 8px" }}>
-                  <select
-                    value={title}
-                    onChange={e => setTitle(e.target.value)}
-                    style={{ ...inputStyle, cursor: "pointer", fontWeight: "700", color: "var(--primary-dark)" }}
-                  >
-                    <option value="Mr.">Mr.</option>
-                    <option value="Mrs.">Mrs.</option>
-                    <option value="Ms.">Ms.</option>
-                    <option value="Baby">Baby</option>
-                    <option value="Dr.">Dr.</option>
-                  </select>
-                </div>
-              </div>
+              <SignupSelect
+                value={title}
+                options={["Mr.", "Mrs.", "Ms.", "Baby", "Dr."]}
+                onChange={setTitle}
+                wrapStyle={inputWrap}
+              />
 
               {/* First Name */}
-              <div style={{ minWidth: 0 }}>
-                <div style={inputWrap}>
-                  <User size={15} color="var(--primary)" style={{ flexShrink: 0 }} />
-                  <input value={firstName} onChange={e => setFirstName(e.target.value)}
-                    placeholder="First Name" style={inputStyle} />
-                </div>
+              <div className="signup-field" style={inputWrap}>
+                <User {...iconProps} />
+                <input value={firstName} onChange={e => setFirstName(e.target.value)}
+                  autoComplete="given-name" autoCapitalize="words"
+                  placeholder="First Name" style={inputStyle} />
               </div>
 
               {/* Last Name */}
-              <div style={{ minWidth: 0 }}>
-                <div style={inputWrap}>
-                  <User size={15} color="var(--primary)" style={{ flexShrink: 0 }} />
-                  <input value={lastName} onChange={e => setLastName(e.target.value)}
-                    placeholder="Last Name" style={inputStyle} />
-                </div>
+              <div className="signup-field" style={inputWrap}>
+                <User {...iconProps} />
+                <input value={lastName} onChange={e => setLastName(e.target.value)}
+                  autoComplete="family-name" autoCapitalize="words"
+                  placeholder="Last Name" style={inputStyle} />
               </div>
             </div>
           </div>
 
-          {/* Gender */}
-          <div>
-            <label style={{ fontSize: "12px", fontWeight: "700", color: "var(--text-main)", display: "block", marginBottom: "5px" }}>
-              Gender *
-            </label>
-            <div style={{ display: "flex", gap: "10px" }}>
-              {["Male", "Female", "Other"].map((g) => {
-                const isSel = gender === g;
-                return (
-                  <button
-                    key={g}
-                    type="button"
-                    onClick={() => setGender(g)}
-                    style={{
-                      flex: 1,
-                      padding: "10px",
-                      borderRadius: "12px",
-                      border: isSel ? "2px solid var(--primary)" : "1.5px solid #edf1f6",
-                      background: isSel ? "var(--primary-light)" : "#fbfcfc",
-                      color: isSel ? "var(--primary-dark)" : "var(--text-muted)",
-                      fontWeight: isSel ? "700" : "500",
-                      fontSize: "14px",
-                      cursor: "pointer",
-                      transition: "all 0.2s"
-                    }}
-                  >
-                    {g}
-                  </button>
-                );
-              })}
+          {/* Gender & Blood Group */}
+          <div className="signup-pair" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+            <div style={{ minWidth: 0 }}>
+              <label style={labelStyle}>Gender <em style={reqStyle}>*</em></label>
+              <SignupSelect
+                icon={<VenusAndMars {...iconProps} />}
+                value={gender}
+                options={["Male", "Female", "Other"]}
+                onChange={setGender}
+                wrapStyle={inputWrap}
+              />
+            </div>
+
+            <div style={{ minWidth: 0 }}>
+              <label style={labelStyle}>Blood Group <em style={reqStyle}>*</em></label>
+              <SignupSelect
+                icon={<Droplet {...iconProps} />}
+                value={bloodGroup}
+                options={["B+", "A+", "O+", "AB+", "A-", "B-", "O-", "AB-"]}
+                onChange={setBloodGroup}
+                wrapStyle={inputWrap}
+              />
             </div>
           </div>
 
-          {/* Date of Birth & Blood Group */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
-            <div>
-              <label style={{ fontSize: "12px", fontWeight: "700", color: "var(--text-main)", display: "block", marginBottom: "5px" }}>
-                Date of Birth *
-              </label>
-              <div style={inputWrap}>
-                <Calendar size={15} color="var(--primary)" style={{ flexShrink: 0 }} />
+          {/* Date of Birth & Phone Number */}
+          <div className="signup-two-col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+            <div style={{ minWidth: 0 }}>
+              <label style={labelStyle}>Date of Birth <em style={reqStyle}>*</em></label>
+              <div className="signup-field" style={inputWrap}>
                 <input
                   type="date"
+                  className="signup-date"
                   value={dob}
                   min={new Date(new Date().setFullYear(new Date().getFullYear() - 150)).toISOString().split("T")[0]}
                   max={new Date().toISOString().split("T")[0]}
                   onChange={e => setDob(e.target.value)}
-                  style={{ ...inputStyle, fontFamily: "inherit" }}
+                  style={{ ...inputStyle, color: dob ? "var(--text-main)" : "#8AA0A4" }}
                 />
               </div>
             </div>
 
-            <div>
-              <label style={{ fontSize: "12px", fontWeight: "700", color: "var(--text-main)", display: "block", marginBottom: "5px" }}>
-                Blood Group *
-              </label>
-              <div style={{ ...inputWrap, padding: "0 8px" }}>
-                <Droplet size={15} color="var(--primary)" style={{ flexShrink: 0, marginLeft: "2px" }} />
-                <select
-                  value={bloodGroup}
-                  onChange={e => setBloodGroup(e.target.value)}
-                  style={{ ...inputStyle, cursor: "pointer", fontWeight: "600", color: "var(--text-main)" }}
-                >
-                  {["B+", "A+", "O+", "AB+", "A-", "B-", "O-", "AB-"].map(bg => (
-                    <option key={bg} value={bg}>{bg}</option>
-                  ))}
-                </select>
+            <div style={{ minWidth: 0 }}>
+              <label style={labelStyle}>Phone Number <em style={reqStyle}>*</em></label>
+              <div className="signup-field" style={inputWrap}>
+                <Phone {...iconProps} />
+                <input type="tel" inputMode="numeric" autoComplete="tel-national" value={phone}
+                  onChange={e => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                  placeholder="10-digit number" maxLength={10} style={inputStyle} />
               </div>
-            </div>
-          </div>
-
-          {/* Phone Number */}
-          <div>
-            <label style={{ fontSize: "12px", fontWeight: "700", color: "var(--text-main)", display: "block", marginBottom: "5px" }}>
-              Phone Number *
-            </label>
-            <div style={inputWrap}>
-              <Phone size={15} color="var(--primary)" style={{ flexShrink: 0 }} />
-              <input type="tel" value={phone} onChange={e => setPhone(e.target.value)}
-                placeholder="10-digit number" maxLength={10} style={inputStyle} />
             </div>
           </div>
 
           {/* Branch */}
           <div ref={dropdownRef} style={{ position: 'relative' }}>
-            <label style={{ fontSize: "12px", fontWeight: "700", color: "var(--text-main)", display: "block", marginBottom: "5px" }}>
-              Branch *
-            </label>
+            <label style={labelStyle}>Branch <em style={reqStyle}>*</em></label>
             <div
-              onClick={() => { setBranchOpen(!branchOpen); if (branchOpen) setBranchSearch(""); }}
+              className="signup-field"
+              onClick={toggleBranch}
               style={{
                 ...inputWrap,
                 cursor: "pointer",
-                padding: "10px 12px",
-                border: branchOpen ? "1.5px solid var(--primary)" : "1.5px solid #edf1f6"
+                ...(branchOpen && { borderColor: "var(--primary)", boxShadow: "0 0 0 4px rgba(46, 102, 110, 0.14)" })
               }}
             >
-              <Building size={15} color="var(--primary)" style={{ flexShrink: 0, marginLeft: "2px" }} />
-              <div style={{ flex: 1, fontSize: "14px", color: selectedLoc ? "var(--text-main)" : "#9ca3af", fontWeight: "600", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              <Building {...iconProps} />
+              <div style={{ flex: 1, fontSize: "14px", color: selectedLoc ? "var(--text-main)" : "#8AA0A4", fontWeight: "500", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                 {selectedLoc ? getBranchLabel(selectedLoc) : "Select Branch"}
               </div>
-              <ChevronDown size={16} color="var(--text-muted)" style={{ transition: "transform 0.2s", transform: branchOpen ? "rotate(180deg)" : "rotate(0deg)" }} />
+              <ChevronDown size={16} color="var(--text-muted)" style={{ flexShrink: 0, transition: "transform 0.2s", transform: branchOpen ? "rotate(180deg)" : "rotate(0deg)" }} />
             </div>
 
             {/* Custom Dropdown Menu */}
             {branchOpen && (
-              <div style={{
-                position: "absolute", top: "calc(100% + 8px)", left: 0, right: 0,
-                background: "#fff", borderRadius: "14px", border: "1px solid #edf1f6",
-                boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)",
-                maxHeight: "240px", overflowY: "auto", zIndex: 50, padding: "8px"
+              <div className="signup-branch-menu" style={{
+                position: "absolute", left: 0, right: 0,
+                ...(branchMenu.up ? { bottom: "calc(100% + 8px)" } : { top: "calc(100% + 8px)" }),
+                maxHeight: `${branchMenu.maxHeight}px`
               }}>
-                {/* Search Box */}
-                <div style={{ display: "flex", alignItems: "center", background: "var(--bg-surface)", border: "1px solid var(--border)", borderRadius: "10px", padding: "8px 12px", marginBottom: "6px" }}>
-                  <Search size={16} color="var(--primary)" />
+                {/* Search Box — stays pinned while the list scrolls */}
+                <div className="signup-branch-search">
+                  <Search size={16} color="var(--primary)" style={{ flexShrink: 0 }} />
                   <input
                     type="text"
+                    autoFocus
                     placeholder="Search branches..."
                     value={branchSearch}
                     onChange={e => setBranchSearch(e.target.value)}
                     onClick={e => e.stopPropagation()}
-                    style={{ border: "none", background: "transparent", outline: "none", width: "100%", fontSize: "13px", paddingLeft: "8px", color: "var(--text-main)" }}
                   />
                 </div>
 
-                {locations.length === 0 ? (
-                  <div style={{ padding: "12px", textAlign: "center", fontSize: "13px", color: "var(--text-muted)" }}>Loading branches...</div>
-                ) : (
-                  locations
-                    .filter(loc => {
-                      if (!branchSearch.trim()) return true;
-                      const q = branchSearch.toLowerCase();
-                      return (
-                        loc.alt_name?.toLowerCase().includes(q) ||
-                        loc.name?.toLowerCase().includes(q) ||
-                        loc.city?.toLowerCase().includes(q) ||
-                        loc.area?.toLowerCase().includes(q) ||
-                        loc.street?.toLowerCase().includes(q) ||
-                        loc.landmark?.toLowerCase().includes(q) ||
-                        loc.entitylocation?.toLowerCase().includes(q)
-                      );
-                    })
-                    .map(loc => {
+                <div className="signup-branch-list">
+                  {locations.length === 0 ? (
+                    <div className="signup-branch-empty">Loading branches...</div>
+                  ) : filteredLocations.length === 0 ? (
+                    <div className="signup-branch-empty">No branches found matching your search.</div>
+                  ) : (
+                    filteredLocations.map(loc => {
                       const isSelected = selectedBranch === loc.entitylocation;
                       return (
                         <button
                           key={loc.entitylocation}
                           type="button"
+                          className={`signup-branch-option${isSelected ? " is-selected" : ""}`}
                           onClick={() => { setSelectedBranch(loc.entitylocation); setBranchOpen(false); setBranchSearch(""); }}
-                          style={{
-                            display: "flex", alignItems: "flex-start", gap: "10px",
-                            padding: "12px", borderRadius: "10px", border: "none",
-                            background: isSelected ? "var(--primary-light)" : "transparent",
-                            cursor: "pointer", textAlign: "left", transition: "all 0.2s",
-                            width: "100%"
-                          }}
-                          onMouseEnter={(e) => !isSelected && (e.currentTarget.style.background = "#f8fafc")}
-                          onMouseLeave={(e) => !isSelected && (e.currentTarget.style.background = "transparent")}
                         >
-                          <div style={{ flex: 1 }}>
-                            <div style={{ fontSize: "13px", fontWeight: isSelected ? "700" : "600", color: isSelected ? "var(--primary-dark)" : "var(--text-main)", lineHeight: "1.4" }}>
-                              {getBranchLabel(loc)}
-                            </div>
-                          </div>
-                          {isSelected && <CheckCircle2 size={16} color="var(--primary)" style={{ flexShrink: 0, marginTop: "2px" }} />}
+                          <span style={{ flex: 1 }}>{getBranchLabel(loc)}</span>
+                          {isSelected && <Check size={16} style={{ flexShrink: 0, marginTop: "2px" }} />}
                         </button>
                       );
                     })
-                )}
-                {locations.length > 0 && locations.filter(loc => {
-                  if (!branchSearch.trim()) return true;
-                  const q = branchSearch.toLowerCase();
-                  return (
-                    loc.alt_name?.toLowerCase().includes(q) ||
-                    loc.name?.toLowerCase().includes(q) ||
-                    loc.city?.toLowerCase().includes(q) ||
-                    loc.area?.toLowerCase().includes(q) ||
-                    loc.street?.toLowerCase().includes(q) ||
-                    loc.landmark?.toLowerCase().includes(q) ||
-                    loc.entitylocation?.toLowerCase().includes(q)
-                  );
-                }).length === 0 && (
-                    <div style={{ padding: "16px", textAlign: "center", fontSize: "13px", color: "var(--text-muted)" }}>
-                      No branches found matching your search.
-                    </div>
                   )}
+                </div>
               </div>
             )}
           </div>
 
           {error && (
             <div style={{
-              background: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626",
+              background: "var(--danger-bg)", border: "1px solid #fecaca", color: "var(--danger)",
               padding: "10px 14px", borderRadius: "10px", fontSize: "13px", fontWeight: "500",
             }}>
               {error}
             </div>
           )}
 
-          <button type="submit" disabled={loading} style={{
-            background: "linear-gradient(135deg, #2e666e, #1f474d)",
-            color: "#ffffff", border: "none", padding: "14px", borderRadius: "12px",
-            fontSize: "15px", fontWeight: "700", cursor: loading ? "default" : "pointer",
+          <button type="submit" disabled={loading} className="signup-submit" style={{
+            background: "var(--primary)",
+            color: "var(--text-inverse)", border: "none", padding: "15px", borderRadius: "var(--radius-md)",
+            fontSize: "15px", fontWeight: "600", cursor: loading ? "default" : "pointer",
             display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
-            opacity: loading ? 0.6 : 1, transition: "all 0.25s", marginTop: "6px",
-            boxShadow: loading ? "none" : "0 6px 18px rgba(46, 102, 110, 0.3)", width: "100%"
+            opacity: loading ? 0.6 : 1, transition: "all 0.2s var(--ease-out)", marginTop: "4px",
+            boxShadow: loading ? "none" : "0 4px 12px rgba(46, 102, 110, 0.28)", width: "100%"
           }}>
-            {loading ? <><Loader2 size={17} className="animate-spin" /> Creating Account...</> : <span style={{ color: "#ffffff", display: "flex", alignItems: "center", gap: "8px", fontWeight: "700" }}>Complete Registration <ArrowRight size={17} color="#ffffff" /></span>}
+            {loading
+              ? <><Loader2 size={18} style={{ animation: "spin 0.8s linear infinite" }} /> Creating Account...</>
+              : <>Complete Registration <ArrowRight size={17} /></>}
           </button>
         </form>
 
@@ -447,8 +487,200 @@ export default function Signup() {
       </div>
 
       <style>{`
+        .signup-field:focus-within {
+          border-color: var(--primary) !important;
+          box-shadow: 0 0 0 4px rgba(46, 102, 110, 0.14);
+        }
+        .signup-field input::placeholder { color: #8AA0A4; font-weight: 400; }
+        .signup-field select option { color: var(--text-main); }
+        /* Date field matches Profile: plain date text with the native calendar icon on the right */
+        .signup-date,
+        .signup-date::-webkit-datetime-edit {
+          font-family: inherit;
+          letter-spacing: normal;
+        }
+        .signup-date::-webkit-calendar-picker-indicator {
+          cursor: pointer;
+          opacity: 0.75;
+          transition: opacity 0.15s ease;
+        }
+        .signup-date::-webkit-calendar-picker-indicator:hover {
+          opacity: 1;
+        }
+        .signup-submit:not(:disabled):hover {
+          background: var(--primary-dark) !important;
+          box-shadow: 0 4px 14px rgba(46, 102, 110, 0.35) !important;
+          transform: translateY(-1px);
+        }
+        .signup-select-chevron {
+          color: var(--primary);
+          flex-shrink: 0;
+          transition: transform 0.2s ease;
+        }
+        .signup-select-trigger.is-open {
+          border-color: var(--primary) !important;
+          box-shadow: 0 0 0 4px rgba(46, 102, 110, 0.14);
+        }
+        .signup-select-trigger.is-open .signup-select-chevron {
+          transform: rotate(180deg);
+        }
+        .signup-select-menu {
+          position: absolute;
+          left: 0;
+          min-width: 100%;
+          width: max-content;
+          top: calc(100% + 6px);
+          z-index: 50;
+          margin: 0;
+          padding: 6px;
+          list-style: none;
+          max-height: 260px;
+          overflow-y: auto;
+          background: var(--bg-surface);
+          border: 1px solid var(--primary-soft);
+          border-radius: 14px;
+          box-shadow: 0 14px 32px rgba(18, 51, 58, 0.14), 0 2px 6px rgba(18, 51, 58, 0.06);
+          animation: signupSelectIn 0.16s ease-out;
+        }
+        .signup-select-option {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          padding: 9px 12px;
+          border-radius: 10px;
+          font-size: 14px;
+          font-weight: 500;
+          color: var(--text-main);
+          cursor: pointer;
+          transition: background 0.15s ease, color 0.15s ease;
+        }
+        .signup-select-option.is-active {
+          background: var(--bg-app);
+          color: var(--primary);
+        }
+        .signup-select-option.is-selected {
+          background: var(--primary-light);
+          color: var(--primary-dark);
+          font-weight: 700;
+        }
+        .signup-branch-menu {
+          display: flex;
+          flex-direction: column;
+          z-index: 50;
+          padding: 8px;
+          background: var(--bg-surface);
+          border: 1px solid var(--primary-soft);
+          border-radius: 14px;
+          box-shadow: 0 14px 32px rgba(18, 51, 58, 0.14), 0 2px 6px rgba(18, 51, 58, 0.06);
+          overflow: hidden;
+          animation: signupSelectIn 0.16s ease-out;
+        }
+        .signup-branch-search {
+          flex-shrink: 0;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 0 12px;
+          height: 42px;
+          margin-bottom: 6px;
+          background: var(--bg-surface);
+          border: 1.5px solid var(--border);
+          border-radius: 10px;
+          transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+        .signup-branch-search:focus-within {
+          border-color: var(--primary);
+          box-shadow: 0 0 0 3px rgba(46, 102, 110, 0.12);
+        }
+        .signup-branch-search input {
+          flex: 1;
+          min-width: 0;
+          border: none;
+          outline: none;
+          background: transparent;
+          font-size: 14px;
+          color: var(--text-main);
+        }
+        .signup-branch-search input::placeholder { color: #8AA0A4; }
+        .signup-branch-list {
+          flex: 1;
+          min-height: 0;
+          overflow-y: auto;
+          overscroll-behavior: contain;
+        }
+        .signup-branch-option {
+          display: flex;
+          align-items: flex-start;
+          gap: 10px;
+          width: 100%;
+          padding: 12px;
+          border: none;
+          border-radius: 10px;
+          background: transparent;
+          text-align: left;
+          font: inherit;
+          font-size: 13.5px;
+          font-weight: 600;
+          line-height: 1.45;
+          color: var(--text-main);
+          cursor: pointer;
+          transition: background 0.15s ease, color 0.15s ease;
+        }
+        .signup-branch-option:hover {
+          background: var(--bg-app);
+          color: var(--primary);
+        }
+        .signup-branch-option.is-selected {
+          background: var(--primary-light);
+          color: var(--primary-dark);
+          font-weight: 700;
+        }
+        .signup-branch-empty {
+          padding: 16px 12px;
+          text-align: center;
+          font-size: 13px;
+          color: var(--text-muted);
+        }
+        @keyframes signupSelectIn {
+          from { opacity: 0; transform: translateY(-4px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
         @media (max-width: 520px) {
+          .signup-page {
+            align-items: flex-start !important;
+            padding: 12px 12px 24px !important;
+            min-height: auto !important;
+          }
+          .signup-card {
+            padding: 22px 16px !important;
+            border-radius: var(--radius-lg) !important;
+          }
+          .signup-header { margin-bottom: 18px !important; }
+          .signup-title { font-size: 20px !important; }
+          /* Title + First Name share a row, Last Name gets its own */
           .signup-name-row {
+            grid-template-columns: 88px 1fr !important;
+          }
+          .signup-name-row > :last-child {
+            grid-column: 1 / -1;
+          }
+          .signup-two-col {
+            grid-template-columns: 1fr !important;
+          }
+          /* 16px stops iOS Safari from zooming in when a field is focused */
+          .signup-field input,
+          .signup-field span,
+          .signup-card input {
+            font-size: 16px !important;
+          }
+          .signup-select-option {
+            padding: 12px !important;
+            font-size: 15px;
+          }
+        }
+        @media (max-width: 340px) {
+          .signup-pair {
             grid-template-columns: 1fr !important;
           }
         }

@@ -8418,6 +8418,9 @@ header.glass .header-secondary-nav a:focus-visible {
       #fff 60%);
   border: 1px solid color-mix(in srgb, var(--review-accent) 18%, transparent);
   border-radius: 22px;
+  /* card text is read-only — no I-beam cursor or blinking caret */
+  cursor: default;
+  caret-color: transparent;
   transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
@@ -8542,6 +8545,9 @@ header.glass .header-secondary-nav a:focus-visible {
   background: #fff;
   border-radius: 24px;
   box-shadow: 0 30px 80px rgba(15, 23, 42, 0.3);
+  /* review text is read-only — no I-beam cursor or blinking caret */
+  cursor: default;
+  caret-color: transparent;
   animation: reviewModalPop 0.25s cubic-bezier(0.2, 0.9, 0.3, 1.2);
 }
 
