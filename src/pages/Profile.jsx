@@ -1120,7 +1120,7 @@ export default function Profile() {
                     <div className="profile-form-row-3col profile-form-row-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px' }}>
                       <div className="profile-form-span-2" style={{ display: 'grid', gridTemplateColumns: '110px 1fr', gap: '12px', gridColumn: 'span 2' }}>
                         <div className="flex flex-col gap-2">
-                          <label className="text-muted" style={{ fontSize: '13px', fontWeight: '600' }}>Title <em className="profile-req">*</em></label>
+                          <label className="text-muted" style={{ fontSize: '13px', fontWeight: '600' }}>Title <span className="required-star">*</span></label>
                           <ProfileSelect
                             name="title"
                             value={profile.title || ""}
@@ -1131,12 +1131,12 @@ export default function Profile() {
                           />
                         </div>
                         <div className="flex flex-col gap-2">
-                          <label className="text-muted" style={{ fontSize: '13px', fontWeight: '600' }}>Full Name <em className="profile-req">*</em></label>
+                          <label className="text-muted" style={{ fontSize: '13px', fontWeight: '600' }}>Full Name <span className="required-star">*</span></label>
                           <input name="name" value={profile.name} onChange={handleChange} readOnly={isFieldLocked} className="input-field" style={inputStyle} />
                         </div>
                       </div>
                       <div className="flex flex-col gap-2">
-                        <label className="text-muted" style={{ fontSize: '13px', fontWeight: '600' }}>Gender <em className="profile-req">*</em></label>
+                        <label className="text-muted" style={{ fontSize: '13px', fontWeight: '600' }}>Gender <span className="required-star">*</span></label>
                         <ProfileSelect
                           name="gender"
                           value={profile.gender}
@@ -1151,7 +1151,7 @@ export default function Profile() {
                     {/* Row 2: Phone Number, Email Address & Date of Birth */}
                     <div className="profile-form-row-3col profile-form-row-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px' }}>
                       <div className="flex flex-col gap-2">
-                        <label className="text-muted" style={{ fontSize: '13px', fontWeight: '600' }}>Phone Number <em className="profile-req">*</em></label>
+                        <label className="text-muted" style={{ fontSize: '13px', fontWeight: '600' }}>Phone Number <span className="required-star">*</span></label>
                         <div style={{ position: 'relative' }}>
                           <input name="phone" value={profile.phone} readOnly className="input-field" style={{ background: 'var(--bg-app)', borderColor: 'transparent', color: 'var(--text-main)', padding: '12px 40px 12px 16px', cursor: isEditing ? 'not-allowed' : undefined, width: '100%' }} />
                           <Lock size={15} className="profile-input-lock" aria-label="Phone number cannot be changed" />
@@ -1162,7 +1162,7 @@ export default function Profile() {
                         <input name="email" value={profile.email || ""} onChange={handleChange} readOnly={isFieldLocked} className="input-field" style={inputStyle} placeholder="Enter email address" />
                       </div>
                       <div className="flex flex-col gap-2">
-                        <label className="text-muted" style={{ fontSize: '13px', fontWeight: '600' }}>Date of Birth <em className="profile-req">*</em></label>
+                        <label className="text-muted" style={{ fontSize: '13px', fontWeight: '600' }}>Date of Birth <span className="required-star">*</span></label>
                         <input
                           type="date"
                           name="dob"
@@ -1180,7 +1180,7 @@ export default function Profile() {
                     {/* Row 3: Blood Group, Height (cm), Weight (kg) */}
                     <div className="profile-form-row-3col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px' }}>
                       <div className="flex flex-col gap-2">
-                        <label className="text-muted" style={{ fontSize: '13px', fontWeight: '600' }}>Blood Group <em className="profile-req">*</em></label>
+                        <label className="text-muted" style={{ fontSize: '13px', fontWeight: '600' }}>Blood Group <span className="required-star">*</span></label>
                         <ProfileSelect
                           name="bloodGroup"
                           value={profile.bloodGroup}
@@ -1487,7 +1487,7 @@ export default function Profile() {
 
                   <div className="modal-form-3col" style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '12px' }}>
                     <div className="flex flex-col family-modal-field">
-                      <label className="family-modal-label">Title <em>*</em></label>
+                      <label className="family-modal-label">Title <span className="required-star">*</span></label>
                       <ProfileSelect
                         compact
                         name="title"
@@ -1499,14 +1499,14 @@ export default function Profile() {
                     </div>
 
                     <div className="flex flex-col family-modal-field">
-                      <label className="family-modal-label">Name <em>*</em></label>
+                      <label className="family-modal-label">Name <span className="required-star">*</span></label>
                       <input name="name" value={memberForm.name} onChange={handleMemberFormChange} placeholder="Full Name" className="input-field" disabled={savingMember} />
                     </div>
                   </div>
 
                   <div className="modal-form-3col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.3fr', gap: '12px' }}>
                     <div className="flex flex-col family-modal-field">
-                      <label className="family-modal-label">Relation <em>*</em></label>
+                      <label className="family-modal-label">Relation <span className="required-star">*</span></label>
                       <ProfileSelect
                         compact
                         name="relation"
@@ -1518,12 +1518,12 @@ export default function Profile() {
                     </div>
 
                     <div className="flex flex-col family-modal-field">
-                      <label className="family-modal-label">Date of Birth <em>*</em></label>
+                      <label className="family-modal-label">Date of Birth <span className="required-star">*</span></label>
                       <input type="date" name="dob" value={memberForm.dob} max={new Date().toISOString().split('T')[0]} onChange={handleMemberFormChange} className="input-field" disabled={savingMember} />
                     </div>
 
                     <div className="flex flex-col family-modal-field">
-                      <label className="family-modal-label">Gender <em>*</em></label>
+                      <label className="family-modal-label">Gender <span className="required-star">*</span></label>
                       <div className="family-modal-segment" role="radiogroup" aria-label="Gender">
                         {["Male", "Female", "Other"].map(g => (
                           <button
@@ -1551,7 +1551,7 @@ export default function Profile() {
                   </div>
 
                   <div className="flex flex-col family-modal-field">
-                    <label className="family-modal-label">Blood Group <em>*</em></label>
+                    <label className="family-modal-label">Blood Group <span className="required-star">*</span></label>
                     <div className="family-modal-blood" role="radiogroup" aria-label="Blood Group">
                       {["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"].map(bg => (
                         <button
@@ -1570,7 +1570,7 @@ export default function Profile() {
                   </div>
 
                   <div className="flex flex-col family-modal-field">
-                    <label className="family-modal-label">Entity Location <em>*</em></label>
+                    <label className="family-modal-label">Entity Location <span className="required-star">*</span></label>
                     <div ref={locationDropdownRef} style={{ position: 'relative' }}>
                       <div
                         onClick={() => {
@@ -2386,11 +2386,6 @@ export default function Profile() {
           color: #55738d;
           text-transform: uppercase;
           letter-spacing: 0.05em;
-        }
-        .profile-req,
-        .family-modal-label em {
-          font-style: normal;
-          color: #e11d48;
         }
         .family-modal .input-field {
           border-radius: 12px;

@@ -152,7 +152,7 @@ export default function AccountDeletion() {
                 {/* Input Group */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <label htmlFor="email" style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-main)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    Email Address <span style={{ color: 'var(--danger)' }}>*</span>
+                    Email Address <span className="required-star">*</span>
                   </label>
                   <div style={{ position: 'relative' }}>
                     <div style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}>
@@ -175,7 +175,7 @@ export default function AccountDeletion() {
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <label htmlFor="phone" style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-main)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    Phone Number <span style={{ color: 'var(--danger)' }}>*</span>
+                    Phone Number <span className="required-star">*</span>
                   </label>
                   <div style={{ position: 'relative' }}>
                     <div style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}>

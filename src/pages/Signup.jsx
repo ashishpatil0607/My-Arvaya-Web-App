@@ -230,7 +230,6 @@ export default function Signup() {
     textTransform: "uppercase", letterSpacing: "0.04em",
     display: "block", marginBottom: "6px"
   };
-  const reqStyle = { fontStyle: "normal", color: "#e11d48" };
   const iconProps = { size: 16, color: "var(--primary)", style: { flexShrink: 0 } };
 
   const cleanText = (str) => {
@@ -309,7 +308,7 @@ export default function Signup() {
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
           {/* Title, First Name & Last Name in Row */}
           <div>
-            <label style={labelStyle}>Full Name <em style={reqStyle}>*</em></label>
+            <label style={labelStyle}>Full Name <span className="required-star">*</span></label>
             <div className="signup-name-row" style={{ display: "grid", gridTemplateColumns: "92px 1fr 1fr", gap: "10px", width: "100%" }}>
               {/* Title */}
               <SignupSelect
@@ -340,7 +339,7 @@ export default function Signup() {
           {/* Gender & Blood Group */}
           <div className="signup-pair" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
             <div style={{ minWidth: 0 }}>
-              <label style={labelStyle}>Gender <em style={reqStyle}>*</em></label>
+              <label style={labelStyle}>Gender <span className="required-star">*</span></label>
               <SignupSelect
                 icon={<VenusAndMars {...iconProps} />}
                 value={gender}
@@ -351,7 +350,7 @@ export default function Signup() {
             </div>
 
             <div style={{ minWidth: 0 }}>
-              <label style={labelStyle}>Blood Group <em style={reqStyle}>*</em></label>
+              <label style={labelStyle}>Blood Group <span className="required-star">*</span></label>
               <SignupSelect
                 icon={<Droplet {...iconProps} />}
                 value={bloodGroup}
@@ -365,7 +364,7 @@ export default function Signup() {
           {/* Date of Birth & Phone Number */}
           <div className="signup-two-col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
             <div style={{ minWidth: 0 }}>
-              <label style={labelStyle}>Date of Birth <em style={reqStyle}>*</em></label>
+              <label style={labelStyle}>Date of Birth <span className="required-star">*</span></label>
               <div className="signup-field" style={inputWrap}>
                 <input
                   type="date"
@@ -380,7 +379,7 @@ export default function Signup() {
             </div>
 
             <div style={{ minWidth: 0 }}>
-              <label style={labelStyle}>Phone Number <em style={reqStyle}>*</em></label>
+              <label style={labelStyle}>Phone Number <span className="required-star">*</span></label>
               <div className="signup-field" style={inputWrap}>
                 <Phone {...iconProps} />
                 <input type="tel" inputMode="numeric" autoComplete="tel-national" value={phone}
@@ -392,7 +391,7 @@ export default function Signup() {
 
           {/* Branch */}
           <div ref={dropdownRef} style={{ position: 'relative' }}>
-            <label style={labelStyle}>Branch <em style={reqStyle}>*</em></label>
+            <label style={labelStyle}>Branch <span className="required-star">*</span></label>
             <div
               className="signup-field"
               onClick={toggleBranch}

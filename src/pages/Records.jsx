@@ -1100,7 +1100,7 @@ export default function Records() {
                 ) : (
                   <div>
                     <Upload size={20} color="var(--primary)" style={{ margin: '0 auto 2px', opacity: 0.8 }} />
-                    <p style={{ margin: 0, fontWeight: '600', color: 'var(--text-main)', fontSize: '12px' }}>Click or drag file to upload *</p>
+                    <p style={{ margin: 0, fontWeight: '600', color: 'var(--text-main)', fontSize: '12px' }}>Click or drag file to upload <span className="required-star">*</span></p>
                     <p style={{ margin: '1px 0 0', fontSize: '10px', color: 'var(--muted)' }}>Supports PDF, JPG, PNG up to 10MB</p>
                   </div>
                 )}
@@ -1108,7 +1108,7 @@ export default function Records() {
 
               {/* Record Title Input */}
               <div style={{ marginBottom: '8px' }}>
-                <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: 'var(--text-main)', marginBottom: '3px' }}>Document Name / Title *</label>
+                <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: 'var(--text-main)', marginBottom: '3px' }}>Document Name / Title <span className="required-star">*</span></label>
                 <input 
                   type="text" 
                   placeholder="e.g. Blood Test Report, Chest X-Ray..." 

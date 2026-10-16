@@ -17393,3 +17393,11 @@ schedule-calendar-card {
   }
   .cj-loader-core { animation: none; }
 }
+
+/* Mandatory field marker — use <span className="required-star">*</span> on every required label */
+.required-star {
+  color: var(--danger);
+  font-style: normal;
+  font-weight: 700;
+  margin-left: 2px;
+}

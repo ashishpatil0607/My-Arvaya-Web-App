@@ -3587,7 +3587,7 @@ function AbhaCreate({
                   marginBottom: "3px",
                 }}
               >
-                Full Name
+                Full Name <span className="required-star">*</span>
               </label>
               <input
                 className="input-field"
@@ -3622,7 +3622,7 @@ function AbhaCreate({
                   marginBottom: "3px",
                 }}
               >
-                Mobile Number
+                Mobile Number <span className="required-star">*</span>
               </label>
               <input
                 className="input-field"
@@ -3667,7 +3667,7 @@ function AbhaCreate({
                   marginBottom: "3px",
                 }}
               >
-                Date of Birth
+                Date of Birth <span className="required-star">*</span>
               </label>
               <DobPicker
                 value={form.dob}
@@ -5171,7 +5171,7 @@ function ChooseProfile({
                         textTransform: "uppercase",
                       }}
                     >
-                      UHID <span style={{ color: "#ef4444" }}>*</span>
+                      UHID <span className="required-star">*</span>
                     </label>
                     {/* <span
                       style={{
