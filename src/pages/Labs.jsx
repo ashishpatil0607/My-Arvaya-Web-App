@@ -3573,6 +3573,7 @@ function toTitleCase(str) {
           </div>
         ) : (
         <>
+        {/* Collection Preference — hidden for now (defaults to "home" visit). To re-enable, remove this comment wrapper.
         <div style={{ marginBottom: "0px" }}>
           <label style={{ display: "block", fontSize: "14px", fontWeight: "700", color: "var(--text-main)", marginBottom: "12px" }}>
             Select Collection Preference
@@ -3616,6 +3617,7 @@ function toTitleCase(str) {
             </label>
           </div>
         </div>
+        */}
 
         <SelectSlotUI onConfirm={confirmBooking} type="lab" submitting={submitting} />
         </>

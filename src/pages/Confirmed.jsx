@@ -284,9 +284,12 @@ export default function Confirmed() {
                  <span className="cf-row-icon"><Clock size={18} /></span> {slot}
                </span>
                )}
+               {/* Collection preference row hidden for lab bookings for now. To re-enable, remove the `bookingType !== 'lab' &&` condition below. */}
+               {bookingType !== 'lab' && (
                <span className="receipt-row">
                  <span className="cf-row-icon">{isCenterVisit ? <Building2 size={18} /> : <MapPin size={18} />}</span> {bookingType === 'lab' ? (isCenterVisit ? "Diagnostic Center Visit" : "Home Collection") : (doctor?.hospital || "Arvaya Clinic")}
                </span>
+               )}
              </div>
           </div>
 

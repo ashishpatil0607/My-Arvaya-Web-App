@@ -479,7 +479,7 @@ export default function Signup() {
 
         <p style={{ textAlign: "center", marginTop: "16px", marginBottom: 0, fontSize: "13px", color: "var(--text-muted)" }}>
           Already have an account?{" "}
-          <Link to="/login" style={{ color: "var(--primary)", fontWeight: "700", textDecoration: "none" }}>
+          <Link to="/" state={{ authRequired: true }} style={{ color: "var(--primary)", fontWeight: "700", textDecoration: "none" }}>
             Sign In
           </Link>
         </p>

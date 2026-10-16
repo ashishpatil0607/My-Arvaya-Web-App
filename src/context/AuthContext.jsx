@@ -3,6 +3,7 @@ import * as authService from "../services/authService";
 import { getPatients } from "../services/dataService";
 import Toast from "../components/common/Toast";
 import { removeFcmToken } from "../services/firebase";
+import { useNavigate } from "react-router-dom";
 
 function setCookie(name, value, days = 365) {
   if (typeof document === "undefined" || !value) return;
@@ -28,6 +29,7 @@ function deleteCookie(name) {
 const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
+  const navigate = useNavigate();
   const [user, setUser] = useState(() => {
     const saved = localStorage.getItem("arvaya_user");
     try {
@@ -253,6 +255,9 @@ export function AuthProvider({ children }) {
 
       deleteCookie("token");
       deleteCookie("arvaya_token");
+      // Go home in the same render batch as clearing the user, so ProtectedRoute
+      // never sees a guest on a protected page and pops the login modal.
+      navigate("/", { replace: true });
       setToken(null);
       setUser(null);
       setLinkedProfiles([]);
