@@ -1661,12 +1661,6 @@ export default function Home() {
           gap: 20px;
         }
 
-        @media (max-width: 768px) {
-          .how-it-works-grid {
-            grid-template-columns: 1fr !important;
-            gap: 64px !important;
-          }
-        }
 
 
       `}</style>

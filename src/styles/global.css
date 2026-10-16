@@ -615,31 +615,42 @@ input[type="radio"]:focus-visible {
   overflow: hidden;
   gap: 16px;
   padding: 18px 18px 20px;
+  /* tinted surface so each card carries its own colour */
   background:
-    linear-gradient(135deg, color-mix(in srgb, var(--tf-bg) 55%, #fff) 0%, #fff 60%);
-  border: 1px solid color-mix(in srgb, var(--tf-color) 14%, transparent);
+    linear-gradient(120deg,
+      color-mix(in srgb, var(--tf-color) 10%, #fff) 0%,
+      color-mix(in srgb, var(--tf-color) 3%, #fff) 70%,
+      #fff 100%);
+  border: 1px solid color-mix(in srgb, var(--tf-color) 22%, transparent);
   border-radius: 18px;
-  box-shadow: 0 6px 18px rgba(5, 73, 78, 0.05);
+  box-shadow:
+    0 16px 32px -14px color-mix(in srgb, var(--tf-color) 34%, transparent),
+    0 2px 6px rgba(5, 73, 78, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
   transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
 }
 
-/* accent line along the bottom */
+/* gradient accent line along the bottom */
 .trust-features-panel--home .trust-feature-item::after {
   content: "";
   position: absolute;
+  z-index: 1;
   left: 18px;
   bottom: 0;
-  width: 32px;
+  width: 40px;
   height: 3px;
-  background: var(--tf-color);
+  background: linear-gradient(90deg, var(--tf-color), color-mix(in srgb, var(--tf-color) 45%, #fff));
   border-radius: 999px 999px 0 0;
   transition: width 0.3s ease;
 }
 
 .trust-features-panel--home .trust-feature-item:hover {
   transform: translateY(-3px);
-  border-color: color-mix(in srgb, var(--tf-color) 32%, transparent);
-  box-shadow: 0 14px 28px color-mix(in srgb, var(--tf-color) 16%, transparent);
+  border-color: color-mix(in srgb, var(--tf-color) 45%, transparent);
+  box-shadow:
+    0 24px 44px -16px color-mix(in srgb, var(--tf-color) 45%, transparent),
+    0 2px 6px rgba(5, 73, 78, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
 .trust-features-panel--home .trust-feature-item:hover::after {
@@ -656,7 +667,7 @@ input[type="radio"]:focus-visible {
       color-mix(in srgb, var(--tf-color) 70%, #fff),
       var(--tf-color)) !important;
   box-shadow:
-    0 0 0 5px var(--tf-bg),
+    0 0 0 4px #fff,
     0 10px 20px color-mix(in srgb, var(--tf-color) 28%, transparent);
 }
 
@@ -689,6 +700,64 @@ input[type="radio"]:focus-visible {
   .trust-feature-item {
     align-items: flex-start;
     padding: 12px;
+  }
+}
+
+/* Home strip on phones: compact 2x2 grid with stacked, centred cards */
+@media (max-width: 640px) {
+  .trust-features-panel--home .trust-features-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .trust-features-panel--home .trust-feature-item {
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 18px 12px 20px;
+    text-align: center;
+  }
+
+  .trust-features-panel--home .trust-feature-item {
+    background:
+      linear-gradient(180deg,
+        color-mix(in srgb, var(--tf-color) 10%, #fff) 0%,
+        color-mix(in srgb, var(--tf-color) 3%, #fff) 70%,
+        #fff 100%);
+  }
+
+  .trust-features-panel--home .trust-feature-item::after {
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  .trust-features-panel--home .trust-feature-item:hover::after {
+    width: 60%;
+  }
+
+  .trust-features-panel--home .trust-feature-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 14px;
+  }
+
+  .trust-features-panel--home .trust-feature-icon svg {
+    width: 21px;
+    height: 21px;
+  }
+
+  .trust-features-panel--home .trust-feature-item h4 {
+    font-size: 14.5px;
+  }
+
+  .trust-features-panel--home .trust-feature-item p {
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 330px) {
+  .trust-features-panel--home .trust-features-grid {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -7313,21 +7382,21 @@ header.glass .header-secondary-nav a:focus-visible {
 .card-elevated,
 .full-calendar-card,
 .booking-doctor-card,
-.booking-confirmed-card,
-.all-tests-card,
-.all-pkg-card,
-.lab-card,
-.pkg-card {
+.booking-confirmed-card {
   border: 1px solid var(--primary-soft) !important;
   border-radius: 22px !important;
   box-shadow: var(--shadow-md) !important;
 }
 
-.card-elevated:hover,
-.all-tests-card:hover,
-.all-pkg-card:hover,
-.lab-card:hover,
-.pkg-card:hover {
+/* lab/package cards set their own accent-coloured border & shadow on their pages */
+.all-tests-card,
+.all-pkg-card,
+.lab-card,
+.pkg-card {
+  border-radius: 22px !important;
+}
+
+.card-elevated:hover {
   border-color: rgba(8, 120, 125, 0.28) !important;
   box-shadow: var(--shadow-lg) !important;
 }
@@ -7556,9 +7625,10 @@ header.glass .header-secondary-nav a:focus-visible {
 .how-it-works-grid {
   position: relative;
   z-index: 1;
+  --how-gap: 96px;
   grid-template-columns: repeat(3, minmax(0, 300px)) !important;
   justify-content: center;
-  gap: 96px !important;
+  gap: var(--how-gap) !important;
 }
 
 .home-how-card {
@@ -7569,45 +7639,61 @@ header.glass .header-secondary-nav a:focus-visible {
   padding: 52px 22px 30px;
   overflow: visible;
   text-align: center;
-  background: rgba(255, 255, 255, 0.97);
-  border: 1px solid rgba(8, 120, 125, 0.14);
+  /* tinted surface so each step carries its own colour */
+  background:
+    linear-gradient(165deg,
+      color-mix(in srgb, var(--step-accent) 14%, #fff) 0%,
+      color-mix(in srgb, var(--step-accent) 5%, #fff) 45%,
+      #fff 100%);
+  border: 1px solid color-mix(in srgb, var(--step-accent) 24%, transparent);
   border-radius: 22px;
-  box-shadow: 0 14px 30px rgba(5, 73, 78, 0.09);
+  box-shadow:
+    0 20px 40px -14px color-mix(in srgb, var(--step-accent) 34%, transparent),
+    0 2px 6px rgba(5, 73, 78, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
   transition: transform 0.35s ease, box-shadow 0.35s ease, border-color 0.35s ease;
 }
 
-/* accent bar along the bottom edge */
+/* gradient accent bar along the bottom edge */
 .home-how-card::before {
   content: "";
   position: absolute;
   z-index: 1;
   left: 50%;
   bottom: 0;
-  width: 44px;
+  width: 56px;
   height: 4px;
   transform: translateX(-50%);
-  background: var(--step-accent);
+  background: linear-gradient(90deg,
+      color-mix(in srgb, var(--step-accent) 55%, #fff),
+      var(--step-accent),
+      color-mix(in srgb, var(--step-accent) 55%, #fff));
   border-radius: 999px 999px 0 0;
-  transition: width 0.35s ease;
+  transition: width 0.35s ease, height 0.35s ease;
 }
 
-/* soft accent wash at the top of the card */
+/* accent glow radiating from behind the icon */
 .home-how-card::after {
   content: "";
   position: absolute;
   inset: 0;
   z-index: 0;
   border-radius: inherit;
-  background: linear-gradient(180deg, var(--step-soft) 0%, transparent 55%);
-  opacity: 0.7;
+  background:
+    radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--step-accent) 22%, transparent) 0%, transparent 58%),
+    radial-gradient(circle at 100% 100%, color-mix(in srgb, var(--step-accent) 10%, transparent) 0%, transparent 45%);
+  opacity: 0.8;
   pointer-events: none;
   transition: opacity 0.35s ease;
 }
 
 .home-how-card:hover {
   transform: translateY(-8px);
-  border-color: color-mix(in srgb, var(--step-accent) 35%, transparent);
-  box-shadow: 0 24px 44px color-mix(in srgb, var(--step-accent) 18%, transparent);
+  border-color: color-mix(in srgb, var(--step-accent) 45%, transparent);
+  box-shadow:
+    0 30px 54px -16px color-mix(in srgb, var(--step-accent) 45%, transparent),
+    0 2px 6px rgba(5, 73, 78, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
 .home-how-card:hover::before {
@@ -7627,7 +7713,7 @@ header.glass .header-secondary-nav a:focus-visible {
   font-size: 54px;
   font-weight: 900;
   line-height: 1;
-  opacity: 0.09;
+  opacity: 0.13;
   pointer-events: none;
   transition: opacity 0.35s ease, transform 0.35s ease;
 }
@@ -7743,9 +7829,10 @@ header.glass .header-secondary-nav a:focus-visible {
   color: var(--step-accent);
   font-size: 12px;
   font-weight: 600;
-  background: var(--step-soft);
-  border: 1px solid color-mix(in srgb, var(--step-accent) 20%, transparent);
+  background: #fff;
+  border: 1px solid color-mix(in srgb, var(--step-accent) 28%, transparent);
   border-radius: 999px;
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--step-accent) 14%, transparent);
 }
 
 .home-how-connector {
@@ -7754,7 +7841,7 @@ header.glass .header-secondary-nav a:focus-visible {
   top: 50%;
   left: 100%;
   display: flex;
-  width: 96px;
+  width: var(--how-gap);
   height: 2px;
   align-items: center;
   justify-content: center;
@@ -7791,6 +7878,41 @@ header.glass .header-secondary-nav a:focus-visible {
 
   50% {
     transform: translateX(4px);
+  }
+}
+
+@keyframes homeHowDashY {
+  to {
+    background-position: 0 8px;
+  }
+}
+
+@keyframes homeHowNudgeY {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(3px);
+  }
+}
+
+/* tablets: three columns still fit, just tighter */
+@media (min-width: 769px) and (max-width: 1100px) {
+  .how-it-works-grid {
+    --how-gap: 44px;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+
+  .home-how-card {
+    padding-inline: 16px;
+  }
+
+  .home-how-connector>span {
+    width: 32px;
+    height: 32px;
   }
 }
 
@@ -7892,14 +8014,18 @@ header.glass .header-secondary-nav a:focus-visible {
   cursor: pointer;
   overflow: hidden;
   isolation: isolate;
+  /* clean tint so each specialty carries its own colour */
   background:
-    radial-gradient(120% 70% at 50% 0%, var(--specialty-soft) 0%, transparent 70%),
-    #fff;
-  border: 1px solid color-mix(in srgb, var(--specialty-accent) 14%, #e8f1f1);
+    linear-gradient(180deg,
+      color-mix(in srgb, var(--specialty-accent) 12%, #fff) 0%,
+      color-mix(in srgb, var(--specialty-accent) 4%, #fff) 60%,
+      #fff 100%);
+  border: 1px solid color-mix(in srgb, var(--specialty-accent) 24%, transparent);
   border-radius: 22px;
   box-shadow:
-    0 1px 2px rgba(5, 73, 78, 0.04),
-    0 8px 24px -10px color-mix(in srgb, var(--specialty-accent) 22%, transparent);
+    0 2px 6px rgba(5, 73, 78, 0.05),
+    0 16px 32px -14px color-mix(in srgb, var(--specialty-accent) 36%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
   transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.35s ease, border-color 0.35s ease;
 }
 
@@ -7910,43 +8036,25 @@ header.glass .header-secondary-nav a:focus-visible {
   top: 0;
   left: 50%;
   width: 36%;
-  height: 3px;
+  height: 4px;
   background: linear-gradient(90deg, transparent, var(--specialty-accent), transparent);
   border-radius: 0 0 3px 3px;
   transform: translateX(-50%);
   transition: width 0.4s ease;
 }
 
-/* soft decorative orb in the corner */
-.home-spec-card::after {
-  content: "";
-  position: absolute;
-  z-index: -1;
-  right: -38px;
-  bottom: -38px;
-  width: 110px;
-  height: 110px;
-  background: radial-gradient(circle, color-mix(in srgb, var(--specialty-accent) 12%, transparent) 0%, transparent 70%);
-  border-radius: 50%;
-  transition: transform 0.5s ease, opacity 0.5s ease;
-  opacity: 0.8;
-}
 
 .home-spec-card:hover {
   transform: translateY(-6px);
-  border-color: color-mix(in srgb, var(--specialty-accent) 38%, transparent);
+  border-color: color-mix(in srgb, var(--specialty-accent) 45%, transparent);
   box-shadow:
-    0 2px 4px rgba(5, 73, 78, 0.04),
-    0 22px 40px -14px color-mix(in srgb, var(--specialty-accent) 38%, transparent);
+    0 2px 6px rgba(5, 73, 78, 0.05),
+    0 26px 46px -16px color-mix(in srgb, var(--specialty-accent) 48%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
 .home-spec-card:hover::before {
   width: 100%;
-}
-
-.home-spec-card:hover::after {
-  opacity: 1;
-  transform: scale(1.6);
 }
 
 .home-spec-icon {
@@ -7960,12 +8068,12 @@ header.glass .header-secondary-nav a:focus-visible {
   background: linear-gradient(
     145deg,
     #fff 0%,
-    color-mix(in srgb, var(--specialty-accent) 14%, #fff) 100%
+    color-mix(in srgb, var(--specialty-accent) 8%, #fff) 100%
   );
   border: 1px solid color-mix(in srgb, var(--specialty-accent) 22%, transparent);
   border-radius: 20px;
   box-shadow:
-    0 0 0 6px color-mix(in srgb, var(--specialty-accent) 6%, transparent),
+    0 0 0 5px rgba(255, 255, 255, 0.85),
     0 10px 20px -8px color-mix(in srgb, var(--specialty-accent) 45%, transparent),
     inset 0 1px 0 #fff;
   transition: color 0.35s ease, background 0.35s ease, transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.35s ease;
@@ -8053,22 +8161,40 @@ header.glass .header-secondary-nav a:focus-visible {
 }
 
 .home-pkg-card {
+  --pkg-accent: #08a57b;
   display: flex;
   min-width: 0;
   overflow: hidden;
   flex-direction: column;
   cursor: pointer;
   background: #fff;
-  border: 1px solid rgba(8, 120, 125, 0.12);
+  border: 1px solid color-mix(in srgb, var(--pkg-accent) 24%, transparent);
   border-radius: 22px;
-  box-shadow: 0 6px 18px rgba(5, 73, 78, 0.06);
+  box-shadow:
+    0 2px 6px rgba(5, 73, 78, 0.05),
+    0 16px 32px -14px color-mix(in srgb, var(--pkg-accent) 36%, transparent);
   transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+/* rotating accent so each package carries its own colour */
+.home-pkg-card:nth-child(4n + 2) {
+  --pkg-accent: #2583d8;
+}
+
+.home-pkg-card:nth-child(4n + 3) {
+  --pkg-accent: #f28a28;
+}
+
+.home-pkg-card:nth-child(4n + 4) {
+  --pkg-accent: #8b5cf6;
 }
 
 .home-pkg-card:hover {
   transform: translateY(-5px);
-  border-color: rgba(8, 120, 125, 0.3);
-  box-shadow: 0 20px 38px rgba(5, 73, 78, 0.13);
+  border-color: color-mix(in srgb, var(--pkg-accent) 45%, transparent);
+  box-shadow:
+    0 2px 6px rgba(5, 73, 78, 0.05),
+    0 26px 46px -16px color-mix(in srgb, var(--pkg-accent) 48%, transparent);
 }
 
 .home-pkg-media {
@@ -8118,16 +8244,32 @@ header.glass .header-secondary-nav a:focus-visible {
 }
 
 .home-pkg-body {
+  position: relative;
   display: flex;
   flex: 1;
   flex-direction: column;
   gap: 12px;
   padding: 18px 18px 18px;
+  background:
+    linear-gradient(180deg,
+      color-mix(in srgb, var(--pkg-accent) 12%, #fff) 0%,
+      color-mix(in srgb, var(--pkg-accent) 7%, #fff) 100%);
+}
+
+/* accent bar where the image meets the body */
+.home-pkg-body::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: linear-gradient(90deg, var(--pkg-accent), color-mix(in srgb, var(--pkg-accent) 35%, #fff));
 }
 
 .home-pkg-title {
   display: -webkit-box;
-  min-height: 2.6em;
+  min-height: 0;
   margin: 0;
   overflow: hidden;
   color: var(--text-main);
@@ -8141,7 +8283,7 @@ header.glass .header-secondary-nav a:focus-visible {
 }
 
 .home-pkg-card:hover .home-pkg-title {
-  color: var(--primary);
+  color: color-mix(in srgb, var(--pkg-accent) 80%, #1f2d2e);
 }
 
 .home-pkg-tests {
@@ -8150,18 +8292,19 @@ header.glass .header-secondary-nav a:focus-visible {
   gap: 6px;
   width: fit-content;
   padding: 5px 11px;
-  color: #138a52;
+  color: color-mix(in srgb, var(--pkg-accent) 80%, #1f2d2e);
   font-size: 12px;
   font-weight: 700;
-  background: linear-gradient(135deg, #e9f9f0, #dff5ea);
-  border: 1px solid rgba(19, 138, 82, 0.14);
+  background: #fff;
+  border: 1px solid color-mix(in srgb, var(--pkg-accent) 28%, transparent);
   border-radius: 999px;
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--pkg-accent) 14%, transparent);
 }
 
 .home-pkg-footer {
   margin-top: auto;
   padding-top: 14px;
-  border-top: 1px dashed rgba(8, 120, 125, 0.18);
+  border-top: 1px dashed color-mix(in srgb, var(--pkg-accent) 28%, transparent);
 }
 
 .home-pkg-btn {
@@ -8171,13 +8314,13 @@ header.glass .header-secondary-nav a:focus-visible {
   gap: 8px;
   width: 100%;
   padding: 11px 16px;
-  color: var(--primary);
+  color: color-mix(in srgb, var(--pkg-accent) 85%, #1f2d2e);
   font-size: 13.5px;
   font-weight: 700;
   white-space: nowrap;
   cursor: pointer;
-  background: var(--primary-light, #e6f4f4);
-  border: 1px solid rgba(8, 120, 125, 0.16);
+  background: #fff;
+  border: 1px solid color-mix(in srgb, var(--pkg-accent) 30%, transparent);
   border-radius: 14px;
   transition: background 0.25s ease, color 0.25s ease, gap 0.25s ease, box-shadow 0.25s ease;
 }
@@ -8185,9 +8328,21 @@ header.glass .header-secondary-nav a:focus-visible {
 .home-pkg-card:hover .home-pkg-btn {
   gap: 12px;
   color: #fff;
-  background: linear-gradient(135deg, var(--primary), #0a9a9f);
+  background: linear-gradient(135deg,
+      color-mix(in srgb, var(--pkg-accent) 75%, #fff),
+      var(--pkg-accent));
   border-color: transparent;
-  box-shadow: 0 8px 18px rgba(8, 120, 125, 0.25);
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--pkg-accent) 30%, transparent);
+}
+
+@media (max-width: 600px) {
+  .home-pkg-media {
+    height: 180px;
+  }
+
+  .home-pkg-title {
+    min-height: 0;
+  }
 }
 
 /* Home: Testimonials */
@@ -9163,7 +9318,11 @@ header.glass .header-secondary-nav a:focus-visible {
 .lab-card-img-container,
 .all-tests-card-img-container,
 .all-pkg-card-img-container {
-  background: linear-gradient(145deg, #e9faf5, #eff7ff) !important;
+  /* tinted in each card's own accent colour (teal when a card has none) */
+  background: linear-gradient(150deg,
+      color-mix(in srgb, var(--lab-accent, #08a57b) 8%, #fff) 0%,
+      color-mix(in srgb, var(--lab-accent, #08a57b) 16%, #fff) 60%,
+      color-mix(in srgb, var(--lab-accent, #08a57b) 22%, #fff) 100%) !important;
 }
 
 .pkg-card-body,
@@ -10657,8 +10816,10 @@ header.glass .header-secondary-nav a:focus-visible {
     font-size: 11px;
   }
 
+  /* mobile: compact horizontal step cards linked by a vertical timeline */
   .how-it-works-grid {
-    gap: 18px !important;
+    --how-gap: 44px;
+    grid-template-columns: 1fr !important;
   }
 
   .home-how-section {
@@ -10669,15 +10830,139 @@ header.glass .header-secondary-nav a:focus-visible {
     padding: 0 4px !important;
   }
 
-  .home-how-card {
-    max-width: 300px;
-    min-height: 210px;
-    margin-inline: auto;
-    padding: 52px 20px 28px;
+  .home-how-heading {
+    margin-bottom: var(--home-heading-gap);
   }
 
+  .home-how-card {
+    display: grid;
+    grid-template-columns: 64px minmax(0, 1fr);
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+    max-width: 460px;
+    min-height: 0;
+    margin-inline: auto;
+    padding: 20px 18px;
+    text-align: left;
+    border-radius: 20px;
+  }
+
+  .home-how-card::before {
+    top: 50%;
+    bottom: auto;
+    left: 0;
+    width: 4px;
+    height: 44px;
+    transform: translateY(-50%);
+    background: linear-gradient(180deg,
+        color-mix(in srgb, var(--step-accent) 55%, #fff),
+        var(--step-accent),
+        color-mix(in srgb, var(--step-accent) 55%, #fff));
+    border-radius: 0 999px 999px 0;
+  }
+
+  .home-how-card:hover::before {
+    width: 4px;
+    height: 70%;
+  }
+
+  .home-how-card::after {
+    background:
+      radial-gradient(circle at 0% 50%, color-mix(in srgb, var(--step-accent) 20%, transparent) 0%, transparent 55%),
+      radial-gradient(circle at 100% 100%, color-mix(in srgb, var(--step-accent) 10%, transparent) 0%, transparent 45%);
+  }
+
+  .home-how-card:hover {
+    transform: translateY(-3px);
+  }
+
+  .home-how-icon {
+    position: relative;
+    top: auto;
+    left: auto;
+    width: 64px;
+    height: 64px;
+    transform: none;
+    border-width: 4px;
+  }
+
+  .home-how-icon svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .home-how-icon::before {
+    inset: -8px;
+  }
+
+  .home-how-card:hover .home-how-icon {
+    transform: rotate(-8deg) scale(1.04);
+  }
+
+  .home-how-step {
+    width: 22px;
+    height: 22px;
+    font-size: 11px;
+  }
+
+  .home-how-watermark {
+    top: 10px;
+    right: 14px;
+    font-size: 40px;
+  }
+
+  .home-how-label {
+    margin-bottom: 2px;
+    font-size: 10.5px;
+  }
+
+  .home-how-copy h3 {
+    margin-bottom: 4px;
+    font-size: 18px;
+  }
+
+  .home-how-copy p {
+    max-width: none;
+    margin: 0 0 10px;
+    font-size: 13.5px;
+    line-height: 1.5;
+  }
+
+  .home-how-chip {
+    padding: 4px 10px;
+    font-size: 11.5px;
+  }
+
+  /* vertical dashed link with a downward arrow between cards */
   .home-how-connector {
-    display: none;
+    top: 100%;
+    left: 50%;
+    width: 2px;
+    height: var(--how-gap);
+    transform: translateX(-50%);
+    background-image: linear-gradient(180deg, rgba(8, 120, 125, 0.45) 50%, transparent 50%);
+    background-size: 2px 8px;
+    animation: homeHowDashY 1s linear infinite;
+  }
+
+  .home-how-connector>span {
+    flex: none;
+    width: 34px;
+    height: 34px;
+    animation: homeHowNudgeY 2s ease-in-out infinite;
+  }
+
+  .home-how-connector>span svg {
+    transform: rotate(90deg);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+
+    .home-how-connector,
+    .home-how-connector>span {
+      animation: none;
+    }
   }
 
   .home-cta-card {

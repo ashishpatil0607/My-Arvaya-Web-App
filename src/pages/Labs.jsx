@@ -10,6 +10,7 @@ import { getLabPackages, getDiagnosticTests, getDiagnosticPackages, getAppointme
 import { useBooking } from "../context/BookingContext";
 import { useAuth } from "../context/AuthContext";
 import { packages as defaultPackages } from "../mocks/data";
+import { getLabOrderColor } from "../utils/labOrderColor";
 import { fallbackHealthPackages, normalizeHealthPackage } from "../utils/healthPackages";
 import { fallbackLabTests } from "../utils/labTests";
 import SelectSlotUI from "../components/doctors/SelectSlotUI";
@@ -27,27 +28,6 @@ const categoriesFilterList = [
   { name: "Vitamins", icon: <Apple size={16} /> },
   { name: "Full Body", icon: <Stethoscope size={16} /> }
 ];
-
-// Picks an accent colour for an order card (icon comes from LabItemIcon, same as Orders page) based on keywords in the test name
-const orderIconRules = [
-  { match: /hba1c|glucose|sugar|diabet|insulin|glycosylated/, Icon: Droplets, color: "#E11D48" },
-  { match: /lipid|cholesterol|triglycer|cardiac|troponin|heart|hdl|ldl/, Icon: Heart, color: "#DB2777" },
-  { match: /thyroid|\btsh\b|\bt3\b|\bt4\b/, Icon: Activity, color: "#7C3AED" },
-  { match: /liver|\blft\b|bilirubin|sgot|sgpt|\balt\b|\bast\b|albumin|globulin|protein/, Icon: Beaker, color: "#D97706" },
-  { match: /kidney|\bkft\b|renal|creatinine|urea|uric|urine/, Icon: FlaskConical, color: "#0891B2" },
-  { match: /vitamin|\bb12\b|\bd3\b|\biron\b|ferritin|calcium/, Icon: Apple, color: "#16A34A" },
-  { match: /bone|joint|arthritis/, Icon: Bone, color: "#64748B" },
-  { match: /\bcbc\b|blood count|hemoglobin|haemoglobin|platelet|\besr\b/, Icon: Droplets, color: "#DC2626" },
-  { match: /pregnan|\bhcg\b|fertility|\bamh\b|prolactin/, Icon: Baby, color: "#EC4899" },
-  { match: /cancer|tumou?r|\bpsa\b|\bcea\b|\bca[- ]?125\b/, Icon: Ribbon, color: "#9333EA" },
-  { match: /covid|allergy|lung|respirat/, Icon: Wind, color: "#0EA5E9" },
-  { match: /full body|package|checkup|profile/, Icon: Stethoscope, color: "#2563EB" },
-];
-
-const getOrderIcon = (name) => {
-  const text = String(name || "").toLowerCase();
-  return orderIconRules.find((r) => r.match.test(text)) || { Icon: TestTube, color: "var(--primary)" };
-};
 
 const mockLabAppointments = [
   { id: 1, date: "June 27, 2026", status: "Upcoming", name: "Complete Blood Count", lab: "LifeCare Diagnostics", time: "10:30 AM" },
@@ -1537,23 +1517,33 @@ function toTitleCase(str) {
           box-shadow: 0 8px 22px rgba(5, 73, 78, 0.14);
         }
 
+        /* each card carries its own colour */
+        /* same rotation as Home's Health Packages */
+        .lab-theme-0 { --lab-accent: #08a57b; }
+        .lab-theme-1 { --lab-accent: #2583d8; }
+        .lab-theme-2 { --lab-accent: #f28a28; }
+        .lab-theme-3 { --lab-accent: #8b5cf6; }
+        .lab-theme-4 { --lab-accent: #d6435f; }
+        .lab-theme-5 { --lab-accent: #0891b2; }
+
         .lab-theme-0,
         .lab-theme-1,
         .lab-theme-2,
         .lab-theme-3,
         .lab-theme-4,
         .lab-theme-5 {
-          --lab-accent: #087b73;
-          --lab-soft: #e8f6f3;
-          --lab-tint: #f7fbfa;
+          --lab-soft: color-mix(in srgb, var(--lab-accent) 12%, #fff);
+          --lab-tint: color-mix(in srgb, var(--lab-accent) 4%, #fff);
         }
 
         .lab-card,
         .pkg-card {
           overflow: hidden;
-          border: 1px solid rgba(8, 120, 125, 0.14);
+          border: 1px solid color-mix(in srgb, var(--lab-accent) 24%, transparent);
           border-radius: 22px;
-          box-shadow: 0 11px 28px rgba(5, 73, 78, 0.08);
+          box-shadow:
+            0 2px 6px rgba(5, 73, 78, 0.05),
+            0 16px 32px -14px color-mix(in srgb, var(--lab-accent) 36%, transparent);
         }
 
         .lab-card {
@@ -1960,14 +1950,18 @@ function toTitleCase(str) {
 
         .lab-card,
         .pkg-card {
-          background: linear-gradient(180deg, #ffffff 60%, #fbfefd 100%);
+          background:
+            linear-gradient(180deg,
+              color-mix(in srgb, var(--lab-accent) 7%, #fff) 0%,
+              color-mix(in srgb, var(--lab-accent) 3%, #fff) 60%,
+              #fff 100%);
           transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease, border-color 0.3s ease;
         }
 
         .lab-card::before,
         .pkg-card::before {
           height: 4px;
-          background: linear-gradient(90deg, var(--lab-accent), #2bc4a6, var(--lab-accent));
+          background: linear-gradient(90deg, var(--lab-accent), color-mix(in srgb, var(--lab-accent) 45%, #fff), var(--lab-accent));
           background-size: 200% 100%;
           transition: background-position 0.6s ease;
         }
@@ -1975,8 +1969,10 @@ function toTitleCase(str) {
         .lab-card:hover,
         .pkg-card:hover {
           transform: translateY(-6px);
-          border-color: rgba(8, 120, 125, 0.32);
-          box-shadow: 0 22px 40px -10px rgba(5, 73, 78, 0.22), 0 6px 14px rgba(5, 73, 78, 0.06);
+          border-color: color-mix(in srgb, var(--lab-accent) 45%, transparent);
+          box-shadow:
+            0 2px 6px rgba(5, 73, 78, 0.05),
+            0 26px 46px -16px color-mix(in srgb, var(--lab-accent) 48%, transparent);
         }
 
         .lab-card:hover::before,
@@ -1989,8 +1985,10 @@ function toTitleCase(str) {
           position: relative;
           overflow: hidden;
           background:
-            radial-gradient(circle at 50% 78%, rgba(255, 255, 255, 0.95) 0%, transparent 42%),
-            linear-gradient(150deg, #f4fbf9 0%, #e3f5f1 60%, #d7efea 100%);
+            linear-gradient(150deg,
+              color-mix(in srgb, var(--lab-accent) 8%, #fff) 0%,
+              color-mix(in srgb, var(--lab-accent) 16%, #fff) 60%,
+              color-mix(in srgb, var(--lab-accent) 22%, #fff) 100%);
         }
 
         /* Decorative rings behind the icon */
@@ -2011,8 +2009,7 @@ function toTitleCase(str) {
           height: 150px;
           right: -55px;
           top: -60px;
-          border: 1px solid rgba(8, 123, 115, 0.12);
-          background: radial-gradient(circle, rgba(52, 211, 180, 0.12), transparent 70%);
+          border: 1px solid color-mix(in srgb, var(--lab-accent) 16%, transparent);
         }
 
         .lab-card .lab-card-img-container::after,
@@ -2021,17 +2018,17 @@ function toTitleCase(str) {
           height: 90px;
           left: -35px;
           bottom: -45px;
-          border: 1px solid rgba(8, 123, 115, 0.1);
+          border: 1px solid color-mix(in srgb, var(--lab-accent) 14%, transparent);
         }
 
         .lab-card .lab-card-visual,
         .pkg-card .lab-card-visual {
-          background: linear-gradient(160deg, #ffffff 0%, #f2fbf8 100%);
+          background: linear-gradient(160deg, #ffffff 0%, color-mix(in srgb, var(--lab-accent) 6%, #fff) 100%);
           border: 1px solid rgba(255, 255, 255, 1);
           box-shadow:
-            0 12px 24px rgba(5, 73, 78, 0.13),
-            0 0 0 6px rgba(255, 255, 255, 0.45),
-            inset 0 -3px 0 rgba(8, 123, 115, 0.06);
+            0 12px 24px color-mix(in srgb, var(--lab-accent) 22%, transparent),
+            0 0 0 6px rgba(255, 255, 255, 0.6),
+            inset 0 -3px 0 color-mix(in srgb, var(--lab-accent) 8%, transparent);
           transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s ease;
         }
 
@@ -2039,9 +2036,9 @@ function toTitleCase(str) {
         .pkg-card:hover .lab-card-visual {
           transform: translateY(-3px) scale(1.06) rotate(-3deg);
           box-shadow:
-            0 16px 30px rgba(5, 73, 78, 0.18),
-            0 0 0 7px rgba(255, 255, 255, 0.6),
-            inset 0 -3px 0 rgba(8, 123, 115, 0.06);
+            0 16px 30px color-mix(in srgb, var(--lab-accent) 30%, transparent),
+            0 0 0 7px rgba(255, 255, 255, 0.75),
+            inset 0 -3px 0 color-mix(in srgb, var(--lab-accent) 8%, transparent);
         }
 
         .lab-card .lab-card-tag,
@@ -2065,15 +2062,16 @@ function toTitleCase(str) {
         .lab-card .lab-card-sub,
         .pkg-card .pkg-card-tests-badge {
           padding: 4px 10px;
-          background: linear-gradient(90deg, var(--lab-soft), #f2faf8);
-          border: 1px solid color-mix(in srgb, var(--lab-accent) 14%, transparent);
+          background: #fff;
+          border: 1px solid color-mix(in srgb, var(--lab-accent) 28%, transparent);
+          box-shadow: 0 4px 12px color-mix(in srgb, var(--lab-accent) 12%, transparent);
         }
 
         .lab-card .lab-card-btn,
         .pkg-card .pkg-card-btn {
           position: relative;
           overflow: hidden;
-          background: linear-gradient(135deg, #0b8f84 0%, var(--lab-accent) 50%, #0a5a5c 100%);
+          background: linear-gradient(135deg, color-mix(in srgb, var(--lab-accent) 78%, #fff) 0%, var(--lab-accent) 50%, color-mix(in srgb, var(--lab-accent) 80%, #000) 100%);
           box-shadow: 0 8px 18px color-mix(in srgb, var(--lab-accent) 28%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.18);
           transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
         }
@@ -2099,7 +2097,7 @@ function toTitleCase(str) {
 
         .lab-card .lab-card-btn:hover,
         .pkg-card .pkg-card-btn:hover {
-          background: linear-gradient(135deg, #0b8f84 0%, var(--lab-accent) 50%, #0a5a5c 100%);
+          background: linear-gradient(135deg, color-mix(in srgb, var(--lab-accent) 78%, #fff) 0%, var(--lab-accent) 50%, color-mix(in srgb, var(--lab-accent) 80%, #000) 100%);
           transform: translateY(-1px);
           box-shadow: 0 12px 22px color-mix(in srgb, var(--lab-accent) 34%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.2);
         }
@@ -2319,8 +2317,8 @@ function toTitleCase(str) {
           width: 6px;
           height: 6px;
           border-radius: 50%;
-          background: #2bc4a6;
-          box-shadow: 0 0 0 3px rgba(43, 196, 166, 0.18);
+          background: var(--lab-accent);
+          box-shadow: 0 0 0 3px color-mix(in srgb, var(--lab-accent) 18%, transparent);
         }
 
         @media (prefers-reduced-motion: reduce) {
@@ -2332,6 +2330,100 @@ function toTitleCase(str) {
           .pkg-card .pkg-card-btn::after {
             transition: none;
           }
+        }
+
+        /* ── Home "Health Packages" card design for Lab Tests & Packages ── */
+        .lab-card,
+        .pkg-card {
+          background: #fff;
+          border: 1px solid color-mix(in srgb, var(--lab-accent) 24%, transparent);
+          box-shadow:
+            0 2px 6px rgba(5, 73, 78, 0.05),
+            0 16px 32px -14px color-mix(in srgb, var(--lab-accent) 36%, transparent);
+          transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+        }
+
+        .lab-card::before,
+        .pkg-card::before {
+          display: none;
+        }
+
+        .lab-card:hover,
+        .pkg-card:hover {
+          transform: translateY(-5px);
+          border-color: color-mix(in srgb, var(--lab-accent) 45%, transparent);
+          box-shadow:
+            0 2px 6px rgba(5, 73, 78, 0.05),
+            0 26px 46px -16px color-mix(in srgb, var(--lab-accent) 48%, transparent);
+        }
+
+        /* tinted body with an accent bar where the media meets it */
+        .lab-card .lab-card-body,
+        .pkg-card .pkg-card-body {
+          position: relative;
+          background:
+            linear-gradient(180deg,
+              color-mix(in srgb, var(--lab-accent) 12%, #fff) 0%,
+              color-mix(in srgb, var(--lab-accent) 7%, #fff) 100%);
+        }
+
+        .lab-card .lab-card-body::before,
+        .pkg-card .pkg-card-body::before {
+          content: "";
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 3px;
+          background: linear-gradient(90deg, var(--lab-accent), color-mix(in srgb, var(--lab-accent) 35%, #fff));
+        }
+
+        .lab-card:hover .lab-card-title,
+        .pkg-card:hover .pkg-card-title {
+          color: color-mix(in srgb, var(--lab-accent) 80%, #1f2d2e);
+        }
+
+        .lab-card .lab-card-sub,
+        .pkg-card .pkg-card-tests-badge {
+          color: color-mix(in srgb, var(--lab-accent) 80%, #1f2d2e);
+          background: #fff;
+          border: 1px solid color-mix(in srgb, var(--lab-accent) 28%, transparent);
+          box-shadow: 0 4px 12px color-mix(in srgb, var(--lab-accent) 14%, transparent);
+        }
+
+        .lab-card .lab-card-footer,
+        .pkg-card .lab-card-footer {
+          border-top: 1px dashed color-mix(in srgb, var(--lab-accent) 28%, transparent);
+        }
+
+        /* outlined button that fills with the card colour on hover */
+        .lab-card .lab-card-btn,
+        .pkg-card .pkg-card-btn {
+          color: color-mix(in srgb, var(--lab-accent) 85%, #1f2d2e);
+          background: #fff;
+          border: 1px solid color-mix(in srgb, var(--lab-accent) 30%, transparent);
+          box-shadow: none;
+          filter: none;
+          transition: background 0.25s ease, color 0.25s ease, box-shadow 0.25s ease, gap 0.25s ease;
+        }
+
+        .lab-card .lab-card-btn::after,
+        .pkg-card .pkg-card-btn::after {
+          display: none;
+        }
+
+        .lab-card:hover .lab-card-btn,
+        .pkg-card:hover .pkg-card-btn,
+        .lab-card .lab-card-btn:hover,
+        .pkg-card .pkg-card-btn:hover {
+          color: #fff;
+          background: linear-gradient(135deg,
+              color-mix(in srgb, var(--lab-accent) 75%, #fff),
+              var(--lab-accent));
+          border-color: transparent;
+          box-shadow: 0 8px 18px color-mix(in srgb, var(--lab-accent) 30%, transparent);
+          transform: none;
+          filter: none;
         }
 
         .lab-grid-view,
@@ -2636,6 +2728,78 @@ function toTitleCase(str) {
           }
         }
 
+        /* ── Order cards: tinted in each test's own colour ── */
+        .lab-order-card {
+          background:
+            linear-gradient(160deg,
+              color-mix(in srgb, var(--oi-color) 11%, #fff) 0%,
+              color-mix(in srgb, var(--oi-color) 4%, #fff) 55%,
+              #fff 100%);
+          border: 1px solid color-mix(in srgb, var(--oi-color) 24%, transparent) !important;
+          box-shadow:
+            0 2px 6px rgba(5, 73, 78, 0.05),
+            0 16px 32px -14px color-mix(in srgb, var(--oi-color) 36%, transparent) !important;
+        }
+
+        /* gradient strip on the top edge — follows the card's rounded corners
+           (same shape as the Home review cards' left strip) */
+        .lab-order-card::before {
+          display: block;
+          inset: 0;
+          z-index: 1;
+          box-sizing: border-box;
+          height: auto;
+          background: linear-gradient(90deg, color-mix(in srgb, var(--oi-color) 78%, #000), var(--oi-color) 50%, color-mix(in srgb, var(--oi-color) 65%, #fff)) border-box;
+          border-top: 4px solid transparent;
+          border-radius: inherit;
+          -webkit-mask: linear-gradient(#000 0 0) padding-box, linear-gradient(#000 0 0);
+          -webkit-mask-composite: xor;
+          mask: linear-gradient(#000 0 0) padding-box exclude, linear-gradient(#000 0 0);
+          pointer-events: none;
+        }
+
+        .lab-order-card:hover,
+        .lab-order-card:focus-visible {
+          border-color: color-mix(in srgb, var(--oi-color) 45%, transparent) !important;
+          box-shadow:
+            0 2px 6px rgba(5, 73, 78, 0.05),
+            0 26px 46px -16px color-mix(in srgb, var(--oi-color) 48%, transparent) !important;
+        }
+
+        .lab-order-card:hover .lab-order-name {
+          color: color-mix(in srgb, var(--oi-color) 80%, #1f2d2e);
+        }
+
+        .lab-order-name {
+          transition: color 0.2s ease;
+        }
+
+        .lab-order-icon {
+          box-shadow:
+            0 0 0 4px #fff,
+            0 8px 16px color-mix(in srgb, var(--oi-color) 30%, transparent);
+        }
+
+        .lab-order-status {
+          background: #fff;
+          border-color: color-mix(in srgb, var(--oc-color) 28%, transparent);
+        }
+
+        .lab-order-when span {
+          background: #fff;
+          border: 1px solid color-mix(in srgb, var(--oi-color) 20%, transparent);
+          box-shadow: 0 3px 10px color-mix(in srgb, var(--oi-color) 10%, transparent);
+        }
+
+        .lab-order-when svg,
+        .lab-order-lab svg {
+          color: color-mix(in srgb, var(--oi-color) 85%, #1f2d2e);
+        }
+
+        .lab-order-footer {
+          border-top-color: color-mix(in srgb, var(--oi-color) 28%, transparent);
+        }
+
         @media (max-width: 1024px) {
           .lab-hero-banner {
             padding: 20px 26px;
@@ -2830,6 +2994,12 @@ function toTitleCase(str) {
             font-size: 12px;
           }
         }
+
+        /* no reserved second line, so the pill sits right under the title */
+        .lab-card .lab-card-title,
+        .pkg-card .pkg-card-title {
+          min-height: 0;
+        }
       `}</style>
 
       {/* ── Top Header Bar ── */}
@@ -2939,7 +3109,7 @@ function toTitleCase(str) {
           ) : showAllTests ? (
             <div className="lab-grid-view">
               {filteredTests.map((test, index) => (
-                <div className={`lab-card lab-theme-${index % 6}`} key={test.id} style={{ width: '100%' }}>
+                <div className={`lab-card lab-theme-${index % 4}`} key={test.id} style={{ width: '100%' }}>
                   <div className="lab-card-img-container">
                     <div className="lab-card-visual"><LabItemIcon item={test} size={43} /></div>
                     <span className="lab-card-tag"><TestTube size={10} /> Certified</span>
@@ -2966,7 +3136,7 @@ function toTitleCase(str) {
 
               <div className="lab-scroll-row" ref={testsScrollRef}>
                 {filteredTests.map((test, index) => (
-                  <div className={`lab-card lab-theme-${index % 6}`} key={test.id}>
+                  <div className={`lab-card lab-theme-${index % 4}`} key={test.id}>
                     <div className="lab-card-img-container">
                       <div className="lab-card-visual"><LabItemIcon item={test} size={43} /></div>
                       <span className="lab-card-tag"><TestTube size={10} /> Certified</span>
@@ -3021,7 +3191,7 @@ function toTitleCase(str) {
           ) : showAllPackages ? (
             <div className="pkg-grid-view">
               {filteredPackages.map((pkg, index) => (
-                <div className={`pkg-card lab-theme-${(index + 2) % 6}`} key={pkg.id} style={{ width: '100%' }}>
+                <div className={`pkg-card lab-theme-${index % 4}`} key={pkg.id} style={{ width: '100%' }}>
                   <div className="pkg-card-img-container">
                     <img src={pkg.img} alt={pkg.title} className="pkg-card-img" />
                   </div>
@@ -3049,7 +3219,7 @@ function toTitleCase(str) {
 
               <div className="lab-scroll-row" ref={packagesScrollRef}>
                 {filteredPackages.map((pkg, index) => (
-                  <div className={`pkg-card lab-theme-${(index + 2) % 6}`} key={pkg.id}>
+                  <div className={`pkg-card lab-theme-${index % 4}`} key={pkg.id}>
                     <div className="pkg-card-img-container">
                       <img src={pkg.img} alt={pkg.title} className="pkg-card-img" />
                     </div>
@@ -3096,18 +3266,19 @@ function toTitleCase(str) {
             <div className="lab-appointments-grid">
               {appointments.slice(0, 4).map((appt) => {
                 const isDone = ['delivered', 'completed', 'ready'].includes((appt.status || '').toLowerCase());
-                const { color: iconColor } = getOrderIcon(appt.name);
+                const iconColor = getLabOrderColor(appt.name);
                 return (
                   <div
                     key={appt.id}
                     className={`lab-order-card${isDone ? ' is-done' : ''}`}
+                    style={{ '--oi-color': iconColor }}
                     role="button"
                     tabIndex={0}
                     onClick={() => go('/orders')}
                     onKeyDown={(e) => { if (e.key === 'Enter') go('/orders'); }}
                   >
                     <div className="lab-order-top">
-                      <div className="lab-order-icon" style={{ '--oi-color': iconColor }}>
+                      <div className="lab-order-icon">
                         <LabItemIcon item={{ title: appt.name }} size={20} />
                       </div>
                       <span className="lab-order-status">

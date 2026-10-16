@@ -47,6 +47,17 @@ function getInitials(name) {
   return (first + last).toUpperCase();
 }
 
+// Colour theme for a family card, keyed off the relation
+function getRelationTone(relation, isPrimary) {
+  if (isPrimary) return "primary";
+  const r = (relation || "").toLowerCase();
+  if (/wife|husband|spouse|partner/.test(r)) return "spouse";
+  if (/son|daughter|child|kid/.test(r)) return "child";
+  if (/father|mother|parent|grand|in-law/.test(r)) return "parent";
+  if (/brother|sister|sibling/.test(r)) return "sibling";
+  return "other";
+}
+
 function getLocationLabel(loc) {
   if (!loc) return "Select Location";
   return [loc.alt_name, loc.area, loc.street, loc.landmark, loc.zip, loc.city, loc.state]
@@ -332,6 +343,7 @@ export default function Profile() {
     if (familyFetchRef.current) return;
     familyFetchRef.current = true;
     setLoadingFamily(true);
+    const startedAt = Date.now();
     try {
       const storedUser = JSON.parse(localStorage.getItem("arvaya_user") || "{}");
       const appUserId = user?.app_user_id || user?.user_id || user?.id || storedUser?.app_user_id || storedUser?.user_id || storedUser?.id || 107602;
@@ -399,6 +411,9 @@ export default function Profile() {
     } catch (err) {
       console.error("fetchFamilyMembers error:", err);
     } finally {
+      // Keep the skeleton up briefly so fast responses don't flash it on/off
+      const elapsed = Date.now() - startedAt;
+      if (elapsed < 450) await new Promise(r => setTimeout(r, 450 - elapsed));
       familyFetchRef.current = false;
       setLoadingFamily(false);
     }
@@ -983,7 +998,6 @@ export default function Profile() {
                   background: 'var(--primary-light, #E4EEEF)',
                   padding: '4px 10px',
                   borderRadius: '20px',
-                  fontFamily: 'monospace',
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '4px',
@@ -1279,21 +1293,41 @@ export default function Profile() {
                   </div>
 
                   {loadingFamily ? (
-                    <div style={{
-                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                      padding: '60px 20px', gap: '12px', background: 'var(--bg-app)', borderRadius: '16px',
-                      border: '1px solid var(--border)', minHeight: '220px'
-                    }}>
-                      <Loader2 size={36} style={{ color: 'var(--primary)', animation: 'spin 1s linear infinite' }} />
-                      <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-muted)' }}>
-                        Loading family members...
-                      </span>
+                    <div className="family-loading" aria-busy="true" aria-live="polite">
+                      <div className="family-loading-status">
+                        <span className="family-loading-pulse"><Users size={16} /></span>
+                        <span>Fetching your family profiles</span>
+                        <span className="family-loading-dots"><i /><i /><i /></span>
+                      </div>
+                      <div className="family-list">
+                        {[0].map(i => (
+                          <div key={i} className="family-card family-card--skeleton">
+                            <div className="family-card-main">
+                              <div className="skeleton family-skel-avatar" />
+                              <div className="family-skel-lines">
+                                <div className="skeleton family-skel-line" style={{ width: i === 1 ? '45%' : '60%' }} />
+                                <div className="family-skel-chips">
+                                  <div className="skeleton family-skel-chip" />
+                                  <div className="skeleton family-skel-chip" style={{ width: '54px' }} />
+                                  <div className="skeleton family-skel-chip" style={{ width: '70px' }} />
+                                </div>
+                              </div>
+                            </div>
+                            <div className="family-skel-actions">
+                              <div className="skeleton family-skel-btn" />
+                              <div className="skeleton family-skel-btn" />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   ) : (
-                    <div className="family-list">
+                    <div className="family-list family-list--loaded">
                       {familyMembers.map(member => (
-                        <div key={member.id} className={`family-card${member.isPrimary ? ' family-card--primary' : ''}`}>
+                        <div key={member.id} className={`family-card family-card--${getRelationTone(member.relation, member.isPrimary)}`}>
+                          <span className="family-card-glow" aria-hidden="true" />
                           <div className="family-card-main">
+                            <div className="family-card-avatar-wrap">
                             <div className="family-card-avatar">
                               {(member.displayImage || (member.isPrimary && userDisplayImage)) ? (
                                 <img
@@ -1307,15 +1341,29 @@ export default function Profile() {
                               ) : null}
                               {getInitials(member.name)}
                             </div>
+                              {member.isPrimary && (
+                                <span className="family-card-avatar-badge" title="Primary Account"><Shield size={10} /></span>
+                              )}
+                            </div>
                             <div style={{ minWidth: 0 }}>
                               <div className="family-card-name-row">
                                 <h4 className="family-card-name">{withTitle(member.title, member.name)}</h4>
-                                {member.relation && <span className="family-relation-chip">{member.relation}</span>}
+                                {member.relation && !member.isPrimary && <span className="family-relation-chip">{member.relation}</span>}
                               </div>
                               <div className="family-card-meta">
-                                <span className="family-meta-pill"><Calendar size={12} /> {member.age} yrs</span>
-                                {member.bloodGroup && <span className="family-meta-pill family-meta-pill--blood"><Droplet size={12} /> {member.bloodGroup}</span>}
-                                {member.mobile && <span className="family-meta-pill"><Phone size={12} /> {member.mobile}</span>}
+                                <span className="family-meta-pill">
+                                  <span className="family-meta-icon"><Calendar size={11} /></span>{member.age} yrs
+                                </span>
+                                {member.bloodGroup && (
+                                  <span className="family-meta-pill family-meta-pill--blood">
+                                    <span className="family-meta-icon"><Droplet size={11} /></span>{member.bloodGroup}
+                                  </span>
+                                )}
+                                {member.mobile && (
+                                  <span className="family-meta-pill">
+                                    <span className="family-meta-icon"><Phone size={11} /></span>{member.mobile}
+                                  </span>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -1709,38 +1757,183 @@ export default function Profile() {
           gap: 14px;
         }
         .family-card {
+          --fam-a: #14b8a6;
+          --fam-b: #0d9488;
+          --fam-ink: #0f766e;
+          --fam-soft: #e3f7f2;
+          --fam-tint: #f6fdfb;
           position: relative;
           display: flex;
           align-items: center;
           justify-content: space-between;
           gap: 16px;
-          padding: 16px 18px 16px 22px;
-          border-radius: 16px;
-          background: #ffffff;
-          border: 1px solid rgba(20, 184, 166, 0.16);
-          box-shadow: 0 2px 8px rgba(11, 37, 69, 0.04);
+          padding: 18px 20px 18px 20px;
+          border-radius: 18px;
+          background: linear-gradient(110deg, #ffffff 55%, var(--fam-tint) 100%);
+          border: 1px solid color-mix(in srgb, var(--fam-a) 20%, transparent);
+          border-left: 4px solid var(--fam-b);
+          box-shadow: 0 1px 2px rgba(11, 37, 69, 0.04), 0 6px 18px rgba(11, 37, 69, 0.05);
           overflow: hidden;
-          transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+          isolation: isolate;
+          transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
         }
-        .family-card::before {
-          content: "";
+        .family-card-glow {
           position: absolute;
-          left: 0;
-          top: 0;
-          bottom: 0;
-          width: 4px;
-          background: linear-gradient(180deg, #5ccfbf 0%, #0d9488 100%);
+          top: -60px;
+          right: -40px;
+          width: 220px;
+          height: 160px;
+          border-radius: 50%;
+          background: radial-gradient(closest-side, color-mix(in srgb, var(--fam-a) 18%, transparent), transparent);
+          z-index: -1;
+          pointer-events: none;
+          transition: transform 0.35s ease;
         }
         .family-card:hover {
           transform: translateY(-2px);
-          border-color: rgba(20, 184, 166, 0.35);
-          box-shadow: 0 10px 24px rgba(13, 148, 136, 0.12);
+          border-color: color-mix(in srgb, var(--fam-a) 40%, transparent);
+          border-left-color: var(--fam-b);
+          box-shadow: 0 14px 30px color-mix(in srgb, var(--fam-b) 16%, transparent);
+        }
+        .family-card:hover .family-card-glow {
+          transform: scale(1.15);
         }
         .family-card--primary {
-          background: linear-gradient(120deg, #f6fdfb 0%, #e9f8f3 100%);
+          --fam-a: #22c55e;
+          --fam-b: #0d9488;
+          --fam-ink: #15803d;
+          --fam-soft: #dcfce7;
+          --fam-tint: #ecfdf5;
         }
-        .family-card--primary::before {
-          background: linear-gradient(180deg, #4ade80 0%, #16a34a 100%);
+        .family-card--spouse {
+          --fam-a: #f472b6;
+          --fam-b: #db2777;
+          --fam-ink: #be185d;
+          --fam-soft: #fce7f3;
+          --fam-tint: #fdf2f8;
+        }
+        .family-card--child {
+          --fam-a: #60a5fa;
+          --fam-b: #2563eb;
+          --fam-ink: #1d4ed8;
+          --fam-soft: #dbeafe;
+          --fam-tint: #eff6ff;
+        }
+        .family-card--parent {
+          --fam-a: #a78bfa;
+          --fam-b: #7c3aed;
+          --fam-ink: #6d28d9;
+          --fam-soft: #ede9fe;
+          --fam-tint: #f5f3ff;
+        }
+        .family-card--sibling {
+          --fam-a: #fbbf24;
+          --fam-b: #d97706;
+          --fam-ink: #b45309;
+          --fam-soft: #fef3c7;
+          --fam-tint: #fffbeb;
+        }
+        .family-loading-status {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          margin-bottom: 14px;
+          font-size: 13.5px;
+          font-weight: 600;
+          color: #0f766e;
+        }
+        .family-loading-pulse {
+          position: relative;
+          width: 30px;
+          height: 30px;
+          border-radius: 50%;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          color: #0d9488;
+          background: #ccfbf1;
+        }
+        .family-loading-pulse::after {
+          content: '';
+          position: absolute;
+          inset: 0;
+          border-radius: 50%;
+          border: 2px solid rgba(13, 148, 136, 0.45);
+          animation: familyPulse 1.6s ease-out infinite;
+        }
+        .family-loading-dots {
+          display: inline-flex;
+          gap: 3px;
+          margin-left: -4px;
+        }
+        .family-loading-dots i {
+          width: 4px;
+          height: 4px;
+          border-radius: 50%;
+          background: #0d9488;
+          animation: familyDot 1.2s ease-in-out infinite;
+        }
+        .family-loading-dots i:nth-child(2) { animation-delay: 0.15s; }
+        .family-loading-dots i:nth-child(3) { animation-delay: 0.3s; }
+        .family-card--skeleton {
+          pointer-events: none;
+        }
+        .family-list--loaded {
+          animation: familyListIn 0.25s ease-out;
+        }
+        .family-card--skeleton {
+          border-left-color: color-mix(in srgb, var(--fam-a) 35%, transparent);
+        }
+        .family-skel-avatar {
+          width: 52px;
+          height: 52px;
+          flex-shrink: 0;
+          border-radius: 50%;
+        }
+        .family-skel-lines {
+          flex: 1;
+          min-width: 160px;
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+        .family-skel-line {
+          height: 14px;
+          border-radius: 7px;
+        }
+        .family-skel-chips {
+          display: flex;
+          gap: 6px;
+        }
+        .family-skel-chip {
+          width: 62px;
+          height: 20px;
+          border-radius: 999px;
+        }
+        .family-skel-actions {
+          display: flex;
+          gap: 8px;
+          flex-shrink: 0;
+        }
+        .family-skel-btn {
+          width: 36px;
+          height: 36px;
+          border-radius: 10px;
+        }
+        .family-card--skeleton .family-card-main {
+          flex: 1;
+        }
+        @keyframes familyPulse {
+          0% { transform: scale(1); opacity: 1; }
+          100% { transform: scale(1.6); opacity: 0; }
+        }
+        @keyframes familyDot {
+          0%, 80%, 100% { opacity: 0.25; transform: translateY(0); }
+          40% { opacity: 1; transform: translateY(-3px); }
+        }
+        @keyframes familyListIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
         }
         .family-card-main {
           display: flex;
@@ -1760,10 +1953,31 @@ export default function Profile() {
           justify-content: center;
           font-size: 19px;
           font-weight: 800;
+          letter-spacing: 0.5px;
           color: #ffffff;
-          background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%);
+          background: linear-gradient(135deg, var(--fam-a) 0%, var(--fam-b) 100%);
           border: 3px solid #ffffff;
-          box-shadow: 0 0 0 2px rgba(13, 148, 136, 0.22), 0 6px 14px rgba(13, 148, 136, 0.2);
+          box-shadow: 0 0 0 2px color-mix(in srgb, var(--fam-a) 35%, transparent), 0 8px 18px color-mix(in srgb, var(--fam-b) 28%, transparent);
+        }
+        .family-card-avatar-wrap {
+          position: relative;
+          flex-shrink: 0;
+        }
+        .family-card-avatar-badge {
+          position: absolute;
+          right: -2px;
+          bottom: -2px;
+          z-index: 2;
+          width: 20px;
+          height: 20px;
+          border-radius: 50%;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          color: #ffffff;
+          background: linear-gradient(135deg, #22c55e 0%, #15803d 100%);
+          border: 2px solid #ffffff;
+          box-shadow: 0 2px 6px rgba(21, 128, 61, 0.35);
         }
         .family-card-name-row {
           display: flex;
@@ -1778,42 +1992,51 @@ export default function Profile() {
           color: #0b2545;
         }
         .family-relation-chip {
-          padding: 2px 9px;
+          padding: 2px 10px;
           border-radius: 999px;
           font-size: 11px;
           font-weight: 700;
-          color: #0f766e;
-          background: #e3f7f2;
-          border: 1px solid rgba(13, 148, 136, 0.18);
+          letter-spacing: 0.2px;
+          color: var(--fam-ink);
+          background: var(--fam-soft);
+          border: 1px solid color-mix(in srgb, var(--fam-a) 30%, transparent);
         }
         .family-card-meta {
           display: flex;
           flex-wrap: wrap;
-          gap: 6px;
-          margin-top: 7px;
+          gap: 8px;
+          margin-top: 9px;
         }
         .family-meta-pill {
           display: inline-flex;
           align-items: center;
-          gap: 5px;
-          padding: 3px 9px;
-          border-radius: 8px;
+          gap: 6px;
+          padding: 3px 10px 3px 3px;
+          border-radius: 999px;
           font-size: 12px;
           font-weight: 600;
-          color: #55738d;
-          background: #f3f7f9;
-          border: 1px solid #e5edf1;
+          color: #3d5a73;
+          background: #ffffff;
+          border: 1px solid #e3ebf0;
+          box-shadow: 0 1px 2px rgba(11, 37, 69, 0.04);
         }
-        .family-meta-pill svg {
-          color: #0d9488;
+        .family-meta-icon {
+          width: 20px;
+          height: 20px;
+          border-radius: 50%;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          color: var(--fam-ink);
+          background: var(--fam-soft);
         }
         .family-meta-pill--blood {
           color: #be123c;
-          background: #fff1f2;
-          border-color: rgba(225, 29, 72, 0.14);
+          border-color: rgba(225, 29, 72, 0.16);
         }
-        .family-meta-pill--blood svg {
+        .family-meta-pill--blood .family-meta-icon {
           color: #e11d48;
+          background: #ffe4e6;
         }
         .family-card-actions {
           display: flex;
@@ -1824,33 +2047,34 @@ export default function Profile() {
           display: inline-flex;
           align-items: center;
           gap: 5px;
-          padding: 5px 11px;
+          padding: 6px 12px;
           border-radius: 999px;
           font-size: 12px;
           font-weight: 700;
-          color: #15803d;
-          background: #dcfce7;
-          border: 1px solid rgba(22, 163, 74, 0.2);
+          color: #ffffff;
+          background: linear-gradient(135deg, #22c55e 0%, #15803d 100%);
+          box-shadow: 0 6px 14px rgba(21, 128, 61, 0.25);
         }
         .family-edit-btn {
           display: inline-flex;
           align-items: center;
           gap: 6px;
-          padding: 7px 14px;
+          padding: 8px 16px;
           border-radius: 999px;
           font-size: 12.5px;
           font-weight: 700;
-          color: #0d9488;
+          color: var(--fam-ink);
           background: #ffffff;
-          border: 1px solid rgba(13, 148, 136, 0.3);
+          border: 1px solid color-mix(in srgb, var(--fam-a) 40%, transparent);
+          box-shadow: 0 2px 6px rgba(11, 37, 69, 0.05);
           cursor: pointer;
           transition: all 0.2s ease;
         }
         .family-edit-btn:not(:disabled):hover {
           color: #ffffff;
-          background: #0d9488;
-          border-color: #0d9488;
-          box-shadow: 0 6px 14px rgba(13, 148, 136, 0.25);
+          background: linear-gradient(135deg, var(--fam-a) 0%, var(--fam-b) 100%);
+          border-color: transparent;
+          box-shadow: 0 8px 18px color-mix(in srgb, var(--fam-b) 30%, transparent);
         }
         .family-empty {
           display: flex;
@@ -2525,20 +2749,23 @@ export default function Profile() {
         .profile-form-card {
           position: relative;
           border: 1px solid rgba(20, 184, 166, 0.16);
+          isolation: isolate;
         }
         .profile-form-card::before {
           content: "";
           position: absolute;
-          top: -1px;
-          left: -1px;
-          right: -1px;
-          height: 20px;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 140px;
           border-radius: inherit;
           border-bottom-left-radius: 0;
           border-bottom-right-radius: 0;
-          background: linear-gradient(90deg, #5ccfbf 0%, #14b8a6 50%, #0d9488 100%);
-          -webkit-mask: linear-gradient(#000 0 4px, transparent 4px);
-          mask: linear-gradient(#000 0 4px, transparent 4px);
+          background:
+            radial-gradient(420px 120px at 0% 0%, rgba(20, 184, 166, 0.12), transparent 70%),
+            radial-gradient(360px 110px at 100% 0%, rgba(13, 148, 136, 0.08), transparent 70%),
+            linear-gradient(180deg, rgba(236, 253, 249, 0.7) 0%, transparent 100%);
+          z-index: -1;
           pointer-events: none;
         }
         .profile-section-head {
@@ -2611,7 +2838,14 @@ export default function Profile() {
         .profile-header-card {
           position: relative;
           overflow: hidden;
-          border: 1px solid rgba(20, 184, 166, 0.16);
+          border: 1px solid rgba(20, 184, 166, 0.22);
+        }
+        .card-elevated.profile-header-card {
+          background:
+            radial-gradient(260px 160px at 100% 100%, rgba(20, 184, 166, 0.12), transparent 70%),
+            radial-gradient(220px 140px at 0% 85%, rgba(94, 207, 191, 0.10), transparent 70%),
+            linear-gradient(180deg, #ffffff 0%, #f3fbf9 55%, #e6f7f3 100%);
+          box-shadow: 0 2px 4px rgba(11, 37, 69, 0.04), 0 14px 34px rgba(13, 148, 136, 0.14);
         }
         .profile-header-card > * {
           position: relative;
@@ -2622,9 +2856,13 @@ export default function Profile() {
           top: 0;
           left: 0;
           right: 0;
-          height: 86px;
+          height: 92px;
           z-index: 0;
-          background: linear-gradient(120deg, #ccf4eb 0%, #99e6d8 55%, #5ccfbf 100%);
+          background:
+            radial-gradient(circle at 12% 30%, rgba(255, 255, 255, 0.28) 0 22px, transparent 23px),
+            radial-gradient(circle at 88% 18%, rgba(255, 255, 255, 0.18) 0 34px, transparent 35px),
+            radial-gradient(circle at 70% 85%, rgba(255, 255, 255, 0.14) 0 14px, transparent 15px),
+            linear-gradient(120deg, #5ccfbf 0%, #14b8a6 45%, #0d9488 100%);
         }
         .profile-card-cover svg {
           position: absolute;
@@ -2646,8 +2884,10 @@ export default function Profile() {
           background: #ecfdf9 !important;
         }
         .profile-patient-id-badge {
-          background: #ffffff !important;
-          border-style: dashed !important;
+          background: #ccfbf1 !important;
+          color: #0f766e !important;
+          border: 1px solid rgba(13, 148, 136, 0.25) !important;
+          border-radius: 999px !important;
         }
         .profile-stat-tile {
           display: flex;

@@ -12,7 +12,7 @@ import Modal from "../components/common/Modal";
 import LabItemIcon from "../components/labs/LabItemIcon";
 import { fallbackLabTests } from "../utils/labTests";
 
-const ITEMS_PER_PAGE = 10;
+const ITEMS_PER_PAGE = 12;
 
 // Fallback tests (same as Labs page) shown when the API returns nothing, e.g. user not logged in
 const normalizeFallbackTest = (t) => ({
@@ -647,14 +647,8 @@ export default function AllLabTests() {
 
         .all-tests-grid {
           display: grid;
-          grid-template-columns: repeat(5, 1fr);
-          gap: 16px;
-        }
-
-        @media (max-width: 1280px) {
-          .all-tests-grid {
-            grid-template-columns: repeat(4, 1fr);
-          }
+          grid-template-columns: repeat(4, 1fr);
+          gap: 20px;
         }
 
         @media (max-width: 1024px) {
@@ -810,6 +804,104 @@ export default function AllLabTests() {
 
         .all-tests-card-btn:hover svg {
           transform: translateX(3px);
+        }
+
+        /* ── Same card design as the Labs page: each card tinted in its own colour ── */
+        .all-tests-card {
+          --lab-accent: #08a57b;
+          background: #fff;
+          border: 1px solid color-mix(in srgb, var(--lab-accent) 24%, transparent);
+          box-shadow:
+            0 2px 6px rgba(5, 73, 78, 0.05),
+            0 16px 32px -14px color-mix(in srgb, var(--lab-accent) 36%, transparent);
+        }
+
+        /* same rotation as the Labs page and Home's Health Packages */
+        .all-tests-card:nth-child(4n + 2) { --lab-accent: #2583d8; }
+        .all-tests-card:nth-child(4n + 3) { --lab-accent: #f28a28; }
+        .all-tests-card:nth-child(4n + 4) { --lab-accent: #8b5cf6; }
+
+        .all-tests-card::before {
+          display: none;
+        }
+
+        .all-tests-card:hover {
+          transform: translateY(-5px);
+          border-color: color-mix(in srgb, var(--lab-accent) 45%, transparent);
+          box-shadow:
+            0 2px 6px rgba(5, 73, 78, 0.05),
+            0 26px 46px -16px color-mix(in srgb, var(--lab-accent) 48%, transparent);
+        }
+
+        .all-tests-card-img-container {
+          background:
+            linear-gradient(150deg,
+              color-mix(in srgb, var(--lab-accent) 8%, #fff) 0%,
+              color-mix(in srgb, var(--lab-accent) 16%, #fff) 60%,
+              color-mix(in srgb, var(--lab-accent) 22%, #fff) 100%);
+        }
+
+        .all-tests-card-img-container::before {
+          border-color: color-mix(in srgb, var(--lab-accent) 16%, transparent);
+          background: none;
+        }
+
+        .all-tests-card-img-container::after {
+          border-color: color-mix(in srgb, var(--lab-accent) 14%, transparent);
+        }
+
+        .all-tests-card-visual {
+          color: var(--lab-accent);
+          background: linear-gradient(160deg, #ffffff 0%, color-mix(in srgb, var(--lab-accent) 6%, #fff) 100%);
+          box-shadow:
+            0 12px 24px color-mix(in srgb, var(--lab-accent) 22%, transparent),
+            0 0 0 6px rgba(255, 255, 255, 0.6),
+            inset 0 -3px 0 color-mix(in srgb, var(--lab-accent) 8%, transparent);
+        }
+
+        .all-tests-card-tag {
+          color: var(--lab-accent);
+          border-color: color-mix(in srgb, var(--lab-accent) 22%, transparent);
+        }
+
+        /* tinted body with an accent bar where the icon area meets it */
+        .all-tests-card-body {
+          position: relative;
+          background:
+            linear-gradient(180deg,
+              color-mix(in srgb, var(--lab-accent) 12%, #fff) 0%,
+              color-mix(in srgb, var(--lab-accent) 7%, #fff) 100%);
+        }
+
+        .all-tests-card-body::before {
+          content: "";
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 3px;
+          background: linear-gradient(90deg, var(--lab-accent), color-mix(in srgb, var(--lab-accent) 35%, #fff));
+        }
+
+        .all-tests-card:hover .all-tests-card-title {
+          color: color-mix(in srgb, var(--lab-accent) 80%, #1f2d2e);
+        }
+
+        /* no reserved second line, so the pill sits right under the title */
+        .all-tests-card .all-tests-card-title {
+          min-height: 0;
+          margin-bottom: 10px;
+        }
+
+        .all-tests-card-sub {
+          color: color-mix(in srgb, var(--lab-accent) 80%, #1f2d2e);
+          background: #fff;
+          border: 1px solid color-mix(in srgb, var(--lab-accent) 28%, transparent);
+          box-shadow: 0 4px 12px color-mix(in srgb, var(--lab-accent) 14%, transparent);
+        }
+
+        .all-tests-card-footer {
+          border-top: 1px dashed color-mix(in srgb, var(--lab-accent) 28%, transparent);
         }
 
         @media (prefers-reduced-motion: reduce) {
