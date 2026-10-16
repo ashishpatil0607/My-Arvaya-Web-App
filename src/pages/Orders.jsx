@@ -3,6 +3,7 @@ import { ChevronRight, ChevronLeft, CalendarCheck, Clock, FlaskConical, Package 
 import { Link } from "react-router-dom";
 import { getLabOrderHistory } from "../services/dataService";
 import LabItemIcon from "../components/labs/LabItemIcon";
+import { getLabOrderColor } from "../utils/labOrderColor";
 
 function getStoredUserId() {
   try {
@@ -254,7 +255,7 @@ export default function Orders() {
             {orders.map(order => {
               const tone = getStatusTone(order.status);
               return (
-                <article key={order.id} className="order-card">
+                <article key={order.id} className="order-card" style={{ '--oi-color': getLabOrderColor(order.items) }}>
                   <div className="order-card-top">
                     <div className="order-card-icon">
                       <LabItemIcon item={{ title: order.items }} size={22} />
@@ -342,32 +343,71 @@ export default function Orders() {
           grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
           gap: 16px;
         }
+        /* same design as the My Orders cards on the Labs page:
+           tinted in each test's own colour, gradient strip on the top edge */
         .order-card {
+          --oi-color: var(--primary);
+          position: relative;
           display: flex;
           flex-direction: column;
-          background: var(--bg-surface, #ffffff);
-          border: 1px solid var(--border);
-          border-radius: 16px;
+          background:
+            linear-gradient(160deg,
+              color-mix(in srgb, var(--oi-color) 11%, #fff) 0%,
+              color-mix(in srgb, var(--oi-color) 4%, #fff) 55%,
+              #fff 100%);
+          border: 1px solid color-mix(in srgb, var(--oi-color) 24%, transparent);
+          border-radius: 20px;
           overflow: hidden;
-          transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+          box-shadow:
+            0 2px 6px rgba(5, 73, 78, 0.05),
+            0 16px 32px -14px color-mix(in srgb, var(--oi-color) 36%, transparent);
+          transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease, border-color 0.3s ease;
+        }
+        /* gradient strip on the top edge — follows the card's rounded corners */
+        .order-card:not(.order-card--skeleton)::before {
+          content: "";
+          position: absolute;
+          inset: 0;
+          z-index: 1;
+          box-sizing: border-box;
+          background: linear-gradient(90deg, color-mix(in srgb, var(--oi-color) 78%, #000), var(--oi-color) 50%, color-mix(in srgb, var(--oi-color) 65%, #fff)) border-box;
+          border-top: 4px solid transparent;
+          border-radius: inherit;
+          -webkit-mask: linear-gradient(#000 0 0) padding-box, linear-gradient(#000 0 0);
+          -webkit-mask-composite: xor;
+          mask: linear-gradient(#000 0 0) padding-box exclude, linear-gradient(#000 0 0);
+          pointer-events: none;
+        }
+        .order-card--skeleton {
+          background: var(--bg-surface, #ffffff);
+          border-color: var(--border);
+          box-shadow: none;
         }
         .order-card:not(.order-card--skeleton):hover {
-          transform: translateY(-2px);
-          border-color: rgba(13, 148, 136, 0.35);
-          box-shadow: 0 10px 24px rgba(13, 148, 136, 0.08);
+          transform: translateY(-4px);
+          border-color: color-mix(in srgb, var(--oi-color) 45%, transparent);
+          box-shadow:
+            0 2px 6px rgba(5, 73, 78, 0.05),
+            0 26px 46px -16px color-mix(in srgb, var(--oi-color) 48%, transparent);
+        }
+        .order-card:not(.order-card--skeleton):hover .order-card-title {
+          color: color-mix(in srgb, var(--oi-color) 80%, #1f2d2e);
         }
         .order-card-top {
           display: flex;
           align-items: flex-start;
           gap: 12px;
-          padding: 16px 16px 14px;
+          padding: 20px 18px 14px;
         }
         .order-card-icon {
           width: 44px;
           height: 44px;
-          border-radius: 12px;
-          background: var(--primary-light);
-          color: var(--primary);
+          border-radius: 13px;
+          color: #fff;
+          background: linear-gradient(145deg, color-mix(in srgb, var(--oi-color) 70%, #fff), var(--oi-color));
+          box-shadow:
+            0 0 0 4px #fff,
+            0 8px 16px color-mix(in srgb, var(--oi-color) 30%, transparent);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -381,8 +421,9 @@ export default function Orders() {
           font-size: 14.5px;
           font-weight: 700;
           color: var(--text-main);
-          margin: 2px 0 6px;
+          margin: 2px 0 10px;
           line-height: 1.35;
+          transition: color 0.2s ease;
           display: -webkit-box;
           -webkit-line-clamp: 2;
           -webkit-box-orient: vertical;
@@ -391,14 +432,23 @@ export default function Orders() {
         .order-card-meta {
           display: flex;
           flex-wrap: wrap;
-          gap: 4px 12px;
-          font-size: 12.5px;
-          color: var(--text-muted);
+          gap: 6px;
+          font-size: 12px;
+          color: var(--text-main);
         }
         .order-card-meta span {
           display: inline-flex;
           align-items: center;
-          gap: 4px;
+          gap: 5px;
+          padding: 4px 9px;
+          font-weight: 600;
+          background: #fff;
+          border: 1px solid color-mix(in srgb, var(--oi-color) 20%, transparent);
+          border-radius: 8px;
+          box-shadow: 0 3px 10px color-mix(in srgb, var(--oi-color) 10%, transparent);
+        }
+        .order-card-meta svg {
+          color: color-mix(in srgb, var(--oi-color) 85%, #1f2d2e);
         }
         .order-status {
           display: inline-flex;
@@ -410,34 +460,33 @@ export default function Orders() {
           font-weight: 700;
           white-space: nowrap;
           flex-shrink: 0;
+          background: #fff;
+          border: 1px solid color-mix(in srgb, currentColor 28%, transparent);
         }
         .order-status-dot {
           width: 6px;
           height: 6px;
           border-radius: 50%;
           background: currentColor;
+          box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 20%, transparent);
         }
         .order-status--success {
           color: #15803d;
-          background: #dcfce7;
         }
         .order-status--pending {
           color: #b45309;
-          background: #fef3c7;
         }
         .order-status--danger {
           color: #b91c1c;
-          background: #fee2e2;
         }
         .order-card-footer {
           display: flex;
           align-items: center;
           justify-content: space-between;
           gap: 12px;
-          margin-top: auto;
-          padding: 10px 16px;
-          background: rgba(13, 148, 136, 0.04);
-          border-top: 1px solid var(--border);
+          margin: auto 18px 0;
+          padding: 12px 0 14px;
+          border-top: 1px dashed color-mix(in srgb, var(--oi-color) 28%, transparent);
         }
         .order-card-label {
           font-size: 12px;
@@ -447,7 +496,7 @@ export default function Orders() {
         .order-card-amount {
           font-size: 18px;
           font-weight: 800;
-          color: var(--primary);
+          color: color-mix(in srgb, var(--oi-color) 85%, #1f2d2e);
           flex-shrink: 0;
         }
         @media (max-width: 400px) {

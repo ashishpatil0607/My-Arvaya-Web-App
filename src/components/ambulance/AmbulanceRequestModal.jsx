@@ -415,7 +415,7 @@ export default function AmbulanceRequestModal({ onClose, onSuccess }) {
       <div className="ambulance-form-row">
       {/* Patient Name */}
       <div>
-        <label style={{ fontSize: "12px", fontWeight: "700", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.07em", display: "block", marginBottom: "8px" }}>Patient Name *</label>
+        <label style={{ fontSize: "12px", fontWeight: "700", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.07em", display: "block", marginBottom: "8px" }}>Patient Name <span className="required-star">*</span></label>
         <div style={{ display: "flex", alignItems: "center", border: `1.5px solid ${fieldErrors.patientName ? "var(--danger)" : "var(--border)"}`, borderRadius: "10px", overflow: "hidden", transition: "border-color 0.2s" }}
           onFocusCapture={e => { if (!fieldErrors.patientName) e.currentTarget.style.borderColor = "var(--primary)"; }}
           onBlurCapture={e => { if (!fieldErrors.patientName) e.currentTarget.style.borderColor = "var(--border)"; }}>
@@ -428,7 +428,7 @@ export default function AmbulanceRequestModal({ onClose, onSuccess }) {
 
       {/* Contact Number */}
       <div>
-        <label style={{ fontSize: "12px", fontWeight: "700", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.07em", display: "block", marginBottom: "8px" }}>Contact Number *</label>
+        <label style={{ fontSize: "12px", fontWeight: "700", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.07em", display: "block", marginBottom: "8px" }}>Contact Number <span className="required-star">*</span></label>
         <div style={{ display: "flex", alignItems: "center", border: `1.5px solid ${fieldErrors.contactNumber ? "var(--danger)" : "var(--border)"}`, borderRadius: "10px", overflow: "hidden", transition: "border-color 0.2s" }}
           onFocusCapture={e => { if (!fieldErrors.contactNumber) e.currentTarget.style.borderColor = "var(--primary)"; }}
           onBlurCapture={e => { if (!fieldErrors.contactNumber) e.currentTarget.style.borderColor = "var(--border)"; }}>
@@ -443,7 +443,7 @@ export default function AmbulanceRequestModal({ onClose, onSuccess }) {
       {/* Pickup Address */}
       <div style={{ marginBottom: "18px" }}>
         <label style={{ fontSize: "12px", fontWeight: "700", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.07em", display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px", flexWrap: "wrap", gap: "6px" }}>
-          <span>Pickup Location *</span>
+          <span>Pickup Location <span className="required-star">*</span></span>
           <button type="button" onClick={handleLocate} disabled={locating || busy}
             style={{ background: "var(--primary-light)", color: "var(--primary)", border: "1px solid var(--primary-soft)", borderRadius: "6px", padding: "4px 10px", fontSize: "11px", fontWeight: "700", cursor: locating || busy ? "default" : "pointer", opacity: locating || busy ? 0.6 : 1, display: "flex", alignItems: "center", gap: "4px", transition: "all 0.2s" }}
             onMouseEnter={e => { if (!locating && !busy) e.currentTarget.style.background = "var(--primary-soft)"; }}
@@ -467,7 +467,7 @@ export default function AmbulanceRequestModal({ onClose, onSuccess }) {
 
       {/* Emergency Type */}
       <div style={{ marginBottom: "8px", position: "relative", zIndex: 20 }}>
-        <label style={{ fontSize: "12px", fontWeight: "700", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.07em", display: "block", marginBottom: "8px" }}>Emergency Type *</label>
+        <label style={{ fontSize: "12px", fontWeight: "700", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.07em", display: "block", marginBottom: "8px" }}>Emergency Type <span className="required-star">*</span></label>
         <div data-field-error>
           <EmergencyTypeSelect value={emergencyType} hasError={!!fieldErrors.emergencyType}
             onChange={v => { setEmergency(v); clearFieldError("emergencyType"); }} />

@@ -11,7 +11,7 @@ import { useAuth } from "../context/AuthContext";
 import SelectSlotUI from "../components/doctors/SelectSlotUI";
 import Modal from "../components/common/Modal";
 
-const ITEMS_PER_PAGE = 10;
+const ITEMS_PER_PAGE = 12;
 
 export default function AllHealthPackages() {
   const go = useNavigate();
@@ -64,9 +64,10 @@ export default function AllHealthPackages() {
             if (rawTitle.includes('-')) rawTitle = rawTitle.split('-')[0].trim();
             const priceVal = parseFloat(p.package_price || p.price || p.cost || p.amount || 999);
             const subitems = Array.isArray(p.subitems) ? p.subitems : [];
-            const itemCount = subitems.length > 0 
-              ? `${subitems.length} Included Tests & Consultations` 
-              : "Comprehensive Package";
+            // same label as the Labs page (utils/healthPackages.js)
+            const itemCount = subitems.length > 0
+              ? `${subitems.length}+ Tests Included`
+              : "30+ Tests Included";
 
             return {
               id: p.rateplan_package_id || p.id || p.package_key || `api-pkg-${idx}`,
@@ -272,14 +273,8 @@ export default function AllHealthPackages() {
 
         .all-pkg-grid {
           display: grid;
-          grid-template-columns: repeat(5, 1fr);
-          gap: 16px;
-        }
-
-        @media (max-width: 1280px) {
-          .all-pkg-grid {
-            grid-template-columns: repeat(4, 1fr);
-          }
+          grid-template-columns: repeat(4, 1fr);
+          gap: 20px;
         }
 
         @media (max-width: 1024px) {
@@ -492,6 +487,94 @@ export default function AllHealthPackages() {
           .all-pkg-card-btn::after {
             transition: none;
           }
+        }
+
+        /* ── Same card design as the Labs page: each card tinted in its own colour ── */
+        .all-pkg-card {
+          --lab-accent: #08a57b;
+          border: 1px solid color-mix(in srgb, var(--lab-accent) 24%, transparent);
+          border-radius: 22px;
+          box-shadow:
+            0 2px 6px rgba(5, 73, 78, 0.05),
+            0 16px 32px -14px color-mix(in srgb, var(--lab-accent) 36%, transparent);
+          transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease, border-color 0.3s ease;
+        }
+
+        /* same rotation as the Labs page and Home's Health Packages */
+        .all-pkg-card:nth-child(4n + 2) { --lab-accent: #2583d8; }
+        .all-pkg-card:nth-child(4n + 3) { --lab-accent: #f28a28; }
+        .all-pkg-card:nth-child(4n + 4) { --lab-accent: #8b5cf6; }
+
+        .all-pkg-card:hover {
+          transform: translateY(-5px);
+          border-color: color-mix(in srgb, var(--lab-accent) 45%, transparent);
+          box-shadow:
+            0 2px 6px rgba(5, 73, 78, 0.05),
+            0 26px 46px -16px color-mix(in srgb, var(--lab-accent) 48%, transparent);
+        }
+
+        .all-pkg-card-img-container {
+          height: 160px;
+          background: color-mix(in srgb, var(--lab-accent) 12%, #fff);
+        }
+
+        /* tinted body with an accent bar where the photo meets it */
+        .all-pkg-card-body {
+          position: relative;
+          gap: 12px;
+          background:
+            linear-gradient(180deg,
+              color-mix(in srgb, var(--lab-accent) 12%, #fff) 0%,
+              color-mix(in srgb, var(--lab-accent) 7%, #fff) 100%);
+        }
+
+        .all-pkg-card-body::before {
+          content: "";
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 3px;
+          background: linear-gradient(90deg, var(--lab-accent), color-mix(in srgb, var(--lab-accent) 35%, #fff));
+        }
+
+        .all-pkg-card-title {
+          min-height: 0;
+          margin-bottom: 0;
+          color: var(--text-main);
+          transition: color 0.2s ease;
+        }
+
+        .all-pkg-card:hover .all-pkg-card-title {
+          color: color-mix(in srgb, var(--lab-accent) 80%, #1f2d2e);
+        }
+
+        .all-pkg-card-tests-badge {
+          gap: 6px;
+          margin-bottom: 0;
+          padding: 5px 11px;
+          color: color-mix(in srgb, var(--lab-accent) 80%, #1f2d2e);
+          font-weight: 700;
+          background: #fff;
+          border: 1px solid color-mix(in srgb, var(--lab-accent) 28%, transparent);
+          border-radius: 999px;
+          box-shadow: 0 4px 12px color-mix(in srgb, var(--lab-accent) 14%, transparent);
+          white-space: nowrap;
+        }
+
+        .all-pkg-card-footer {
+          padding-top: 14px;
+          border-top: 1px dashed color-mix(in srgb, var(--lab-accent) 28%, transparent);
+        }
+
+        .all-pkg-card-btn,
+        .all-pkg-card-btn:hover {
+          background: linear-gradient(135deg, #0b8f84 0%, #087b73 50%, #0a5a5c 100%);
+          border-radius: 13px;
+        }
+
+        .all-pkg-card-btn:hover {
+          transform: translateY(-1px);
         }
 
         .all-pkg-chip {

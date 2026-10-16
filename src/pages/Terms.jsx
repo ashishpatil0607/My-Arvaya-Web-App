@@ -779,7 +779,7 @@ export default function Terms() {
                           <span className="terms-contact-icon"><MapPin size={17} /></span>
                           <span className="terms-contact-text">
                             <small>Registered office</small>
-                            <span>123 Healthcare Ave, Bangalore 560001</span>
+                            <span>Health SeCURE Hospitals Care &amp; Solutions Private limited. No.1/5, Ground Floor, Santosh Complex, Armugam Circle, Basavanagudi, Bengaluru-560004</span>
                           </span>
                         </div>
                       </div>
