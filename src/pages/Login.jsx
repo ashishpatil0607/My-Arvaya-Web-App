@@ -1619,6 +1619,12 @@ function Mobile({ onBack, onSend, busy, err }) {
   const { showToast } = useAuth();
   const [m, setM] = useState("");
   const [localErr, setLocalErr] = useState("");
+  const sendBtnRef = useRef(null);
+
+  // Button is disabled until 10 digits, so focus after the re-render enables it
+  useEffect(() => {
+    if (/^[6-9]\d{9}$/.test(m)) sendBtnRef.current?.focus();
+  }, [m]);
 
   const handleInputChange = (e) => {
     const val = e.target.value.replace(/\D/g, "");
@@ -1749,6 +1755,7 @@ function Mobile({ onBack, onSend, busy, err }) {
       </div>
 
       <button
+        ref={sendBtnRef}
         disabled={busy || m.length < 10}
         onClick={handleSend}
         aria-busy={busy}
@@ -1792,6 +1799,12 @@ function Otp({ phone, onBack, onVerify, onResend, busy, err }) {
   const [o, setO] = useState("");
   const [countdown, setCountdown] = useState(600);
   const [canResend, setCanResend] = useState(false);
+  const verifyBtnRef = useRef(null);
+
+  // Button is disabled until 6 digits, so focus after the re-render enables it
+  useEffect(() => {
+    if (o.length === 6) verifyBtnRef.current?.focus();
+  }, [o]);
 
   useEffect(() => {
     if (countdown <= 0) {
@@ -1908,6 +1921,7 @@ function Otp({ phone, onBack, onVerify, onResend, busy, err }) {
       </div>
 
       <button
+        ref={verifyBtnRef}
         className="otp-submit-btn"
         disabled={busy || o.length < 6}
         onClick={() => onVerify(o)}
@@ -3825,6 +3839,10 @@ function ErrorBox({ msg }) {
 
 function OtpInputGrid({ value, onChange }) {
   const refs = useRef([]);
+
+  useEffect(() => {
+    refs.current[0]?.focus();
+  }, []);
 
   const handleChange = (e, idx) => {
     const val = e.target.value.replace(/\D/g, "");
