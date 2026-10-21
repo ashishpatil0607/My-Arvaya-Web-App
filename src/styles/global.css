@@ -5310,9 +5310,8 @@ input[type="radio"]:focus-visible {
   overflow: visible;
   background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
   color: #fff;
-  font-weight: 800;
+  font-weight: 700;
   font-size: 13px;
-  letter-spacing: 0.06em;
   padding: 11px 18px;
   border: none;
   border-radius: var(--radius-full);
@@ -5336,6 +5335,13 @@ input[type="radio"]:focus-visible {
   background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
   transform: translateY(-2px);
   box-shadow: 0 12px 28px rgba(220, 38, 38, 0.48);
+}
+
+/* SOS FAB is mobile-only */
+@media (min-width: 769px) {
+  .sos-fab {
+    display: none;
+  }
 }
 
 .chatbot-fab:hover {
@@ -11071,8 +11077,22 @@ header.glass .header-secondary-nav a:focus-visible {
   }
 
   .sos-fab {
-    bottom: max(72px, calc(env(safe-area-inset-bottom) + 66px));
+    bottom: max(70px, calc(env(safe-area-inset-bottom) + 64px));
     right: 16px;
+  }
+
+  /* Keep the SOS and Chat FABs visually identical in size on mobile */
+  .chatbot-fab,
+  .sos-fab {
+    gap: 6px;
+    font-size: 12.5px;
+    padding: 9px 15px;
+  }
+
+  .chatbot-fab svg,
+  .sos-fab svg {
+    width: 18px;
+    height: 18px;
   }
 
   .card-elevated,

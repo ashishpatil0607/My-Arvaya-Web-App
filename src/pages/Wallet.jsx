@@ -478,7 +478,7 @@ export default function Wallet() {
 
               <div>
                 <div className="wallet-hero-pill-tag">
-                  <Sparkles size={13} /> Arvaya Wallet &middot; Balance & Payments
+                  <Sparkles size={13} /> SeCURE Arvaya Wallet &middot; Balance & Payments
                 </div>
 
                 <h1 className="wallet-hero-title">
@@ -550,8 +550,8 @@ export default function Wallet() {
           <section className="wallet-panel wallet-guest-panel">
             <div className="wallet-guest">
               <div className="wallet-guest-copy">
-                <span className="wallet-guest-eyebrow"><ShieldCheck size={13} /> Arvaya Wallet</span>
-                <h3>Pay smarter with your Arvaya Wallet</h3>
+                <span className="wallet-guest-eyebrow"><ShieldCheck size={13} /> SeCURE Arvaya Wallet</span>
+                <h3>Pay smarter with your SeCURE Arvaya Wallet</h3>
                 <p>Sign in to check your wallet balance, collect cashback on bookings and use it to pay for appointments and lab tests.</p>
 
                 <ul className="wallet-guest-list">
@@ -580,7 +580,7 @@ export default function Wallet() {
               <div className="wallet-guest-visual" aria-hidden="true">
                 <div className="wallet-guest-card">
                   <div className="wallet-guest-card-top">
-                    <span>Arvaya Wallet</span>
+                    <span>SeCURE Arvaya Wallet</span>
                     <Star size={16} />
                   </div>
                   <small>Wallet balance</small>

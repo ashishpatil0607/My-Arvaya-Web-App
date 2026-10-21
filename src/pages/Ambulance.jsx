@@ -746,7 +746,7 @@ export default function AmbulancePage() {
 
               <div>
                 <div className="wallet-hero-pill-tag">
-                  <Sparkles size={13} /> Arvaya Emergency &middot; Ambulance Tracking
+                  <Sparkles size={13} /> SeCURE Arvaya Emergency &middot; Ambulance Tracking
                 </div>
 
                 <h1 className="wallet-hero-title">

@@ -637,7 +637,6 @@ export default function Profile() {
   };
 
   useEffect(() => {
-    document.title = "Patient Profile | Arvaya Patient Portal";
     loadPatientProfile();
   }, [user]);
 

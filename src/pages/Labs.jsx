@@ -1,7 +1,7 @@
-import { 
-  Search, ChevronRight, ChevronLeft, Activity, FlaskConical, Clock, Heart, ShieldCheck, 
-  Sparkles, Droplets, Bone, Brain, Baby, Eye, Ribbon, Flame, Wind, Pill, Syringe, 
-  Scissors, Apple, Zap, Users, Dumbbell, Beaker, Microscope, TestTube, Stethoscope, 
+import {
+  Search, ChevronRight, ChevronLeft, Activity, FlaskConical, Clock, Heart, ShieldCheck,
+  Sparkles, Droplets, Bone, Brain, Baby, Eye, Ribbon, Flame, Wind, Pill, Syringe,
+  Scissors, Apple, Zap, Users, Dumbbell, Beaker, Microscope, TestTube, Stethoscope,
   CalendarDays, MapPin, ArrowRight, CheckCircle2, Filter, X, Wallet, Home, Building2, User, ClipboardList
 } from "lucide-react";
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
@@ -101,23 +101,23 @@ export default function Labs({ forceModalOpen = false }) {
   const packagesScrollRef = useRef(null);
   const apptsScrollRef = useRef(null);
 
-function toTitleCase(str) {
-  if (!str) return "";
-  return String(str)
-    .toLowerCase()
-    .split(" ")
-    .map(word => {
-      if (word === "-" || word === "&" || word === "/") return word;
-      if (word.startsWith("(") && word.endsWith(")")) {
-        return "(" + word.slice(1, -1).toUpperCase() + ")";
-      }
-      if (["rft", "lft", "cbc", "tsh", "hba1c"].includes(word)) {
-        return word.toUpperCase();
-      }
-      return word.charAt(0).toUpperCase() + word.slice(1);
-    })
-    .join(" ");
-}
+  function toTitleCase(str) {
+    if (!str) return "";
+    return String(str)
+      .toLowerCase()
+      .split(" ")
+      .map(word => {
+        if (word === "-" || word === "&" || word === "/") return word;
+        if (word.startsWith("(") && word.endsWith(")")) {
+          return "(" + word.slice(1, -1).toUpperCase() + ")";
+        }
+        if (["rft", "lft", "cbc", "tsh", "hba1c"].includes(word)) {
+          return word.toUpperCase();
+        }
+        return word.charAt(0).toUpperCase() + word.slice(1);
+      })
+      .join(" ");
+  }
 
   // Fetch API data on mount / clicking Lab Tests
   useEffect(() => {
@@ -139,7 +139,7 @@ function toTitleCase(str) {
         if (!isMounted) return;
         if (Array.isArray(apiTests) && apiTests.length > 0) {
           const normalized = apiTests.map((t, idx) => {
-            let rawTitle = t.service_name || t.name || t.title || t.test_name || `Lab Test ${idx+1}`;
+            let rawTitle = t.service_name || t.name || t.title || t.test_name || `Lab Test ${idx + 1}`;
             if (rawTitle.includes('-')) rawTitle = rawTitle.split('-')[0].trim();
             const rawCategory = t.profile_name || t.category || t.test_category_name || t.department || "Fluid & Clinical Test";
             const priceVal = parseFloat(t.price || t.cost || t.amount || 150);
@@ -168,7 +168,7 @@ function toTitleCase(str) {
         }
       })
       .catch((err) => {
-        console.error("Failed to fetch /api/diagnostic/getTests:", err);
+        console.error("Failed to fetch /diagnostic/getTests:", err);
       })
       .finally(() => { if (isMounted) setLoadingTests(false); });
 
@@ -185,7 +185,7 @@ function toTitleCase(str) {
         }
       })
       .catch((err) => {
-        console.error("Failed to fetch /api/diagnostic/getPackages:", err);
+        console.error("Failed to fetch /diagnostic/getPackages:", err);
       })
       .finally(() => { if (isMounted) setLoadingPackages(false); });
 
@@ -309,13 +309,13 @@ function toTitleCase(str) {
   // Filtered Lab Tests
   const filteredTests = useMemo(() => {
     return (labTests || []).filter(item => {
-      const matchQ = (item.title || "").toLowerCase().includes(q.toLowerCase()) || 
-                     (item.category || "").toLowerCase().includes(q.toLowerCase()) ||
-                     (item.department || "").toLowerCase().includes(q.toLowerCase());
+      const matchQ = (item.title || "").toLowerCase().includes(q.toLowerCase()) ||
+        (item.category || "").toLowerCase().includes(q.toLowerCase()) ||
+        (item.department || "").toLowerCase().includes(q.toLowerCase());
       if (!matchQ) return false;
       if (selectedFilter !== "All") {
         return (item.department || "").toLowerCase().includes(selectedFilter.toLowerCase()) ||
-               (item.category || "").toLowerCase().includes(selectedFilter.toLowerCase());
+          (item.category || "").toLowerCase().includes(selectedFilter.toLowerCase());
       }
       return true;
     });
@@ -324,12 +324,12 @@ function toTitleCase(str) {
   // Filtered Packages
   const filteredPackages = useMemo(() => {
     return (healthPackages || []).filter(item => {
-      const matchQ = (item.title || "").toLowerCase().includes(q.toLowerCase()) || 
-                     (item.category || "").toLowerCase().includes(q.toLowerCase());
+      const matchQ = (item.title || "").toLowerCase().includes(q.toLowerCase()) ||
+        (item.category || "").toLowerCase().includes(q.toLowerCase());
       if (!matchQ) return false;
       if (selectedFilter !== "All") {
         return (item.title || "").toLowerCase().includes(selectedFilter.toLowerCase()) ||
-               (item.category || "").toLowerCase().includes(selectedFilter.toLowerCase());
+          (item.category || "").toLowerCase().includes(selectedFilter.toLowerCase());
       }
       return true;
     });
@@ -451,7 +451,7 @@ function toTitleCase(str) {
           color: "#2e666e",
         },
         modal: {
-          ondismiss: function() {
+          ondismiss: function () {
             submitLockRef.current = false;
             setSubmitting(false);
           }
@@ -475,7 +475,7 @@ function toTitleCase(str) {
 
   return (
     <main className="page page-enter labs-page" style={{ padding: 0, color: 'var(--text-main)' }}>
-      
+
       {/* Embedded Responsive Styling for Lab UI */}
       <style>{`
         .lab-container-custom {
@@ -3091,7 +3091,7 @@ function toTitleCase(str) {
                 <p className="lab-section-subtitle">Individual tests for specific health checks</p>
               </div>
             </div>
-            <button 
+            <button
               className="lab-view-all-btn"
               onClick={() => go("/labs/all-tests")}
             >
@@ -3173,7 +3173,7 @@ function toTitleCase(str) {
                 <p className="lab-section-subtitle">Bundled checkups covering multiple tests at a better price</p>
               </div>
             </div>
-            <button 
+            <button
               className="lab-view-all-btn"
               onClick={() => go("/labs/all-packages")}
             >
@@ -3391,8 +3391,8 @@ function toTitleCase(str) {
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border)', paddingTop: '16px' }}>
               <span style={{ color: 'var(--text-main)', fontSize: '14px', fontWeight: '500' }}>Apply wallet balance</span>
-              <div 
-                onClick={() => { if(walletBalance > 0 && !submitting) setApplyWallet(!applyWallet) }}
+              <div
+                onClick={() => { if (walletBalance > 0 && !submitting) setApplyWallet(!applyWallet) }}
                 style={{
                   width: '40px',
                   height: '22px',
@@ -3422,9 +3422,9 @@ function toTitleCase(str) {
               <div style={{ marginTop: '12px', background: '#f0fdf4', border: '1px solid #dcfce7', borderRadius: '8px', padding: '10px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-main)', fontWeight: '600' }}>
                   <span>₹</span>
-                  <input 
-                    type="number" 
-                    value={walletAppliedAmount} 
+                  <input
+                    type="number"
+                    value={walletAppliedAmount}
                     onChange={handleWalletInputChange}
                     style={{ background: 'transparent', border: 'none', outline: 'none', width: '80px', fontSize: '15px', fontWeight: '600', color: 'var(--text-main)' }}
                   />
@@ -3572,8 +3572,8 @@ function toTitleCase(str) {
             </div>
           </div>
         ) : (
-        <>
-        {/* Collection Preference — hidden for now (defaults to "home" visit). To re-enable, remove this comment wrapper.
+          <>
+            {/* Collection Preference — hidden for now (defaults to "home" visit). To re-enable, remove this comment wrapper.
         <div style={{ marginBottom: "0px" }}>
           <label style={{ display: "block", fontSize: "14px", fontWeight: "700", color: "var(--text-main)", marginBottom: "12px" }}>
             Select Collection Preference
@@ -3619,8 +3619,8 @@ function toTitleCase(str) {
         </div>
         */}
 
-        <SelectSlotUI onConfirm={confirmBooking} type="lab" submitting={submitting} />
-        </>
+            <SelectSlotUI onConfirm={confirmBooking} type="lab" submitting={submitting} />
+          </>
         )}
       </Modal>
 

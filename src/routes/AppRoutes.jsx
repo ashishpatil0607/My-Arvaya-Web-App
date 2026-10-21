@@ -1,4 +1,5 @@
-import { Routes, Route, Navigate } from "react-router-dom";
+import { useEffect } from "react";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import ProtectedRoute from "../components/common/ProtectedRoute";
 import Signup from "../pages/Signup";
 import Home from "../pages/Home";
@@ -40,11 +41,66 @@ import AccountDeletion from "../pages/AccountDeletion";
 import About from "../pages/About";
 import Terms from "../pages/Terms";
 
+const DEFAULT_TITLE = "Arvaya | Your Health, Our Priority";
+
+const PAGE_TITLES = {
+  "/signup": "Create Account",
+  "/account-deletion": "Account Deletion",
+  "/doctor": "Doctor Profile",
+  "/pharmacy": "Pharmacy",
+  "/labs": "Lab Tests",
+  "/labs/all-tests": "All Lab Tests",
+  "/labs/all-packages": "Health Packages",
+  "/labs/package-details": "Package Details",
+  "/abha": "ABHA Health ID",
+  "/records": "Health Records",
+  "/wallet": "Wallet",
+  "/rewards": "Rewards",
+  "/ambulance": "Ambulance",
+  "/support": "Help & Support",
+  "/care-journey": "Care Journey",
+  "/doctors": "Select Hospital",
+  "/doctors/specialty": "Select Specialty",
+  "/doctors/list": "Select Doctor",
+  "/doctors/visit-type": "Select Visit Type",
+  "/doctors/schedule": "Select Schedule",
+  "/slot": "Select Slot",
+  "/review": "Review Appointment",
+  "/confirmed": "Appointment Confirmed",
+  "/profile": "Patient Profile",
+  "/settings": "Settings",
+  "/notifications": "Notifications",
+  "/my-appointments": "My Appointments",
+  "/prescriptions": "Prescriptions",
+  "/orders": "My Orders",
+  "/payments": "Payments",
+  "/referrals": "Referrals",
+  "/ai-assistant": "AI Assistant",
+  "/doctors/review": "Review Booking",
+  "/doctors/confirmed": "Booking Confirmed",
+  "/about": "About Us",
+  "/terms-and-conditions": "Terms & Conditions",
+};
+
+function getPageTitle(pathname) {
+  const path = pathname.replace(/\/+$/, "") || "/";
+  const title =
+    PAGE_TITLES[path] ||
+    (path.startsWith("/labs/package-details/") && PAGE_TITLES["/labs/package-details"]);
+  return title ? `${title} | Arvaya` : DEFAULT_TITLE;
+}
+
 function P({ children }) {
   return <ProtectedRoute>{children}</ProtectedRoute>;
 }
 
 export default function AppRoutes() {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    document.title = getPageTitle(pathname);
+  }, [pathname]);
+
   return (
     <Routes>
       {/* Public */}

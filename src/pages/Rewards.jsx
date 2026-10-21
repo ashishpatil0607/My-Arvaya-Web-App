@@ -418,7 +418,7 @@ export default function Rewards() {
 
               <div>
                 <div className="wallet-hero-pill-tag">
-                  <Sparkles size={13} /> Arvaya Rewards &middot; Loyalty Points
+                  <Sparkles size={13} /> SeCURE Arvaya Rewards &middot; Loyalty Points
                 </div>
 
                 <h1 className="wallet-hero-title">
@@ -494,7 +494,7 @@ export default function Rewards() {
                 <div className="wallet-guest-visual" aria-hidden="true">
                   <div className="wallet-guest-card">
                     <div className="wallet-guest-card-top">
-                      <span>Arvaya Rewards</span>
+                      <span>SeCURE Arvaya Rewards</span>
                       <Star size={16} />
                     </div>
                     <small>Loyalty points</small>
