@@ -427,7 +427,7 @@ export async function getDiagnosticTests(filters = {}) {
       limit: limit || pageSize || 300,
       searchQuery: searchQuery || ""
     };
-    const res = await api.post("/api/diagnostic/getTests", payload);
+    const res = await api.post("/diagnostic/getTests", payload);
     const list = res?.data || res?.tests || res?.list || res?.result || res || [];
     const resultList = Array.isArray(list) ? list : [];
 
@@ -458,7 +458,7 @@ export async function getDiagnosticPackages(filters = {}) {
       limit: limit || pageSize || 200,
       searchQuery: searchQuery || ""
     };
-    const res = await api.post("/api/diagnostic/getPackages", payload);
+    const res = await api.post("/diagnostic/getPackages", payload);
     const list = res?.data || res?.packages || res?.list || res?.result || res || [];
     const resultList = Array.isArray(list) ? list : [];
 
@@ -585,7 +585,7 @@ export async function getPatientReviews(filters = {}) {
       filter: filters.filter || " and is_active=1",
       ...filters
     };
-    const res = await api.post("/api/patientReview/get", payload);
+    const res = await api.post("/patientReview/get", payload);
     const list = res?.data || res?.result || res || [];
     return Array.isArray(list) ? list : [];
   } catch (err) {

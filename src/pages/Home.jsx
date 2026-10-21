@@ -246,7 +246,7 @@ export default function Home() {
     {
       name: "Ananya Reddy",
       role: "Bangalore",
-      text: "Booking an appointment was incredibly seamless. The doctor was available the same day and the consultation was thorough. Arvaya has become my go-to healthcare platform.",
+      text: "Booking an appointment was incredibly seamless. The doctor was available the same day and the consultation was thorough. SeCURE Arvaya has become my go-to healthcare platform.",
       rating: 5,
     },
     {
@@ -282,7 +282,7 @@ export default function Home() {
           }
         })
         .catch((err) => {
-          console.error("Failed to fetch /api/patientReview/get for Home:", err);
+          console.error("Failed to fetch /patientReview/get for Home:", err);
         });
 
     loadReviews();
@@ -317,7 +317,7 @@ export default function Home() {
       })
       .catch((err) => {
         console.error(
-          "Failed to fetch /api/diagnostic/getPackages for Home:",
+          "Failed to fetch /diagnostic/getPackages for Home:",
           err,
         );
       })
@@ -691,7 +691,7 @@ export default function Home() {
                 iconColor: "#087b73",
               },
               {
-                title: "Arvaya Rewards",
+                title: "SeCURE Arvaya Rewards",
                 sub: "Earn points on every booking and redeem exclusive offers",
                 icon: <Gift size={29} strokeWidth={1.8} />,
                 bgIcon: <Gift size={150} strokeWidth={1.2} />,
@@ -1134,7 +1134,7 @@ export default function Home() {
                 Available on iOS &amp; Android
               </span>
               <h2 className="arv-app-title">
-                Get the <span>Arvaya App</span>
+                Get the <span>SeCURE Arvaya App</span>
               </h2>
               <p className="arv-app-text">
                 Book appointments, manage health records, order medicines, and

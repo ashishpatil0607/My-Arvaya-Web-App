@@ -1135,11 +1135,11 @@ export default function Header() {
       <button
         type="button"
         className="sos-fab"
-        aria-label="SOS - Call Ambulance"
+        aria-label="Call Ambulance"
         onClick={() => (user ? setShowAmbulanceModal(true) : setShowAmbulanceLoginPrompt(true))}
       >
-        <Siren size={20} strokeWidth={2.4} />
-        SOS
+        <Siren size={22} />
+        Call Ambulance
       </button>
 
       {showAmbulanceModal && (

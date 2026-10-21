@@ -16,7 +16,7 @@ const SUPPORT_EMAIL = "support@arvaya.health";
 
 const SOCIAL_LINKS = {
   facebook: "https://www.facebook.com/securehospitals",
-  x: "https://x.com/arvayahealthcare",
+  x: "https://x.com/securearvayahealthcare",
   instagram: "https://www.instagram.com/secure_hospital",
   linkedin: "https://www.linkedin.com/company/secure-hospitals",
   youtube: "https://www.youtube.com/@SeCUREHospitals"
@@ -362,7 +362,7 @@ export default function Footer() {
         {/* ── Bottom Area: Copyright ── */}
         <div className="footer-bottom">
           <p className="footer-copy">
-            &copy; {new Date().getFullYear()} Arvaya Healthcare. All rights reserved.
+            &copy; {new Date().getFullYear()} SeCURE Arvaya Healthcare. All rights reserved.
           </p>
           <div className="bottom-links">
             {[["Terms & Conditions", "/terms-and-conditions"]].map(([label, path]) => (
