@@ -187,10 +187,10 @@ function EmergencyTypeSelect({ value, onChange, hasError }) {
 
 /* ── Small shared atoms ──────────────────────────────────────────────────── */
 
-function Overlay({ children, onClose }) {
+function Overlay({ children }) {
   const content = (
-    <div className="ambulance-modal-overlay" onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} style={{ width: "100%", maxWidth: "860px", margin: "auto", position: "relative" }}>{children}</div>
+    <div className="ambulance-modal-overlay">
+      <div style={{ width: "100%", maxWidth: "860px", margin: "auto", position: "relative" }}>{children}</div>
     </div>
   );
   if (typeof window === "undefined") return content;
@@ -516,7 +516,7 @@ export default function AmbulanceRequestModal({ onClose, onSuccess }) {
   );
 
   return (
-    <Overlay onClose={handleClose}>
+    <Overlay>
       <div className="ambulance-modal-card">
 
         {/* Left Panel */}

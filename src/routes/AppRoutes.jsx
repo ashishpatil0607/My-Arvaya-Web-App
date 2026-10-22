@@ -41,7 +41,7 @@ import AccountDeletion from "../pages/AccountDeletion";
 import About from "../pages/About";
 import Terms from "../pages/Terms";
 
-const DEFAULT_TITLE = "Arvaya | Your Health, Our Priority";
+const DEFAULT_TITLE = "SeCURE ARVAYA | Your Health, Our Priority";
 
 const PAGE_TITLES = {
   "/signup": "Create Account",
@@ -87,7 +87,7 @@ function getPageTitle(pathname) {
   const title =
     PAGE_TITLES[path] ||
     (path.startsWith("/labs/package-details/") && PAGE_TITLES["/labs/package-details"]);
-  return title ? `${title} | Arvaya` : DEFAULT_TITLE;
+  return title ? `${title} | SeCURE ARVAYA` : DEFAULT_TITLE;
 }
 
 function P({ children }) {

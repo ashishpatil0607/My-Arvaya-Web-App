@@ -29,7 +29,7 @@ const SECTIONS = [
     id: "acceptance",
     title: "Acceptance of Terms",
     body: [
-      "These Terms & Conditions (\"Terms\") govern your access to and use of the Arvaya website, mobile applications and related services (together, the \"Platform\"), operated by Arvaya Healthcare Ltd. (\"Arvaya\", \"we\", \"us\" or \"our\"), including services offered under the Secure Hospitals brand.",
+      "These Terms & Conditions (\"Terms\") govern your access to and use of the SeCURE ARVAYA website, mobile applications and related services (together, the \"Platform\"), operated by SeCURE ARVAYA Healthcare Ltd. (\"SeCURE ARVAYA\", \"we\", \"us\" or \"our\"), including services offered under the Secure Hospitals brand.",
       "By creating an account, booking a service or otherwise using the Platform, you confirm that you have read, understood and agree to be bound by these Terms and our Privacy Policy. If you do not agree, please do not use the Platform.",
     ],
   },
@@ -49,7 +49,7 @@ const SECTIONS = [
     id: "services",
     title: "Our Services",
     body: [
-      "Arvaya is a technology platform that connects you with independent, registered healthcare providers. Our services include:",
+      "SeCURE ARVAYA is a technology platform that connects you with independent, registered healthcare providers. Our services include:",
       [
         "Doctor consultations (in-clinic and online video consultations) with registered medical practitioners.",
         "Lab test and health package bookings, including home sample collection by partner laboratories.",
@@ -78,7 +78,7 @@ const SECTIONS = [
         "You may cancel a doctor appointment free of charge up to 4 hours before the scheduled time. Cancellations within 4 hours, or missed appointments, may not be eligible for a refund.",
         "Lab bookings can be cancelled or rescheduled free of charge until the phlebotomist is assigned for sample collection.",
         "If a provider cancels or fails to attend, you will receive a full refund.",
-        "Approved refunds are credited to your original payment method within 5–7 business days, or instantly to your Arvaya Wallet if you choose that option.",
+        "Approved refunds are credited to your original payment method within 5–7 business days, or instantly to your SeCURE ARVAYA Wallet if you choose that option.",
       ],
     ],
   },
@@ -87,7 +87,7 @@ const SECTIONS = [
     title: "Lab Tests & Reports",
     body: [
       "Lab tests are performed by our NABL-accredited partner laboratories. Please follow the preparation instructions shown for each test (for example, fasting requirements). Reports are shared on the Platform and by email once ready; turnaround times are estimates and may vary.",
-      "Lab reports should be interpreted by a qualified doctor. Arvaya does not provide diagnosis based on test results.",
+      "Lab reports should be interpreted by a qualified doctor. SeCURE ARVAYA does not provide diagnosis based on test results.",
     ],
   },
   {
@@ -114,7 +114,7 @@ const SECTIONS = [
     body: [
       [
         "All prices are in Indian Rupees (₹) and include applicable taxes unless stated otherwise.",
-        "Payments are processed by secure, RBI-authorised payment gateways. Arvaya does not store your full card details.",
+        "Payments are processed by secure, RBI-authorised payment gateways. SeCURE ARVAYA does not store your full card details.",
         "Wallet balance can be used only for services on the Platform. It is non-transferable and cannot be withdrawn as cash, except for refunded amounts as required by law.",
         "Reward points and referral benefits have no cash value, may carry expiry dates, and may be modified or withdrawn at our discretion. Any misuse or fraudulent referrals will result in forfeiture.",
       ],
@@ -151,7 +151,7 @@ const SECTIONS = [
     id: "ip",
     title: "Intellectual Property",
     body: [
-      "All content on the Platform, including the Arvaya and Secure Hospitals names, logos, design, text, graphics and software, is owned by or licensed to Arvaya Healthcare Ltd. and protected by applicable intellectual property laws. You may not use it without our prior written permission.",
+      "All content on the Platform, including the SeCURE ARVAYA and Secure Hospitals names, logos, design, text, graphics and software, is owned by or licensed to SeCURE ARVAYA Healthcare Ltd. and protected by applicable intellectual property laws. You may not use it without our prior written permission.",
     ],
   },
   {
@@ -159,7 +159,7 @@ const SECTIONS = [
     title: "Disclaimers & Limitation of Liability",
     body: [
       "The Platform is provided on an \"as is\" and \"as available\" basis. While we verify the registration of listed providers, we do not guarantee any particular medical outcome.",
-      "To the maximum extent permitted by law, Arvaya shall not be liable for any indirect, incidental or consequential damages arising from your use of the Platform or from services delivered by third-party providers. Our total liability for any claim shall not exceed the amount you paid to Arvaya for the specific service giving rise to the claim.",
+      "To the maximum extent permitted by law, SeCURE ARVAYA shall not be liable for any indirect, incidental or consequential damages arising from your use of the Platform or from services delivered by third-party providers. Our total liability for any claim shall not exceed the amount you paid to SeCURE ARVAYA for the specific service giving rise to the claim.",
     ],
   },
   {
@@ -196,9 +196,9 @@ const SECTIONS = [
 /* Short summary shown above the full terms. Each `to` jumps to the section with the details. */
 const KEY_POINTS = [
   { icon: Clock, title: "Free cancellation", text: "Up to 4 hours before a doctor appointment.", to: "appointments" },
-  { icon: RotateCcw, title: "Refunds in 5–7 days", text: "Or instantly to your Arvaya Wallet.", to: "appointments" },
+  { icon: RotateCcw, title: "Refunds in 5–7 days", text: "Or instantly to your SeCURE ARVAYA Wallet.", to: "appointments" },
   { icon: LockKeyhole, title: "Consent-based sharing", text: "Your records go to a provider only with your consent.", to: "health-data" },
-  { icon: Siren, title: "Emergency? Call 112", text: "Arvaya is not a substitute for emergency care.", to: "emergency", danger: true },
+  { icon: Siren, title: "Emergency? Call 112", text: "SeCURE ARVAYA is not a substitute for emergency care.", to: "emergency", danger: true },
 ];
 
 export default function Terms() {
@@ -687,7 +687,7 @@ export default function Terms() {
           </div>
           <h1>Terms &amp; Conditions</h1>
           <p>
-            Please read these terms carefully before using Arvaya. They explain your rights and
+            Please read these terms carefully before using SeCURE ARVAYA. They explain your rights and
             responsibilities when you book consultations, lab tests, ambulances and other
             healthcare services through our platform.
           </p>
