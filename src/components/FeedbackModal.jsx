@@ -225,9 +225,6 @@ export default function FeedbackModal() {
         overflowY: "auto",
         fontFamily: "var(--font-sans, system-ui, sans-serif)",
       }}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) handleDismiss();
-      }}
     >
       <div
         style={{

@@ -27,7 +27,7 @@ const whatOffers = [
   { icon: BellRing, title: "Smart Notifications & Reminders", desc: "Receive appointment updates, important notifications, and timely healthcare reminders." },
   { icon: Watch, title: "Wearable Integration", desc: "Connect compatible wearable devices to track health metrics such as heart rate, sleep, and other available wellness indicators." },
   { icon: Bot, title: "SecureAnt AI Chat", desc: "Get AI-powered assistance to help navigate healthcare services and find relevant health information through an intelligent chat experience." },
-  { icon: Gift, title: "Refer a Friend", desc: "Share ARVAYA with friends and family to help them discover a more convenient healthcare experience." },
+  { icon: Gift, title: "Refer a Friend", desc: "Share SeCURE ARVAYA with friends and family to help them discover a more convenient healthcare experience." },
 ];
 
 const highlights = ["Connected", "Convenient", "Personalized"];
@@ -40,23 +40,23 @@ export default function About() {
         <section className="about-hero">
           <div className="about-hero-glow" aria-hidden="true" />
           <div className="about-hero-logo">
-            <img src="/logo.png" alt="Arvaya Health & Wellness" />
+            <img src="/secure-hospitals-logo.png" alt="Secure Hospitals – Arvaya Healthcare Ltd." />
           </div>
           <span className="about-eyebrow">
-            <HeartPulse size={14} /> About ARVAYA
+            <HeartPulse size={14} /> About SeCURE ARVAYA
           </span>
           <h1 className="about-title">
             Empowering Health. <span>Enhancing Lives.</span>
           </h1>
           <p className="about-tagline">
-            ARVAYA is your digital gateway to connected, convenient, and
+            SeCURE ARVAYA is your digital gateway to connected, convenient, and
             personalized healthcare.
           </p>
           <p className="about-lead">
-            ARVAYA is a patient-centric digital health platform designed to
+            SeCURE ARVAYA is a patient-centric digital health platform designed to
             simplify healthcare access and enhance the overall patient
             experience. By bringing essential healthcare services together in
-            one place, ARVAYA enables individuals and families to manage health
+            one place, SeCURE ARVAYA enables individuals and families to manage health
             profiles, book hospital appointments, access previous health
             records, and stay connected with healthcare services through a
             seamless digital experience.
@@ -74,7 +74,7 @@ export default function About() {
         <section className="about-section">
           <header className="about-section-head">
             <span className="about-kicker">Features</span>
-            <h2>What ARVAYA Offers</h2>
+            <h2>What SeCURE ARVAYA Offers</h2>
           </header>
           <div className="about-grid">
             {whatOffers.map(({ icon: Icon, title, desc }) => (
@@ -99,7 +99,7 @@ export default function About() {
           <div>
             <span className="about-kicker">Our Commitment</span>
             <p>
-              At ARVAYA, we believe healthcare should be accessible, convenient,
+              At SeCURE ARVAYA, we believe healthcare should be accessible, convenient,
               and centered around people. We combine digital innovation with
               patient-focused services to simplify everyday healthcare
               interactions, improve engagement, and help individuals stay
@@ -125,7 +125,7 @@ export default function About() {
         </section>
 
         <p className="about-closing">
-          ARVAYA — <span>Bringing Healthcare Closer to You.</span>
+          SeCURE ARVAYA — <span>Bringing Healthcare Closer to You.</span>
         </p>
 
         {/* Contact & Support */}

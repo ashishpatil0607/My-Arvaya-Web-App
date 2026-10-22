@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, startTransition } from "react";
 import * as authService from "../services/authService";
 import { getPatients } from "../services/dataService";
 import Toast from "../components/common/Toast";
@@ -257,11 +257,15 @@ export function AuthProvider({ children }) {
       deleteCookie("arvaya_token");
       // Go home in the same render batch as clearing the user, so ProtectedRoute
       // never sees a guest on a protected page and pops the login modal.
-      navigate("/", { replace: true });
-      setToken(null);
-      setUser(null);
-      setLinkedProfiles([]);
-      setLoginMethod("user_verify_otp");
+      // React Router v7 applies navigate() as a transition, so the auth reset must
+      // be a transition too or it renders first.
+      startTransition(() => {
+        navigate("/", { replace: true });
+        setToken(null);
+        setUser(null);
+        setLinkedProfiles([]);
+        setLoginMethod("user_verify_otp");
+      });
       showToast("Logged out successfully!", "success");
     }
   }

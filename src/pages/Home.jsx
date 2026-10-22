@@ -1463,7 +1463,7 @@ export default function Home() {
           overflow: hidden;
           border-radius: 28px;
           background-image:
-            url('/app-download-background1.png'),
+            url('/app-download-background-secure.png'),
             linear-gradient(112deg, #064b58 0%, #08727d 48%, #25b4b1 100%);
           background-size: calc(100% + 60px) auto, cover;
           background-position: 100% 40%, center;

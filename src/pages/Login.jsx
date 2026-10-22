@@ -108,11 +108,9 @@ export default function Login({ forceOpen = false, modalHost = false }) {
     setUhidInputs({});
     setVerifyOtpRawRes(null);
     closeLoginModal();
-    const target =
-      location.state?.from || location.state?.redirectPath || pendingRedirect;
-    if (target && target !== "/login") {
-      go(target, { replace: true });
-    } else if (!isModalPresentation) {
+    // Dismissing means the user didn't log in, so stay put — sending a guest to the
+    // pending (usually protected) redirect would bounce back here and reopen the modal.
+    if (!isModalPresentation) {
       go("/", { replace: true });
     }
   };
@@ -1042,10 +1040,13 @@ export default function Login({ forceOpen = false, modalHost = false }) {
           >
             <img
               src="/secure-hospitals-logo.png"
-              alt="Arvaya"
+              alt="Secure Hospitals – Arvaya Healthcare Ltd."
               style={{
-                height: "36px",
-                filter: "brightness(0) invert(1)",
+                height: "48px",
+                objectFit: "contain",
+                background: "#ffffff",
+                padding: "6px 12px",
+                borderRadius: "12px",
                 marginBottom: "24px",
                 width: "fit-content",
               }}
